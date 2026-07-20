@@ -1,12 +1,16 @@
 package hanamuramiyu.karakuri.ui;
 
+import hanamuramiyu.karakuri.task.SequenceTask;
 import hanamuramiyu.karakuri.task.TaskManager;
 import hanamuramiyu.karakuri.task.TaskStatus;
+import hanamuramiyu.karakuri.task.WaitTask;
 import hanamuramiyu.karakuri.task.WalkForwardTask;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+
+import java.util.List;
 
 public final class KarakuriScreen extends Screen {
     private static final int PANEL_HEIGHT = 230;
@@ -15,7 +19,8 @@ public final class KarakuriScreen extends Screen {
     private static final int CONTENT_MARGIN = 16;
     private static final int BUTTON_GAP = 8;
     private static final int BUTTON_HEIGHT = 20;
-    private static final int TEST_DURATION_TICKS = 40;
+    private static final int WALK_DURATION_TICKS = 40;
+    private static final int WAIT_DURATION_TICKS = 20;
 
     private final Screen parent;
 
@@ -111,7 +116,7 @@ public final class KarakuriScreen extends Screen {
 
         graphics.drawString(
             font,
-            Component.literal("Test task"),
+            Component.literal("Test sequence"),
             panelX + CONTENT_MARGIN,
             panelY + 70,
             0xFF9999AA,
@@ -119,7 +124,7 @@ public final class KarakuriScreen extends Screen {
         );
         graphics.drawString(
             font,
-            Component.literal("Walk forward for 2 seconds"),
+            Component.literal("Walk 2s, wait 1s, walk 2s"),
             panelX + CONTENT_MARGIN,
             panelY + 88,
             0xFFF4F4F7,
@@ -179,7 +184,16 @@ public final class KarakuriScreen extends Screen {
             return;
         }
 
-        TaskManager.start(new WalkForwardTask(TEST_DURATION_TICKS), minecraft);
+        TaskManager.start(
+            new SequenceTask(
+                List.of(
+                    new WalkForwardTask(WALK_DURATION_TICKS),
+                    new WaitTask(WAIT_DURATION_TICKS),
+                    new WalkForwardTask(WALK_DURATION_TICKS)
+                )
+            ),
+            minecraft
+        );
     }
 
     private void updateButtons() {
@@ -189,6 +203,9 @@ public final class KarakuriScreen extends Screen {
 
         TaskStatus status = TaskManager.getStatus();
 
+        startButton.setMessage(
+            Component.literal(status == TaskStatus.PAUSED ? "Resume" : "Start")
+        );
         startButton.active = status != TaskStatus.RUNNING;
         pauseButton.active = status == TaskStatus.RUNNING;
         stopButton.active = status != TaskStatus.IDLE;
