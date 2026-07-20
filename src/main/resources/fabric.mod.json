@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "karakuri",
+  "version": "${version}",
+  "name": "Karakuri",
+  "description": "Programmable player automation for Minecraft.",
+  "authors": [
+    "hanamuramiyu"
+  ],
+  "icon": "assets/karakuri/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "main": [
+      "hanamuramiyu.karakuri.Karakuri"
+    ],
+    "client": [
+      "hanamuramiyu.karakuri.KarakuriClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
