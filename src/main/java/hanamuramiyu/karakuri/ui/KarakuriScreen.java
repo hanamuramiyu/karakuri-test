@@ -1,20 +1,23 @@
 package hanamuramiyu.karakuri.ui;
 
+import hanamuramiyu.karakuri.task.TaskManager;
+import hanamuramiyu.karakuri.task.TaskStatus;
+import hanamuramiyu.karakuri.task.WalkForwardTask;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 public final class KarakuriScreen extends Screen {
-    private static final int PANEL_HEIGHT = 210;
+    private static final int PANEL_HEIGHT = 230;
     private static final int PANEL_MAX_WIDTH = 360;
     private static final int PANEL_MARGIN = 20;
     private static final int CONTENT_MARGIN = 16;
     private static final int BUTTON_GAP = 8;
     private static final int BUTTON_HEIGHT = 20;
+    private static final int TEST_DURATION_TICKS = 40;
 
     private final Screen parent;
-    private ExecutionStatus status = ExecutionStatus.IDLE;
 
     private Button startButton;
     private Button pauseButton;
@@ -35,7 +38,7 @@ public final class KarakuriScreen extends Screen {
 
         startButton = Button.builder(
             Component.literal("Start"),
-            button -> setStatus(ExecutionStatus.RUNNING)
+            button -> startOrResume()
         ).bounds(
             panelX + CONTENT_MARGIN,
             buttonY,
@@ -45,7 +48,7 @@ public final class KarakuriScreen extends Screen {
 
         pauseButton = Button.builder(
             Component.literal("Pause"),
-            button -> setStatus(ExecutionStatus.PAUSED)
+            button -> TaskManager.pause(minecraft)
         ).bounds(
             panelX + CONTENT_MARGIN + buttonWidth + BUTTON_GAP,
             buttonY,
@@ -55,7 +58,7 @@ public final class KarakuriScreen extends Screen {
 
         stopButton = Button.builder(
             Component.literal("Stop"),
-            button -> setStatus(ExecutionStatus.IDLE)
+            button -> TaskManager.stop(minecraft)
         ).bounds(
             panelX + CONTENT_MARGIN + (buttonWidth + BUTTON_GAP) * 2,
             buttonY,
@@ -71,10 +74,16 @@ public final class KarakuriScreen extends Screen {
     }
 
     @Override
+    public void tick() {
+        updateButtons();
+    }
+
+    @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         int panelX = getPanelX();
         int panelY = getPanelY();
         int panelWidth = getPanelWidth();
+        TaskStatus status = TaskManager.getStatus();
 
         graphics.fill(0, 0, width, height, 0xC0101018);
         graphics.fill(
@@ -102,18 +111,35 @@ public final class KarakuriScreen extends Screen {
 
         graphics.drawString(
             font,
+            Component.literal("Test task"),
+            panelX + CONTENT_MARGIN,
+            panelY + 70,
+            0xFF9999AA,
+            false
+        );
+        graphics.drawString(
+            font,
+            Component.literal("Walk forward for 2 seconds"),
+            panelX + CONTENT_MARGIN,
+            panelY + 88,
+            0xFFF4F4F7,
+            false
+        );
+
+        graphics.drawString(
+            font,
             Component.literal("Current session"),
             panelX + CONTENT_MARGIN,
-            panelY + 72,
-            0xFFF4F4F7,
+            panelY + 120,
+            0xFF9999AA,
             false
         );
         graphics.drawString(
             font,
             Component.literal("Controls only the active account"),
             panelX + CONTENT_MARGIN,
-            panelY + 90,
-            0xFF9999AA,
+            panelY + 138,
+            0xFFF4F4F7,
             false
         );
 
@@ -121,7 +147,7 @@ public final class KarakuriScreen extends Screen {
             font,
             Component.literal("Status"),
             panelX + CONTENT_MARGIN,
-            panelY + 122,
+            panelY + 166,
             0xFF9999AA,
             false
         );
@@ -129,8 +155,8 @@ public final class KarakuriScreen extends Screen {
             font,
             Component.literal(status.label()),
             panelX + CONTENT_MARGIN,
-            panelY + 140,
-            status.color(),
+            panelY + 184,
+            getStatusColor(status),
             false
         );
 
@@ -142,9 +168,18 @@ public final class KarakuriScreen extends Screen {
         minecraft.setScreen(parent);
     }
 
-    private void setStatus(ExecutionStatus status) {
-        this.status = status;
-        updateButtons();
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+
+    private void startOrResume() {
+        if (TaskManager.getStatus() == TaskStatus.PAUSED) {
+            TaskManager.resume(minecraft);
+            return;
+        }
+
+        TaskManager.start(new WalkForwardTask(TEST_DURATION_TICKS), minecraft);
     }
 
     private void updateButtons() {
@@ -152,9 +187,19 @@ public final class KarakuriScreen extends Screen {
             return;
         }
 
-        startButton.active = status != ExecutionStatus.RUNNING;
-        pauseButton.active = status == ExecutionStatus.RUNNING;
-        stopButton.active = status != ExecutionStatus.IDLE;
+        TaskStatus status = TaskManager.getStatus();
+
+        startButton.active = status != TaskStatus.RUNNING;
+        pauseButton.active = status == TaskStatus.RUNNING;
+        stopButton.active = status != TaskStatus.IDLE;
+    }
+
+    private int getStatusColor(TaskStatus status) {
+        return switch (status) {
+            case IDLE -> 0xFFB7B7C5;
+            case RUNNING -> 0xFF73D69C;
+            case PAUSED -> 0xFFF2C66D;
+        };
     }
 
     private int getPanelWidth() {
@@ -177,27 +222,5 @@ public final class KarakuriScreen extends Screen {
     ) {
         int x = (width - font.width(text)) / 2;
         graphics.drawString(font, text, x, y, color, false);
-    }
-
-    private enum ExecutionStatus {
-        IDLE("Idle", 0xFFB7B7C5),
-        RUNNING("Running", 0xFF73D69C),
-        PAUSED("Paused", 0xFFF2C66D);
-
-        private final String label;
-        private final int color;
-
-        ExecutionStatus(String label, int color) {
-            this.label = label;
-            this.color = color;
-        }
-
-        private String label() {
-            return label;
-        }
-
-        private int color() {
-            return color;
-        }
     }
 }
