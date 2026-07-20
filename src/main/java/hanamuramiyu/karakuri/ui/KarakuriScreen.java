@@ -1,5 +1,7 @@
 package hanamuramiyu.karakuri.ui;
 
+import hanamuramiyu.karakuri.task.ClientTask;
+import hanamuramiyu.karakuri.task.RepeatTask;
 import hanamuramiyu.karakuri.task.SequenceTask;
 import hanamuramiyu.karakuri.task.TaskManager;
 import hanamuramiyu.karakuri.task.TaskStatus;
@@ -21,6 +23,7 @@ public final class KarakuriScreen extends Screen {
     private static final int BUTTON_HEIGHT = 20;
     private static final int WALK_DURATION_TICKS = 40;
     private static final int WAIT_DURATION_TICKS = 20;
+    private static final int TEST_REPEAT_COUNT = 3;
 
     private final Screen parent;
 
@@ -130,12 +133,20 @@ public final class KarakuriScreen extends Screen {
             0xFFF4F4F7,
             false
         );
+        graphics.drawString(
+            font,
+            Component.literal("Repeat 3 times"),
+            panelX + CONTENT_MARGIN,
+            panelY + 104,
+            0xFFF4F4F7,
+            false
+        );
 
         graphics.drawString(
             font,
             Component.literal("Current session"),
             panelX + CONTENT_MARGIN,
-            panelY + 120,
+            panelY + 130,
             0xFF9999AA,
             false
         );
@@ -143,7 +154,7 @@ public final class KarakuriScreen extends Screen {
             font,
             Component.literal("Controls only the active account"),
             panelX + CONTENT_MARGIN,
-            panelY + 138,
+            panelY + 148,
             0xFFF4F4F7,
             false
         );
@@ -152,7 +163,7 @@ public final class KarakuriScreen extends Screen {
             font,
             Component.literal("Status"),
             panelX + CONTENT_MARGIN,
-            panelY + 166,
+            panelY + 172,
             0xFF9999AA,
             false
         );
@@ -160,7 +171,7 @@ public final class KarakuriScreen extends Screen {
             font,
             Component.literal(status.label()),
             panelX + CONTENT_MARGIN,
-            panelY + 184,
+            panelY + 188,
             getStatusColor(status),
             false
         );
@@ -185,14 +196,21 @@ public final class KarakuriScreen extends Screen {
         }
 
         TaskManager.start(
-            new SequenceTask(
-                List.of(
-                    new WalkForwardTask(WALK_DURATION_TICKS),
-                    new WaitTask(WAIT_DURATION_TICKS),
-                    new WalkForwardTask(WALK_DURATION_TICKS)
-                )
+            new RepeatTask(
+                KarakuriScreen::createTestSequence,
+                TEST_REPEAT_COUNT
             ),
             minecraft
+        );
+    }
+
+    private static ClientTask createTestSequence() {
+        return new SequenceTask(
+            List.of(
+                new WalkForwardTask(WALK_DURATION_TICKS),
+                new WaitTask(WAIT_DURATION_TICKS),
+                new WalkForwardTask(WALK_DURATION_TICKS)
+            )
         );
     }
 
