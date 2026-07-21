@@ -11,19 +11,26 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
+import java.util.List;
+
 public final class KarakuriScreen extends Screen {
-    private static final int PANEL_HEIGHT = 300;
+    private static final int PANEL_HEIGHT = 340;
     private static final int PANEL_MAX_WIDTH = 360;
     private static final int PANEL_MARGIN = 20;
     private static final int CONTENT_MARGIN = 16;
     private static final int BUTTON_GAP = 8;
     private static final int BUTTON_HEIGHT = 20;
+    private static final int MAX_VISIBLE_STEPS = 4;
 
     private final Screen parent;
-    private final Scenario scenario;
 
+    private List<Scenario> scenarios;
+    private int selectedScenarioIndex;
     private ExecutionMode executionMode = ExecutionMode.ONCE;
 
+    private Button previousButton;
+    private Button nextButton;
+    private Button reloadButton;
     private Button modeButton;
     private Button startButton;
     private Button pauseButton;
@@ -32,7 +39,7 @@ public final class KarakuriScreen extends Screen {
     public KarakuriScreen(Screen parent) {
         super(Component.literal("Karakuri"));
         this.parent = parent;
-        this.scenario = ScenarioLibrary.getFirst();
+        this.scenarios = ScenarioLibrary.getScenarios();
     }
 
     @Override
@@ -40,9 +47,42 @@ public final class KarakuriScreen extends Screen {
         int panelX = getPanelX();
         int panelY = getPanelY();
         int contentWidth = getPanelWidth() - CONTENT_MARGIN * 2;
-        int buttonWidth = (contentWidth - BUTTON_GAP * 2) / 3;
-        int modeButtonY = panelY + 234;
-        int controlButtonY = panelY + 264;
+        int navigationButtonWidth = (contentWidth - BUTTON_GAP * 2) / 3;
+        int controlButtonWidth = (contentWidth - BUTTON_GAP * 2) / 3;
+        int navigationButtonY = panelY + 248;
+        int modeButtonY = panelY + 278;
+        int controlButtonY = panelY + 308;
+
+        previousButton = Button.builder(
+            Component.literal("Previous"),
+            button -> selectScenario(-1)
+        ).bounds(
+            panelX + CONTENT_MARGIN,
+            navigationButtonY,
+            navigationButtonWidth,
+            BUTTON_HEIGHT
+        ).build();
+
+        nextButton = Button.builder(
+            Component.literal("Next"),
+            button -> selectScenario(1)
+        ).bounds(
+            panelX + CONTENT_MARGIN + navigationButtonWidth + BUTTON_GAP,
+            navigationButtonY,
+            navigationButtonWidth,
+            BUTTON_HEIGHT
+        ).build();
+
+        reloadButton = Button.builder(
+            Component.literal("Reload"),
+            button -> reloadScenarios()
+        ).bounds(
+            panelX + CONTENT_MARGIN
+                + (navigationButtonWidth + BUTTON_GAP) * 2,
+            navigationButtonY,
+            navigationButtonWidth,
+            BUTTON_HEIGHT
+        ).build();
 
         modeButton = Button.builder(
             Component.empty(),
@@ -63,7 +103,7 @@ public final class KarakuriScreen extends Screen {
         ).bounds(
             panelX + CONTENT_MARGIN,
             controlButtonY,
-            buttonWidth,
+            controlButtonWidth,
             BUTTON_HEIGHT
         ).build();
 
@@ -71,9 +111,9 @@ public final class KarakuriScreen extends Screen {
             Component.literal("Pause"),
             button -> TaskManager.pause(minecraft)
         ).bounds(
-            panelX + CONTENT_MARGIN + buttonWidth + BUTTON_GAP,
+            panelX + CONTENT_MARGIN + controlButtonWidth + BUTTON_GAP,
             controlButtonY,
-            buttonWidth,
+            controlButtonWidth,
             BUTTON_HEIGHT
         ).build();
 
@@ -81,12 +121,16 @@ public final class KarakuriScreen extends Screen {
             Component.literal("Stop"),
             button -> TaskManager.stop(minecraft)
         ).bounds(
-            panelX + CONTENT_MARGIN + (buttonWidth + BUTTON_GAP) * 2,
+            panelX + CONTENT_MARGIN
+                + (controlButtonWidth + BUTTON_GAP) * 2,
             controlButtonY,
-            buttonWidth,
+            controlButtonWidth,
             BUTTON_HEIGHT
         ).build();
 
+        addRenderableWidget(previousButton);
+        addRenderableWidget(nextButton);
+        addRenderableWidget(reloadButton);
         addRenderableWidget(modeButton);
         addRenderableWidget(startButton);
         addRenderableWidget(pauseButton);
@@ -101,11 +145,17 @@ public final class KarakuriScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+    public void render(
+        GuiGraphics graphics,
+        int mouseX,
+        int mouseY,
+        float delta
+    ) {
         int panelX = getPanelX();
         int panelY = getPanelY();
         int panelWidth = getPanelWidth();
         TaskStatus status = TaskManager.getStatus();
+        Scenario scenario = getSelectedScenario();
 
         graphics.fill(0, 0, width, height, 0xC0101018);
         graphics.fill(
@@ -123,7 +173,12 @@ public final class KarakuriScreen extends Screen {
             0xFF626278
         );
 
-        drawCenteredText(graphics, title, panelY + 18, 0xFFF4F4F7);
+        drawCenteredText(
+            graphics,
+            title,
+            panelY + 18,
+            0xFFF4F4F7
+        );
         drawCenteredText(
             graphics,
             Component.literal("Programmable player automation"),
@@ -139,6 +194,22 @@ public final class KarakuriScreen extends Screen {
             0xFF9999AA,
             false
         );
+
+        Component scenarioPosition = Component.literal(
+            (selectedScenarioIndex + 1) + " of " + scenarios.size()
+        );
+
+        graphics.drawString(
+            font,
+            scenarioPosition,
+            panelX + panelWidth
+                - CONTENT_MARGIN
+                - font.width(scenarioPosition),
+            panelY + 66,
+            0xFF9999AA,
+            false
+        );
+
         graphics.drawString(
             font,
             Component.literal(scenario.name()),
@@ -148,7 +219,12 @@ public final class KarakuriScreen extends Screen {
             false
         );
 
-        for (int index = 0; index < scenario.steps().size(); index++) {
+        int visibleStepCount = Math.min(
+            scenario.steps().size(),
+            MAX_VISIBLE_STEPS
+        );
+
+        for (int index = 0; index < visibleStepCount; index++) {
             Scenario.Step step = scenario.steps().get(index);
 
             graphics.drawString(
@@ -161,11 +237,25 @@ public final class KarakuriScreen extends Screen {
             );
         }
 
+        if (scenario.steps().size() > MAX_VISIBLE_STEPS) {
+            int hiddenStepCount =
+                scenario.steps().size() - MAX_VISIBLE_STEPS;
+
+            graphics.drawString(
+                font,
+                Component.literal("+ " + hiddenStepCount + " more"),
+                panelX + CONTENT_MARGIN,
+                panelY + 106 + MAX_VISIBLE_STEPS * 16,
+                0xFF9999AA,
+                false
+            );
+        }
+
         graphics.drawString(
             font,
             Component.literal(executionMode.description()),
             panelX + CONTENT_MARGIN,
-            panelY + 160,
+            panelY + 190,
             0xFFF4F4F7,
             false
         );
@@ -174,7 +264,7 @@ public final class KarakuriScreen extends Screen {
             font,
             Component.literal("Current session"),
             panelX + CONTENT_MARGIN,
-            panelY + 184,
+            panelY + 210,
             0xFF9999AA,
             false
         );
@@ -182,7 +272,7 @@ public final class KarakuriScreen extends Screen {
             font,
             Component.literal("Controls only the active account"),
             panelX + CONTENT_MARGIN,
-            panelY + 202,
+            panelY + 226,
             0xFFF4F4F7,
             false
         );
@@ -191,7 +281,7 @@ public final class KarakuriScreen extends Screen {
             font,
             Component.literal("Status: " + status.label()),
             panelX + CONTENT_MARGIN,
-            panelY + 218,
+            panelY + 232,
             getStatusColor(status),
             false
         );
@@ -215,18 +305,61 @@ public final class KarakuriScreen extends Screen {
             return;
         }
 
+        Scenario selectedScenario = getSelectedScenario();
+
         TaskManager.start(
             new RepeatTask(
-                () -> ScenarioTaskFactory.create(scenario),
+                () -> ScenarioTaskFactory.create(selectedScenario),
                 executionMode.repeatCount()
             ),
             minecraft
         );
     }
 
+    private void selectScenario(int offset) {
+        if (scenarios.size() <= 1) {
+            return;
+        }
+
+        selectedScenarioIndex = Math.floorMod(
+            selectedScenarioIndex + offset,
+            scenarios.size()
+        );
+
+        updateButtons();
+    }
+
+    private void reloadScenarios() {
+        String selectedScenarioName = getSelectedScenario().name();
+
+        ScenarioLibrary.reload();
+        scenarios = ScenarioLibrary.getScenarios();
+        selectedScenarioIndex = 0;
+
+        for (int index = 0; index < scenarios.size(); index++) {
+            if (scenarios.get(index).name().equals(selectedScenarioName)) {
+                selectedScenarioIndex = index;
+                break;
+            }
+        }
+
+        updateButtons();
+    }
+
+    private Scenario getSelectedScenario() {
+        if (selectedScenarioIndex >= scenarios.size()) {
+            selectedScenarioIndex = 0;
+        }
+
+        return scenarios.get(selectedScenarioIndex);
+    }
+
     private void updateButtons() {
         if (
-            modeButton == null
+            previousButton == null
+                || nextButton == null
+                || reloadButton == null
+                || modeButton == null
                 || startButton == null
                 || pauseButton == null
                 || stopButton == null
@@ -235,14 +368,22 @@ public final class KarakuriScreen extends Screen {
         }
 
         TaskStatus status = TaskManager.getStatus();
+        boolean idle = status == TaskStatus.IDLE;
+        boolean hasMultipleScenarios = scenarios.size() > 1;
+
+        previousButton.active = idle && hasMultipleScenarios;
+        nextButton.active = idle && hasMultipleScenarios;
+        reloadButton.active = idle;
 
         modeButton.setMessage(
             Component.literal("Mode: " + executionMode.label())
         );
-        modeButton.active = status == TaskStatus.IDLE;
+        modeButton.active = idle;
 
         startButton.setMessage(
-            Component.literal(status == TaskStatus.PAUSED ? "Resume" : "Start")
+            Component.literal(
+                status == TaskStatus.PAUSED ? "Resume" : "Start"
+            )
         );
         startButton.active = status != TaskStatus.RUNNING;
         pauseButton.active = status == TaskStatus.RUNNING;
@@ -287,7 +428,11 @@ public final class KarakuriScreen extends Screen {
         private final String description;
         private final int repeatCount;
 
-        ExecutionMode(String label, String description, int repeatCount) {
+        ExecutionMode(
+            String label,
+            String description,
+            int repeatCount
+        ) {
             this.label = label;
             this.description = description;
             this.repeatCount = repeatCount;
