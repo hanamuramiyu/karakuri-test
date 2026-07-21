@@ -1,6 +1,7 @@
 package hanamuramiyu.karakuri;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import hanamuramiyu.karakuri.scenario.ScenarioLibrary;
 import hanamuramiyu.karakuri.task.TaskManager;
 import hanamuramiyu.karakuri.ui.KarakuriScreen;
 import net.fabricmc.api.ClientModInitializer;
@@ -26,6 +27,8 @@ public final class KarakuriClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        ScenarioLibrary.initialize();
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             TaskManager.tick(client);
 

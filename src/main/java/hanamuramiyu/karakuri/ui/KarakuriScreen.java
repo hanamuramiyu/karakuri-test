@@ -1,6 +1,7 @@
 package hanamuramiyu.karakuri.ui;
 
 import hanamuramiyu.karakuri.scenario.Scenario;
+import hanamuramiyu.karakuri.scenario.ScenarioLibrary;
 import hanamuramiyu.karakuri.scenario.ScenarioTaskFactory;
 import hanamuramiyu.karakuri.task.RepeatTask;
 import hanamuramiyu.karakuri.task.TaskManager;
@@ -10,8 +11,6 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-import java.util.List;
-
 public final class KarakuriScreen extends Screen {
     private static final int PANEL_HEIGHT = 300;
     private static final int PANEL_MAX_WIDTH = 360;
@@ -20,16 +19,8 @@ public final class KarakuriScreen extends Screen {
     private static final int BUTTON_GAP = 8;
     private static final int BUTTON_HEIGHT = 20;
 
-    private static final Scenario TEST_SCENARIO = new Scenario(
-        "Basic Movement",
-        List.of(
-            new Scenario.WalkForwardStep(40),
-            new Scenario.WaitStep(20),
-            new Scenario.WalkForwardStep(40)
-        )
-    );
-
     private final Screen parent;
+    private final Scenario scenario;
 
     private ExecutionMode executionMode = ExecutionMode.ONCE;
 
@@ -41,6 +32,7 @@ public final class KarakuriScreen extends Screen {
     public KarakuriScreen(Screen parent) {
         super(Component.literal("Karakuri"));
         this.parent = parent;
+        this.scenario = ScenarioLibrary.getFirst();
     }
 
     @Override
@@ -149,15 +141,15 @@ public final class KarakuriScreen extends Screen {
         );
         graphics.drawString(
             font,
-            Component.literal(TEST_SCENARIO.name()),
+            Component.literal(scenario.name()),
             panelX + CONTENT_MARGIN,
             panelY + 84,
             0xFFF4F4F7,
             false
         );
 
-        for (int index = 0; index < TEST_SCENARIO.steps().size(); index++) {
-            Scenario.Step step = TEST_SCENARIO.steps().get(index);
+        for (int index = 0; index < scenario.steps().size(); index++) {
+            Scenario.Step step = scenario.steps().get(index);
 
             graphics.drawString(
                 font,
@@ -225,7 +217,7 @@ public final class KarakuriScreen extends Screen {
 
         TaskManager.start(
             new RepeatTask(
-                () -> ScenarioTaskFactory.create(TEST_SCENARIO),
+                () -> ScenarioTaskFactory.create(scenario),
                 executionMode.repeatCount()
             ),
             minecraft
