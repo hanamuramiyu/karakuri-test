@@ -19,6 +19,7 @@ public final class ScenarioActionLibrary {
     private final int y;
     private final int width;
     private final int height;
+    private final Layout layout;
 
     private final KarakuriButton movementCategoryButton;
     private final KarakuriButton timingCategoryButton;
@@ -35,6 +36,7 @@ public final class ScenarioActionLibrary {
     private final List<KarakuriButton> widgets;
 
     private Category selectedCategory = Category.MOVEMENT;
+    private boolean visible = true;
 
     public ScenarioActionLibrary(
         Font font,
@@ -42,6 +44,7 @@ public final class ScenarioActionLibrary {
         int y,
         int width,
         int height,
+        Layout layout,
         Consumer<Scenario.MoveDirection> moveAction,
         Runnable waitAction
     ) {
@@ -50,108 +53,248 @@ public final class ScenarioActionLibrary {
         this.y = y;
         this.width = width;
         this.height = height;
+        this.layout = layout;
 
-        int categoryX = x + PADDING;
-        int categoryWidth = width - PADDING * 2;
-        int categoryY = y + 30;
+        if (layout == Layout.SIDEBAR) {
+            int categoryX = x + PADDING;
+            int categoryWidth = width - PADDING * 2;
+            int categoryY = y + 30;
 
-        movementCategoryButton = createButton(
-            categoryX,
-            categoryY,
-            categoryWidth,
-            Component.literal("Movement"),
-            () -> selectCategory(Category.MOVEMENT)
-        );
+            movementCategoryButton = createButton(
+                categoryX,
+                categoryY,
+                categoryWidth,
+                Component.literal("Movement"),
+                () -> selectCategory(Category.MOVEMENT),
+                KarakuriButton.TextAlignment.LEFT
+            );
 
-        timingCategoryButton = createButton(
-            categoryX,
-            categoryY + 26,
-            categoryWidth,
-            Component.literal("Timing"),
-            () -> selectCategory(Category.TIMING)
-        );
+            timingCategoryButton = createButton(
+                categoryX,
+                categoryY + 26,
+                categoryWidth,
+                Component.literal("Timing"),
+                () -> selectCategory(Category.TIMING),
+                KarakuriButton.TextAlignment.LEFT
+            );
 
-        mouseCategoryButton = createButton(
-            categoryX,
-            categoryY + 52,
-            categoryWidth,
-            Component.literal("Mouse  ·  Soon"),
-            () -> {
-            }
-        );
+            mouseCategoryButton = createButton(
+                categoryX,
+                categoryY + 52,
+                categoryWidth,
+                Component.literal("Mouse  ·  Soon"),
+                () -> {
+                },
+                KarakuriButton.TextAlignment.LEFT
+            );
 
-        blocksCategoryButton = createButton(
-            categoryX,
-            categoryY + 78,
-            categoryWidth,
-            Component.literal("Blocks  ·  Soon"),
-            () -> {
-            }
-        );
+            blocksCategoryButton = createButton(
+                categoryX,
+                categoryY + 78,
+                categoryWidth,
+                Component.literal("Blocks  ·  Soon"),
+                () -> {
+                },
+                KarakuriButton.TextAlignment.LEFT
+            );
 
-        inventoryCategoryButton = createButton(
-            categoryX,
-            categoryY + 104,
-            categoryWidth,
-            Component.literal("Inventory  ·  Soon"),
-            () -> {
-            }
-        );
+            inventoryCategoryButton = createButton(
+                categoryX,
+                categoryY + 104,
+                categoryWidth,
+                Component.literal("Inventory  ·  Soon"),
+                () -> {
+                },
+                KarakuriButton.TextAlignment.LEFT
+            );
+
+            int actionY = Math.min(
+                y + 188,
+                y + height - 74
+            );
+
+            int actionWidth = (
+                categoryWidth - BUTTON_GAP
+            ) / 2;
+
+            forwardButton = createButton(
+                categoryX,
+                actionY,
+                actionWidth,
+                Component.literal("Forward"),
+                () -> moveAction.accept(
+                    Scenario.MoveDirection.FORWARD
+                ),
+                KarakuriButton.TextAlignment.CENTER
+            );
+
+            backwardButton = createButton(
+                categoryX + actionWidth + BUTTON_GAP,
+                actionY,
+                actionWidth,
+                Component.literal("Backward"),
+                () -> moveAction.accept(
+                    Scenario.MoveDirection.BACKWARD
+                ),
+                KarakuriButton.TextAlignment.CENTER
+            );
+
+            leftButton = createButton(
+                categoryX,
+                actionY + 26,
+                actionWidth,
+                Component.literal("Left"),
+                () -> moveAction.accept(
+                    Scenario.MoveDirection.LEFT
+                ),
+                KarakuriButton.TextAlignment.CENTER
+            );
+
+            rightButton = createButton(
+                categoryX + actionWidth + BUTTON_GAP,
+                actionY + 26,
+                actionWidth,
+                Component.literal("Right"),
+                () -> moveAction.accept(
+                    Scenario.MoveDirection.RIGHT
+                ),
+                KarakuriButton.TextAlignment.CENTER
+            );
+
+            waitButton = createButton(
+                categoryX,
+                actionY,
+                categoryWidth,
+                Component.literal("Wait"),
+                waitAction,
+                KarakuriButton.TextAlignment.CENTER
+            );
+        } else {
+            int availableWidth = width - PADDING * 2;
+            int categoryWidth = (
+                availableWidth - BUTTON_GAP * 4
+            ) / 5;
+
+            int categoryX = x + PADDING;
+            int categoryY = y + 28;
+
+            movementCategoryButton = createButton(
+                categoryX,
+                categoryY,
+                categoryWidth,
+                Component.literal("Move"),
+                () -> selectCategory(Category.MOVEMENT),
+                KarakuriButton.TextAlignment.CENTER
+            );
+
+            timingCategoryButton = createButton(
+                categoryX
+                    + (categoryWidth + BUTTON_GAP),
+                categoryY,
+                categoryWidth,
+                Component.literal("Time"),
+                () -> selectCategory(Category.TIMING),
+                KarakuriButton.TextAlignment.CENTER
+            );
+
+            mouseCategoryButton = createButton(
+                categoryX
+                    + (categoryWidth + BUTTON_GAP) * 2,
+                categoryY,
+                categoryWidth,
+                Component.literal("Mouse"),
+                () -> {
+                },
+                KarakuriButton.TextAlignment.CENTER
+            );
+
+            blocksCategoryButton = createButton(
+                categoryX
+                    + (categoryWidth + BUTTON_GAP) * 3,
+                categoryY,
+                categoryWidth,
+                Component.literal("Blocks"),
+                () -> {
+                },
+                KarakuriButton.TextAlignment.CENTER
+            );
+
+            inventoryCategoryButton = createButton(
+                categoryX
+                    + (categoryWidth + BUTTON_GAP) * 4,
+                categoryY,
+                categoryWidth,
+                Component.literal("Items"),
+                () -> {
+                },
+                KarakuriButton.TextAlignment.CENTER
+            );
+
+            int actionY = y + 60;
+            int actionWidth = (
+                availableWidth - BUTTON_GAP * 3
+            ) / 4;
+
+            forwardButton = createButton(
+                categoryX,
+                actionY,
+                actionWidth,
+                Component.literal("Forward"),
+                () -> moveAction.accept(
+                    Scenario.MoveDirection.FORWARD
+                ),
+                KarakuriButton.TextAlignment.CENTER
+            );
+
+            backwardButton = createButton(
+                categoryX
+                    + (actionWidth + BUTTON_GAP),
+                actionY,
+                actionWidth,
+                Component.literal("Backward"),
+                () -> moveAction.accept(
+                    Scenario.MoveDirection.BACKWARD
+                ),
+                KarakuriButton.TextAlignment.CENTER
+            );
+
+            leftButton = createButton(
+                categoryX
+                    + (actionWidth + BUTTON_GAP) * 2,
+                actionY,
+                actionWidth,
+                Component.literal("Left"),
+                () -> moveAction.accept(
+                    Scenario.MoveDirection.LEFT
+                ),
+                KarakuriButton.TextAlignment.CENTER
+            );
+
+            rightButton = createButton(
+                categoryX
+                    + (actionWidth + BUTTON_GAP) * 3,
+                actionY,
+                actionWidth,
+                Component.literal("Right"),
+                () -> moveAction.accept(
+                    Scenario.MoveDirection.RIGHT
+                ),
+                KarakuriButton.TextAlignment.CENTER
+            );
+
+            waitButton = createButton(
+                categoryX,
+                actionY,
+                availableWidth,
+                Component.literal("Wait"),
+                waitAction,
+                KarakuriButton.TextAlignment.CENTER
+            );
+        }
 
         mouseCategoryButton.active = false;
         blocksCategoryButton.active = false;
         inventoryCategoryButton.active = false;
-
-        int actionY = y + 188;
-        int actionWidth = (categoryWidth - BUTTON_GAP) / 2;
-
-        forwardButton = createButton(
-            categoryX,
-            actionY,
-            actionWidth,
-            Component.literal("Forward"),
-            () -> moveAction.accept(
-                Scenario.MoveDirection.FORWARD
-            )
-        );
-
-        backwardButton = createButton(
-            categoryX + actionWidth + BUTTON_GAP,
-            actionY,
-            actionWidth,
-            Component.literal("Backward"),
-            () -> moveAction.accept(
-                Scenario.MoveDirection.BACKWARD
-            )
-        );
-
-        leftButton = createButton(
-            categoryX,
-            actionY + 26,
-            actionWidth,
-            Component.literal("Left"),
-            () -> moveAction.accept(
-                Scenario.MoveDirection.LEFT
-            )
-        );
-
-        rightButton = createButton(
-            categoryX + actionWidth + BUTTON_GAP,
-            actionY + 26,
-            actionWidth,
-            Component.literal("Right"),
-            () -> moveAction.accept(
-                Scenario.MoveDirection.RIGHT
-            )
-        );
-
-        waitButton = createButton(
-            categoryX,
-            actionY,
-            categoryWidth,
-            Component.literal("Wait"),
-            waitAction
-        );
 
         widgets = List.of(
             movementCategoryButton,
@@ -173,7 +316,16 @@ public final class ScenarioActionLibrary {
         return widgets;
     }
 
+    public void setVisible(boolean visible) {
+        this.visible = visible;
+        updateWidgets();
+    }
+
     public void render(GuiGraphics graphics) {
+        if (!visible) {
+            return;
+        }
+
         graphics.fill(
             x,
             y,
@@ -202,47 +354,60 @@ public final class ScenarioActionLibrary {
             font,
             Component.literal("Action Library"),
             x + PADDING,
-            y + 10,
+            y + 9,
             0xFFF1ECF5,
             false
         );
 
-        graphics.drawString(
-            font,
-            Component.literal("Categories"),
-            x + PADDING,
-            y + 20,
-            0xFF81778A,
-            false
-        );
+        if (layout == Layout.SIDEBAR) {
+            graphics.drawString(
+                font,
+                Component.literal("Categories"),
+                x + PADDING,
+                y + 20,
+                0xFF81778A,
+                false
+            );
 
-        graphics.fill(
-            x + PADDING,
-            y + 166,
-            x + width - PADDING,
-            y + 167,
-            0xFF302B37
-        );
+            int dividerY = Math.min(
+                y + 166,
+                y + height - 94
+            );
 
-        graphics.drawString(
-            font,
-            Component.literal(
-                "Add " + selectedCategory.label()
-            ),
-            x + PADDING,
-            y + 174,
-            0xFF9E94A8,
-            false
-        );
+            graphics.fill(
+                x + PADDING,
+                dividerY,
+                x + width - PADDING,
+                dividerY + 1,
+                0xFF302B37
+            );
 
-        graphics.drawString(
-            font,
-            Component.literal("Inserted after selected block"),
-            x + PADDING,
-            y + height - 18,
-            0xFF716A79,
-            false
-        );
+            graphics.drawString(
+                font,
+                Component.literal(
+                    "Add " + selectedCategory.label()
+                ),
+                x + PADDING,
+                dividerY + 8,
+                0xFF9E94A8,
+                false
+            );
+        }
+
+        if (height >= 118) {
+            graphics.drawString(
+                font,
+                Component.literal(
+                    layout == Layout.SIDEBAR
+                        ? "Inserted after selected block"
+                        : "Actions are inserted after the selected block"
+                ),
+                x + PADDING,
+                y + height - 14,
+                0xFF716A79,
+                false
+            );
+        }
     }
 
     private KarakuriButton createButton(
@@ -250,7 +415,8 @@ public final class ScenarioActionLibrary {
         int buttonY,
         int buttonWidth,
         Component message,
-        Runnable action
+        Runnable action,
+        KarakuriButton.TextAlignment alignment
     ) {
         KarakuriButton button = new KarakuriButton(
             font,
@@ -263,10 +429,7 @@ public final class ScenarioActionLibrary {
             KarakuriButton.Style.GHOST
         );
 
-        button.setTextAlignment(
-            KarakuriButton.TextAlignment.LEFT
-        );
-
+        button.setTextAlignment(alignment);
         return button;
     }
 
@@ -276,6 +439,14 @@ public final class ScenarioActionLibrary {
     }
 
     private void updateWidgets() {
+        for (KarakuriButton widget : widgets) {
+            widget.visible = visible;
+        }
+
+        if (!visible) {
+            return;
+        }
+
         movementCategoryButton.setStyle(
             selectedCategory == Category.MOVEMENT
                 ? KarakuriButton.Style.PRIMARY
@@ -302,18 +473,27 @@ public final class ScenarioActionLibrary {
         forwardButton.setStyle(
             KarakuriButton.Style.SECONDARY
         );
+
         backwardButton.setStyle(
             KarakuriButton.Style.SECONDARY
         );
+
         leftButton.setStyle(
             KarakuriButton.Style.SECONDARY
         );
+
         rightButton.setStyle(
             KarakuriButton.Style.SECONDARY
         );
+
         waitButton.setStyle(
             KarakuriButton.Style.SECONDARY
         );
+    }
+
+    public enum Layout {
+        SIDEBAR,
+        HORIZONTAL
     }
 
     private enum Category {
