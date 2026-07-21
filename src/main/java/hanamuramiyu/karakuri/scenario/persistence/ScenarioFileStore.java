@@ -1,7 +1,7 @@
 package hanamuramiyu.karakuri.scenario.persistence;
 
+import hanamuramiyu.karakuri.scenario.model.Scenario;
 import hanamuramiyu.karakuri.Karakuri;
-import hanamuramiyu.karakuri.scenario.Scenario;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.IOException;

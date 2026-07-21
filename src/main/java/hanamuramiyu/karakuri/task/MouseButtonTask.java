@@ -1,18 +1,20 @@
 package hanamuramiyu.karakuri.task;
 
-import hanamuramiyu.karakuri.scenario.Scenario;
+import hanamuramiyu.karakuri.scenario.model.MouseInputMode;
+import hanamuramiyu.karakuri.scenario.model.MouseStep;
+import hanamuramiyu.karakuri.scenario.model.MouseStopMode;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 
 public final class MouseButtonTask implements ClientTask {
-    private final Scenario.MouseStep step;
+    private final MouseStep step;
 
     private int elapsedTicks;
     private int completedClicks;
     private boolean pressed;
     private boolean finished;
 
-    public MouseButtonTask(Scenario.MouseStep step) {
+    public MouseButtonTask(MouseStep step) {
         if (step == null) {
             throw new IllegalArgumentException(
                 "Mouse step must not be null"
@@ -26,7 +28,7 @@ public final class MouseButtonTask implements ClientTask {
     public void start(Minecraft client) {
         if (
             step.inputMode()
-                == Scenario.MouseInputMode.HOLD
+                == MouseInputMode.HOLD
         ) {
             setPressed(client, true);
             return;
@@ -45,7 +47,7 @@ public final class MouseButtonTask implements ClientTask {
 
         if (
             step.inputMode()
-                == Scenario.MouseInputMode.HOLD
+                == MouseInputMode.HOLD
         ) {
             tickHold(client);
             return;
@@ -64,7 +66,7 @@ public final class MouseButtonTask implements ClientTask {
         if (
             !finished
                 && step.inputMode()
-                    == Scenario.MouseInputMode.HOLD
+                    == MouseInputMode.HOLD
         ) {
             setPressed(client, true);
         }
@@ -84,7 +86,7 @@ public final class MouseButtonTask implements ClientTask {
     private void tickHold(Minecraft client) {
         if (
             step.stopMode()
-                == Scenario.MouseStopMode.MANUAL
+                == MouseStopMode.MANUAL
         ) {
             setPressed(client, true);
             return;

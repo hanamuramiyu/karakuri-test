@@ -1,5 +1,7 @@
 package hanamuramiyu.karakuri.scenario.persistence;
 
+import hanamuramiyu.karakuri.scenario.model.Scenario;
+import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -7,7 +9,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
-import hanamuramiyu.karakuri.scenario.Scenario;
 
 import java.io.Reader;
 import java.io.Writer;
@@ -165,7 +166,7 @@ final class ScenarioJsonCodec {
         JsonArray stepArray =
             values.requiredArray("steps");
 
-        List<Scenario.Step> steps =
+        List<ScenarioStep> steps =
             new ArrayList<>();
 
         for (
@@ -202,7 +203,7 @@ final class ScenarioJsonCodec {
             new JsonArray();
 
         for (
-            Scenario.Step step :
+            ScenarioStep step :
             scenario.steps()
         ) {
             stepArray.add(

@@ -1,6 +1,7 @@
 package hanamuramiyu.karakuri.task;
 
-import hanamuramiyu.karakuri.scenario.Scenario;
+import hanamuramiyu.karakuri.scenario.model.JumpStep;
+import hanamuramiyu.karakuri.scenario.model.JumpStopMode;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 
@@ -9,7 +10,7 @@ public final class JumpTask implements ClientTask {
     private static final int REPEAT_PRESS_TICKS = 1;
     private static final int FAILED_PRESS_RETRY_TICKS = 4;
 
-    private final Scenario.JumpStep step;
+    private final JumpStep step;
 
     private int elapsedTicks;
     private int completedJumps;
@@ -23,7 +24,7 @@ public final class JumpTask implements ClientTask {
     private boolean waitingForLanding;
 
     public JumpTask(
-        Scenario.JumpStep step
+        JumpStep step
     ) {
         if (step == null) {
             throw new IllegalArgumentException(
@@ -205,7 +206,7 @@ public final class JumpTask implements ClientTask {
 
         if (
             step.stopMode()
-                == Scenario.JumpStopMode.DURATION
+                == JumpStopMode.DURATION
                 && elapsedTicks
                     >= step.durationTicks()
         ) {
@@ -221,7 +222,7 @@ public final class JumpTask implements ClientTask {
 
         if (
             step.stopMode()
-                == Scenario.JumpStopMode.DURATION
+                == JumpStopMode.DURATION
                 && elapsedTicks
                     >= step.durationTicks()
         ) {
@@ -314,7 +315,7 @@ public final class JumpTask implements ClientTask {
 
     private boolean hasReachedJumpCount() {
         return step.stopMode()
-            == Scenario.JumpStopMode.JUMP_COUNT
+            == JumpStopMode.JUMP_COUNT
             && completedJumps >= step.jumpCount();
     }
 

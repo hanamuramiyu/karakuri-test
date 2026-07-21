@@ -1,16 +1,16 @@
 package hanamuramiyu.karakuri.task;
 
-import hanamuramiyu.karakuri.scenario.Scenario;
+import hanamuramiyu.karakuri.scenario.model.HotbarStep;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 
 public final class HotbarTask implements ClientTask {
-    private final Scenario.HotbarStep step;
+    private final HotbarStep step;
 
     private boolean finished;
 
     public HotbarTask(
-        Scenario.HotbarStep step
+        HotbarStep step
     ) {
         if (step == null) {
             throw new IllegalArgumentException(

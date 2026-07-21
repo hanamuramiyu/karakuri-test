@@ -1,6 +1,7 @@
 package hanamuramiyu.karakuri.ui;
 
-import hanamuramiyu.karakuri.scenario.Scenario;
+import hanamuramiyu.karakuri.scenario.model.Scenario;
+import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.scenario.ScenarioLibrary;
 import hanamuramiyu.karakuri.scenario.ScenarioTaskFactory;
 import hanamuramiyu.karakuri.task.RepeatTask;
@@ -608,7 +609,7 @@ public final class KarakuriScreen extends Screen {
             index < visibleStepCount;
             index++
         ) {
-            Scenario.Step step =
+            ScenarioStep step =
                 scenario.steps().get(index);
 
             graphics.drawString(

@@ -1,6 +1,7 @@
 package hanamuramiyu.karakuri.task;
 
-import hanamuramiyu.karakuri.scenario.Scenario;
+import hanamuramiyu.karakuri.scenario.model.CameraMotion;
+import hanamuramiyu.karakuri.scenario.model.CameraStep;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 
@@ -8,7 +9,7 @@ public final class CameraTask implements ClientTask {
     private static final float MIN_PITCH = -90.0f;
     private static final float MAX_PITCH = 90.0f;
 
-    private final Scenario.CameraStep step;
+    private final CameraStep step;
 
     private float startYaw;
     private float startPitch;
@@ -34,7 +35,7 @@ public final class CameraTask implements ClientTask {
     private boolean renderOverrideActive;
 
     public CameraTask(
-        Scenario.CameraStep step
+        CameraStep step
     ) {
         if (step == null) {
             throw new IllegalArgumentException(
@@ -96,7 +97,7 @@ public final class CameraTask implements ClientTask {
 
         if (
             step.motion()
-                == Scenario.CameraMotion.INSTANT
+                == CameraMotion.INSTANT
         ) {
             applyInstantRotation(
                 player,
@@ -116,7 +117,7 @@ public final class CameraTask implements ClientTask {
             !started
                 || finished
                 || step.motion()
-                    == Scenario.CameraMotion.INSTANT
+                    == CameraMotion.INSTANT
         ) {
             return;
         }
@@ -251,7 +252,7 @@ public final class CameraTask implements ClientTask {
                 || finished
                 || renderOverrideActive
                 || step.motion()
-                    != Scenario.CameraMotion.SMOOTH
+                    != CameraMotion.SMOOTH
         ) {
             return;
         }

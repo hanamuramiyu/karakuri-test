@@ -1,6 +1,6 @@
 package hanamuramiyu.karakuri.ui;
 
-import hanamuramiyu.karakuri.scenario.Scenario;
+import hanamuramiyu.karakuri.scenario.model.Scenario;
 import hanamuramiyu.karakuri.scenario.ScenarioLibrary;
 import hanamuramiyu.karakuri.ui.widget.KarakuriButton;
 import net.minecraft.client.gui.GuiGraphics;

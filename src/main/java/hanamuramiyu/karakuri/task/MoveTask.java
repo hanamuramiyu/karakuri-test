@@ -1,17 +1,18 @@
 package hanamuramiyu.karakuri.task;
 
-import hanamuramiyu.karakuri.scenario.Scenario;
+import hanamuramiyu.karakuri.scenario.model.MoveMode;
+import hanamuramiyu.karakuri.scenario.model.MoveStep;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 
 public final class MoveTask implements ClientTask {
-    private final Scenario.MoveStep step;
+    private final MoveStep step;
 
     private int remainingTicks;
     private boolean finished;
 
     public MoveTask(
-        Scenario.MoveStep step
+        MoveStep step
     ) {
         if (step == null) {
             throw new IllegalArgumentException(
@@ -92,7 +93,7 @@ public final class MoveTask implements ClientTask {
 
         if (
             step.mode()
-                == Scenario.MoveMode.SPRINT
+                == MoveMode.SPRINT
         ) {
             client.options
                 .keySprint
@@ -101,7 +102,7 @@ public final class MoveTask implements ClientTask {
 
         if (
             step.mode()
-                == Scenario.MoveMode.SNEAK
+                == MoveMode.SNEAK
         ) {
             client.options
                 .keyShift

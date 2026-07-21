@@ -1,6 +1,8 @@
 package hanamuramiyu.karakuri.ui;
 
-import hanamuramiyu.karakuri.scenario.Scenario;
+import hanamuramiyu.karakuri.scenario.model.CameraDirection;
+import hanamuramiyu.karakuri.scenario.model.MouseAction;
+import hanamuramiyu.karakuri.scenario.model.MoveDirection;
 import hanamuramiyu.karakuri.ui.widget.KarakuriButton;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -60,11 +62,11 @@ public final class ScenarioActionLibrary {
         int width,
         int height,
         Layout layout,
-        Consumer<Scenario.MoveDirection> moveAction,
+        Consumer<MoveDirection> moveAction,
         Runnable jumpAction,
         Runnable waitAction,
-        Consumer<Scenario.MouseAction> mouseAction,
-        Consumer<Scenario.CameraDirection> cameraAction,
+        Consumer<MouseAction> mouseAction,
+        Consumer<CameraDirection> cameraAction,
         Runnable hotbarAction
     ) {
         this.font = font;
@@ -182,7 +184,7 @@ public final class ScenarioActionLibrary {
                 thirdWidth,
                 Component.literal("Forward"),
                 () -> moveAction.accept(
-                    Scenario.MoveDirection.FORWARD
+                    MoveDirection.FORWARD
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -196,7 +198,7 @@ public final class ScenarioActionLibrary {
                 thirdWidth,
                 Component.literal("Back"),
                 () -> moveAction.accept(
-                    Scenario.MoveDirection.BACKWARD
+                    MoveDirection.BACKWARD
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -222,7 +224,7 @@ public final class ScenarioActionLibrary {
                 halfWidth,
                 Component.literal("Left"),
                 () -> moveAction.accept(
-                    Scenario.MoveDirection.LEFT
+                    MoveDirection.LEFT
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -236,7 +238,7 @@ public final class ScenarioActionLibrary {
                 halfWidth,
                 Component.literal("Right"),
                 () -> moveAction.accept(
-                    Scenario.MoveDirection.RIGHT
+                    MoveDirection.RIGHT
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -258,7 +260,7 @@ public final class ScenarioActionLibrary {
                 halfWidth,
                 Component.literal("Left Click"),
                 () -> mouseAction.accept(
-                    Scenario.MouseAction.LEFT_CLICK
+                    MouseAction.LEFT_CLICK
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -272,7 +274,7 @@ public final class ScenarioActionLibrary {
                 halfWidth,
                 Component.literal("Right Click"),
                 () -> mouseAction.accept(
-                    Scenario.MouseAction.RIGHT_CLICK
+                    MouseAction.RIGHT_CLICK
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -284,7 +286,7 @@ public final class ScenarioActionLibrary {
                 halfWidth,
                 Component.literal("Turn Left"),
                 () -> cameraAction.accept(
-                    Scenario.CameraDirection.LEFT
+                    CameraDirection.LEFT
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -298,7 +300,7 @@ public final class ScenarioActionLibrary {
                 halfWidth,
                 Component.literal("Turn Right"),
                 () -> cameraAction.accept(
-                    Scenario.CameraDirection.RIGHT
+                    CameraDirection.RIGHT
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -310,7 +312,7 @@ public final class ScenarioActionLibrary {
                 halfWidth,
                 Component.literal("Look Up"),
                 () -> cameraAction.accept(
-                    Scenario.CameraDirection.UP
+                    CameraDirection.UP
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -324,7 +326,7 @@ public final class ScenarioActionLibrary {
                 halfWidth,
                 Component.literal("Look Down"),
                 () -> cameraAction.accept(
-                    Scenario.CameraDirection.DOWN
+                    CameraDirection.DOWN
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -459,7 +461,7 @@ public final class ScenarioActionLibrary {
                 movementWidth,
                 Component.literal("Forward"),
                 () -> moveAction.accept(
-                    Scenario.MoveDirection.FORWARD
+                    MoveDirection.FORWARD
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -473,7 +475,7 @@ public final class ScenarioActionLibrary {
                 movementWidth,
                 Component.literal("Back"),
                 () -> moveAction.accept(
-                    Scenario.MoveDirection.BACKWARD
+                    MoveDirection.BACKWARD
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -489,7 +491,7 @@ public final class ScenarioActionLibrary {
                 movementWidth,
                 Component.literal("Left"),
                 () -> moveAction.accept(
-                    Scenario.MoveDirection.LEFT
+                    MoveDirection.LEFT
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -505,7 +507,7 @@ public final class ScenarioActionLibrary {
                 movementWidth,
                 Component.literal("Right"),
                 () -> moveAction.accept(
-                    Scenario.MoveDirection.RIGHT
+                    MoveDirection.RIGHT
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -547,7 +549,7 @@ public final class ScenarioActionLibrary {
                 halfWidth,
                 Component.literal("Left Click"),
                 () -> mouseAction.accept(
-                    Scenario.MouseAction.LEFT_CLICK
+                    MouseAction.LEFT_CLICK
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -561,7 +563,7 @@ public final class ScenarioActionLibrary {
                 halfWidth,
                 Component.literal("Right Click"),
                 () -> mouseAction.accept(
-                    Scenario.MouseAction.RIGHT_CLICK
+                    MouseAction.RIGHT_CLICK
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -579,7 +581,7 @@ public final class ScenarioActionLibrary {
                 actionWidth,
                 Component.literal("Left"),
                 () -> cameraAction.accept(
-                    Scenario.CameraDirection.LEFT
+                    CameraDirection.LEFT
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -593,7 +595,7 @@ public final class ScenarioActionLibrary {
                 actionWidth,
                 Component.literal("Right"),
                 () -> cameraAction.accept(
-                    Scenario.CameraDirection.RIGHT
+                    CameraDirection.RIGHT
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -609,7 +611,7 @@ public final class ScenarioActionLibrary {
                 actionWidth,
                 Component.literal("Up"),
                 () -> cameraAction.accept(
-                    Scenario.CameraDirection.UP
+                    CameraDirection.UP
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER
@@ -625,7 +627,7 @@ public final class ScenarioActionLibrary {
                 actionWidth,
                 Component.literal("Down"),
                 () -> cameraAction.accept(
-                    Scenario.CameraDirection.DOWN
+                    CameraDirection.DOWN
                 ),
                 KarakuriButton
                     .TextAlignment.CENTER

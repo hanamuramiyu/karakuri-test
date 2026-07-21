@@ -1,5 +1,6 @@
 package hanamuramiyu.karakuri.scenario;
 
+import hanamuramiyu.karakuri.scenario.model.Scenario;
 import hanamuramiyu.karakuri.scenario.persistence.ScenarioFileStore;
 
 import java.util.List;

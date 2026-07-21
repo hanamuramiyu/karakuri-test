@@ -1,5 +1,13 @@
 package hanamuramiyu.karakuri.scenario;
 
+import hanamuramiyu.karakuri.scenario.model.CameraStep;
+import hanamuramiyu.karakuri.scenario.model.HotbarStep;
+import hanamuramiyu.karakuri.scenario.model.JumpStep;
+import hanamuramiyu.karakuri.scenario.model.MouseStep;
+import hanamuramiyu.karakuri.scenario.model.MoveStep;
+import hanamuramiyu.karakuri.scenario.model.Scenario;
+import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
+import hanamuramiyu.karakuri.scenario.model.WaitStep;
 import hanamuramiyu.karakuri.task.CameraTask;
 import hanamuramiyu.karakuri.task.ClientTask;
 import hanamuramiyu.karakuri.task.HotbarTask;
@@ -30,25 +38,25 @@ public final class ScenarioTaskFactory {
     }
 
     public static ClientTask createStep(
-        Scenario.Step step
+        ScenarioStep step
     ) {
         return switch (step) {
-            case Scenario.CameraStep cameraStep ->
+            case CameraStep cameraStep ->
                 new CameraTask(cameraStep);
 
-            case Scenario.HotbarStep hotbarStep ->
+            case HotbarStep hotbarStep ->
                 new HotbarTask(hotbarStep);
 
-            case Scenario.JumpStep jumpStep ->
+            case JumpStep jumpStep ->
                 new JumpTask(jumpStep);
 
-            case Scenario.MoveStep moveStep ->
+            case MoveStep moveStep ->
                 new MoveTask(moveStep);
 
-            case Scenario.MouseStep mouseStep ->
+            case MouseStep mouseStep ->
                 new MouseButtonTask(mouseStep);
 
-            case Scenario.WaitStep waitStep ->
+            case WaitStep waitStep ->
                 new WaitTask(
                     waitStep.durationTicks()
                 );

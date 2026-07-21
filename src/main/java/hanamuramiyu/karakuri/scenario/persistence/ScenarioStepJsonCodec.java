@@ -1,12 +1,27 @@
 package hanamuramiyu.karakuri.scenario.persistence;
 
+import hanamuramiyu.karakuri.scenario.model.CameraDirection;
+import hanamuramiyu.karakuri.scenario.model.CameraMotion;
+import hanamuramiyu.karakuri.scenario.model.CameraStep;
+import hanamuramiyu.karakuri.scenario.model.HotbarStep;
+import hanamuramiyu.karakuri.scenario.model.JumpMode;
+import hanamuramiyu.karakuri.scenario.model.JumpStep;
+import hanamuramiyu.karakuri.scenario.model.JumpStopMode;
+import hanamuramiyu.karakuri.scenario.model.MouseAction;
+import hanamuramiyu.karakuri.scenario.model.MouseInputMode;
+import hanamuramiyu.karakuri.scenario.model.MouseStep;
+import hanamuramiyu.karakuri.scenario.model.MouseStopMode;
+import hanamuramiyu.karakuri.scenario.model.MoveDirection;
+import hanamuramiyu.karakuri.scenario.model.MoveMode;
+import hanamuramiyu.karakuri.scenario.model.MoveStep;
+import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
+import hanamuramiyu.karakuri.scenario.model.WaitStep;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import hanamuramiyu.karakuri.scenario.Scenario;
 
 final class ScenarioStepJsonCodec {
-    Scenario.Step read(
+    ScenarioStep read(
         JsonElement element
     ) {
         JsonObjectReader values =
@@ -52,13 +67,13 @@ final class ScenarioStepJsonCodec {
                 );
 
             case "walk_forward" ->
-                new Scenario.MoveStep(
-                    Scenario.MoveDirection.FORWARD,
+                new MoveStep(
+                    MoveDirection.FORWARD,
                     durationTicks
                 );
 
             case "wait" ->
-                new Scenario.WaitStep(
+                new WaitStep(
                     durationTicks
                 );
 
@@ -71,7 +86,7 @@ final class ScenarioStepJsonCodec {
     }
 
     JsonObject write(
-        Scenario.Step step
+        ScenarioStep step
     ) {
         if (step == null) {
             throw new IllegalArgumentException(
@@ -80,37 +95,37 @@ final class ScenarioStepJsonCodec {
         }
 
         return switch (step) {
-            case Scenario.CameraStep cameraStep ->
+            case CameraStep cameraStep ->
                 writeCameraStep(cameraStep);
 
-            case Scenario.HotbarStep hotbarStep ->
+            case HotbarStep hotbarStep ->
                 writeHotbarStep(hotbarStep);
 
-            case Scenario.JumpStep jumpStep ->
+            case JumpStep jumpStep ->
                 writeJumpStep(jumpStep);
 
-            case Scenario.MoveStep moveStep ->
+            case MoveStep moveStep ->
                 writeMoveStep(moveStep);
 
-            case Scenario.MouseStep mouseStep ->
+            case MouseStep mouseStep ->
                 writeMouseStep(mouseStep);
 
-            case Scenario.WaitStep waitStep ->
+            case WaitStep waitStep ->
                 writeWaitStep(waitStep);
         };
     }
 
-    private Scenario.CameraStep readCameraStep(
+    private CameraStep readCameraStep(
         JsonObjectReader values,
         int durationTicks
     ) {
-        return new Scenario.CameraStep(
-            Scenario.CameraDirection.fromId(
+        return new CameraStep(
+            CameraDirection.fromId(
                 values.requiredString(
                     "direction"
                 )
             ),
-            Scenario.CameraMotion.fromId(
+            CameraMotion.fromId(
                 values.optionalString(
                     "motion",
                     "smooth"
@@ -118,36 +133,36 @@ final class ScenarioStepJsonCodec {
             ),
             values.optionalInt(
                 "angleDegrees",
-                Scenario.CameraStep
+                CameraStep
                     .DEFAULT_ANGLE_DEGREES
             ),
             durationTicks
         );
     }
 
-    private Scenario.HotbarStep readHotbarStep(
+    private HotbarStep readHotbarStep(
         JsonObjectReader values
     ) {
-        return new Scenario.HotbarStep(
+        return new HotbarStep(
             values.optionalInt(
                 "slot",
-                Scenario.HotbarStep.DEFAULT_SLOT
+                HotbarStep.DEFAULT_SLOT
             )
         );
     }
 
-    private Scenario.JumpStep readJumpStep(
+    private JumpStep readJumpStep(
         JsonObjectReader values,
         int durationTicks
     ) {
-        return new Scenario.JumpStep(
-            Scenario.JumpMode.fromId(
+        return new JumpStep(
+            JumpMode.fromId(
                 values.optionalString(
                     "mode",
                     "single"
                 )
             ),
-            Scenario.JumpStopMode.fromId(
+            JumpStopMode.fromId(
                 values.optionalString(
                     "stopMode",
                     "duration"
@@ -156,23 +171,23 @@ final class ScenarioStepJsonCodec {
             durationTicks,
             values.optionalInt(
                 "jumpCount",
-                Scenario.JumpStep
+                JumpStep
                     .DEFAULT_JUMP_COUNT
             )
         );
     }
 
-    private Scenario.MoveStep readMoveStep(
+    private MoveStep readMoveStep(
         JsonObjectReader values,
         int durationTicks
     ) {
-        return new Scenario.MoveStep(
-            Scenario.MoveDirection.fromId(
+        return new MoveStep(
+            MoveDirection.fromId(
                 values.requiredString(
                     "direction"
                 )
             ),
-            Scenario.MoveMode.fromId(
+            MoveMode.fromId(
                 values.optionalString(
                     "mode",
                     "walk"
@@ -186,23 +201,23 @@ final class ScenarioStepJsonCodec {
         );
     }
 
-    private Scenario.MouseStep readMouseStep(
+    private MouseStep readMouseStep(
         JsonObjectReader values,
         int durationTicks
     ) {
-        return new Scenario.MouseStep(
-            Scenario.MouseAction.fromId(
+        return new MouseStep(
+            MouseAction.fromId(
                 values.requiredString(
                     "action"
                 )
             ),
-            Scenario.MouseInputMode.fromId(
+            MouseInputMode.fromId(
                 values.optionalString(
                     "inputMode",
                     "hold"
                 )
             ),
-            Scenario.MouseStopMode.fromId(
+            MouseStopMode.fromId(
                 values.optionalString(
                     "stopMode",
                     "duration"
@@ -211,19 +226,19 @@ final class ScenarioStepJsonCodec {
             durationTicks,
             values.optionalInt(
                 "clicksPerSecondHalfSteps",
-                Scenario.MouseStep
+                MouseStep
                     .DEFAULT_CPS_HALF_STEPS
             ),
             values.optionalInt(
                 "clickCount",
-                Scenario.MouseStep
+                MouseStep
                     .DEFAULT_CLICK_COUNT
             )
         );
     }
 
     private JsonObject writeCameraStep(
-        Scenario.CameraStep step
+        CameraStep step
     ) {
         JsonObject object =
             createStepObject(
@@ -250,7 +265,7 @@ final class ScenarioStepJsonCodec {
     }
 
     private JsonObject writeHotbarStep(
-        Scenario.HotbarStep step
+        HotbarStep step
     ) {
         JsonObject object =
             createStepObject(
@@ -267,7 +282,7 @@ final class ScenarioStepJsonCodec {
     }
 
     private JsonObject writeJumpStep(
-        Scenario.JumpStep step
+        JumpStep step
     ) {
         JsonObject object =
             createStepObject(
@@ -294,7 +309,7 @@ final class ScenarioStepJsonCodec {
     }
 
     private JsonObject writeMoveStep(
-        Scenario.MoveStep step
+        MoveStep step
     ) {
         JsonObject object =
             createStepObject(
@@ -321,7 +336,7 @@ final class ScenarioStepJsonCodec {
     }
 
     private JsonObject writeMouseStep(
-        Scenario.MouseStep step
+        MouseStep step
     ) {
         JsonObject object =
             createStepObject(
@@ -358,7 +373,7 @@ final class ScenarioStepJsonCodec {
     }
 
     private JsonObject writeWaitStep(
-        Scenario.WaitStep step
+        WaitStep step
     ) {
         return createStepObject(
             "wait",

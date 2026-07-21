@@ -1,5 +1,6 @@
 package hanamuramiyu.karakuri.scenario;
 
+import hanamuramiyu.karakuri.scenario.model.Scenario;
 import java.util.ArrayList;
 import java.util.List;
 
