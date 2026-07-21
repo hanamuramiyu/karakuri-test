@@ -31,8 +31,10 @@ public final class ScenarioEditorScreen extends Screen {
     private static final int DURATION_STEP_TICKS = 10;
     private static final int MIN_DURATION_TICKS = 1;
     private static final int MAX_DURATION_TICKS = 72000;
+
     private static final int DEFAULT_MOVE_DURATION_TICKS = 40;
     private static final int DEFAULT_WAIT_DURATION_TICKS = 20;
+    private static final int DEFAULT_MOUSE_DURATION_TICKS = 20;
 
     private final KarakuriScreen parent;
     private final int scenarioIndex;
@@ -85,6 +87,9 @@ public final class ScenarioEditorScreen extends Screen {
     private KarakuriButton backwardDirectionButton;
     private KarakuriButton leftDirectionButton;
     private KarakuriButton rightDirectionButton;
+
+    private KarakuriButton leftMouseButton;
+    private KarakuriButton rightMouseButton;
 
     private KarakuriButton durationDecreaseButton;
     private KarakuriButton durationIncreaseButton;
@@ -156,10 +161,14 @@ public final class ScenarioEditorScreen extends Screen {
                 ? ScenarioActionLibrary.Layout.SIDEBAR
                 : ScenarioActionLibrary.Layout.HORIZONTAL,
             this::insertMoveStep,
-            this::insertWaitStep
+            this::insertWaitStep,
+            this::insertMouseStep
         );
 
-        for (KarakuriButton widget : actionLibrary.widgets()) {
+        for (
+            KarakuriButton widget :
+            actionLibrary.widgets()
+        ) {
             addRenderableWidget(widget);
         }
 
@@ -167,7 +176,8 @@ public final class ScenarioEditorScreen extends Screen {
         int canvasWidth;
 
         if (layoutMode == LayoutMode.WIDE) {
-            int libraryWidth = getWideLibraryWidth();
+            int libraryWidth =
+                getWideLibraryWidth();
 
             canvasX = bodyX
                 + libraryWidth
@@ -182,12 +192,13 @@ public final class ScenarioEditorScreen extends Screen {
             canvasWidth = bodyWidth;
         }
 
-        workflowCanvas = new ScenarioWorkflowCanvas(
-            font,
-            steps,
-            this::onCanvasSelectionChanged,
-            this::onCanvasContentChanged
-        );
+        workflowCanvas =
+            new ScenarioWorkflowCanvas(
+                font,
+                steps,
+                this::onCanvasSelectionChanged,
+                this::onCanvasContentChanged
+            );
 
         workflowCanvas.setBounds(
             canvasX,
@@ -256,7 +267,6 @@ public final class ScenarioEditorScreen extends Screen {
         );
 
         renderHeader(graphics);
-
         actionLibrary.render(graphics);
 
         if (isWorkflowVisible()) {
@@ -285,6 +295,8 @@ public final class ScenarioEditorScreen extends Screen {
             mouseY,
             delta
         );
+
+        renderCenteredDurationValue(graphics);
     }
 
     @Override
@@ -377,11 +389,11 @@ public final class ScenarioEditorScreen extends Screen {
         bodyY = panelY + headerHeight;
         bodyWidth = panelWidth - CONTENT_MARGIN * 2;
 
-        footerY = panelY + panelHeight - footerHeight;
+        footerY =
+            panelY + panelHeight - footerHeight;
 
-        bodyHeight = footerY
-            - bodyY
-            - PANEL_GAP;
+        bodyHeight =
+            footerY - bodyY - PANEL_GAP;
 
         inspectorWidth = Math.clamp(
             bodyWidth * 24 / 100,
@@ -389,9 +401,8 @@ public final class ScenarioEditorScreen extends Screen {
             270
         );
 
-        inspectorX = bodyX
-            + bodyWidth
-            - inspectorWidth;
+        inspectorX =
+            bodyX + bodyWidth - inspectorWidth;
 
         inspectorY = bodyY;
         inspectorHeight = bodyHeight;
@@ -411,13 +422,11 @@ public final class ScenarioEditorScreen extends Screen {
         bodyY = tabY + tabHeight + 4;
         bodyWidth = panelWidth - 12;
 
-        footerY = panelY
-            + panelHeight
-            - footerHeight;
+        footerY =
+            panelY + panelHeight - footerHeight;
 
-        bodyHeight = footerY
-            - bodyY
-            - 4;
+        bodyHeight =
+            footerY - bodyY - 4;
 
         inspectorX = bodyX;
         inspectorY = bodyY;
@@ -426,24 +435,28 @@ public final class ScenarioEditorScreen extends Screen {
     }
 
     private void createNameField() {
-        int titleWidth = layoutMode == LayoutMode.WIDE
-            ? 132
-            : 104;
+        int titleWidth =
+            layoutMode == LayoutMode.WIDE
+                ? 132
+                : 104;
 
         nameFrameX = panelX + titleWidth;
-        nameFrameY = panelY + (
-            layoutMode == LayoutMode.WIDE
-                ? 13
-                : 8
-        );
+
+        nameFrameY = panelY
+            + (
+                layoutMode == LayoutMode.WIDE
+                    ? 13
+                    : 8
+            );
 
         nameFrameWidth = panelWidth
             - titleWidth
             - CONTENT_MARGIN;
 
-        nameFrameHeight = layoutMode == LayoutMode.WIDE
-            ? 24
-            : 22;
+        nameFrameHeight =
+            layoutMode == LayoutMode.WIDE
+                ? 24
+                : 22;
 
         nameField = new EditBox(
             font,
@@ -459,10 +472,13 @@ public final class ScenarioEditorScreen extends Screen {
         nameField.setTextColorUneditable(0xFF81798E);
         nameField.setTextShadow(false);
         nameField.setMaxLength(64);
+
         nameField.setHint(
             Component.literal("Scenario name")
         );
+
         nameField.setValue(initialName);
+
         nameField.setResponder(
             value -> updateButtons()
         );
@@ -473,9 +489,13 @@ public final class ScenarioEditorScreen extends Screen {
     private void createCompactTabs() {
         int tabX = panelX + 6;
         int tabY = bodyY - 26;
-        int tabWidth = (
-            panelWidth - 12 - BUTTON_GAP * 2
-        ) / 3;
+
+        int tabWidth =
+            (
+                panelWidth
+                    - 12
+                    - BUTTON_GAP * 2
+            ) / 3;
 
         workflowTabButton = createButton(
             tabX,
@@ -527,6 +547,10 @@ public final class ScenarioEditorScreen extends Screen {
         addRenderableWidget(backwardDirectionButton);
         addRenderableWidget(leftDirectionButton);
         addRenderableWidget(rightDirectionButton);
+
+        addRenderableWidget(leftMouseButton);
+        addRenderableWidget(rightMouseButton);
+
         addRenderableWidget(durationDecreaseButton);
         addRenderableWidget(durationField);
         addRenderableWidget(durationIncreaseButton);
@@ -538,15 +562,14 @@ public final class ScenarioEditorScreen extends Screen {
         int contentX = inspectorX + 10;
         int contentWidth = inspectorWidth - 20;
 
-        int halfWidth = (
-            contentWidth - BUTTON_GAP
-        ) / 2;
+        int halfWidth =
+            (contentWidth - BUTTON_GAP) / 2;
 
-        int directionY = inspectorY + 72;
+        int selectorY = inspectorY + 72;
 
         forwardDirectionButton = createButton(
             contentX,
-            directionY,
+            selectorY,
             halfWidth,
             Component.literal("Forward"),
             () -> setDirection(
@@ -557,7 +580,7 @@ public final class ScenarioEditorScreen extends Screen {
 
         backwardDirectionButton = createButton(
             contentX + halfWidth + BUTTON_GAP,
-            directionY,
+            selectorY,
             halfWidth,
             Component.literal("Backward"),
             () -> setDirection(
@@ -568,7 +591,7 @@ public final class ScenarioEditorScreen extends Screen {
 
         leftDirectionButton = createButton(
             contentX,
-            directionY + 28,
+            selectorY + 28,
             halfWidth,
             Component.literal("Left"),
             () -> setDirection(
@@ -579,11 +602,33 @@ public final class ScenarioEditorScreen extends Screen {
 
         rightDirectionButton = createButton(
             contentX + halfWidth + BUTTON_GAP,
-            directionY + 28,
+            selectorY + 28,
             halfWidth,
             Component.literal("Right"),
             () -> setDirection(
                 Scenario.MoveDirection.RIGHT
+            ),
+            KarakuriButton.Style.GHOST
+        );
+
+        leftMouseButton = createButton(
+            contentX,
+            selectorY,
+            halfWidth,
+            Component.literal("Left Click"),
+            () -> setMouseAction(
+                Scenario.MouseAction.LEFT_CLICK
+            ),
+            KarakuriButton.Style.GHOST
+        );
+
+        rightMouseButton = createButton(
+            contentX + halfWidth + BUTTON_GAP,
+            selectorY,
+            halfWidth,
+            Component.literal("Right Click"),
+            () -> setMouseAction(
+                Scenario.MouseAction.RIGHT_CLICK
             ),
             KarakuriButton.Style.GHOST
         );
@@ -641,29 +686,27 @@ public final class ScenarioEditorScreen extends Screen {
         int padding = 8;
         int columnGap = 10;
 
-        int contentWidth = inspectorWidth
-            - padding * 2;
+        int contentWidth =
+            inspectorWidth - padding * 2;
 
-        int columnWidth = (
-            contentWidth - columnGap
-        ) / 2;
+        int columnWidth =
+            (contentWidth - columnGap) / 2;
 
         int leftX = inspectorX + padding;
-        int rightX = leftX
-            + columnWidth
-            + columnGap;
 
-        int directionButtonWidth = (
-            columnWidth - BUTTON_GAP
-        ) / 2;
+        int rightX =
+            leftX + columnWidth + columnGap;
 
-        int firstRowY = inspectorY + 42;
+        int selectorWidth =
+            (columnWidth - BUTTON_GAP) / 2;
+
+        int firstRowY = inspectorY + 58;
         int secondRowY = firstRowY + 26;
 
         forwardDirectionButton = createButton(
             leftX,
             firstRowY,
-            directionButtonWidth,
+            selectorWidth,
             Component.literal("Forward"),
             () -> setDirection(
                 Scenario.MoveDirection.FORWARD
@@ -672,11 +715,9 @@ public final class ScenarioEditorScreen extends Screen {
         );
 
         backwardDirectionButton = createButton(
-            leftX
-                + directionButtonWidth
-                + BUTTON_GAP,
+            leftX + selectorWidth + BUTTON_GAP,
             firstRowY,
-            directionButtonWidth,
+            selectorWidth,
             Component.literal("Backward"),
             () -> setDirection(
                 Scenario.MoveDirection.BACKWARD
@@ -687,7 +728,7 @@ public final class ScenarioEditorScreen extends Screen {
         leftDirectionButton = createButton(
             leftX,
             secondRowY,
-            directionButtonWidth,
+            selectorWidth,
             Component.literal("Left"),
             () -> setDirection(
                 Scenario.MoveDirection.LEFT
@@ -696,14 +737,34 @@ public final class ScenarioEditorScreen extends Screen {
         );
 
         rightDirectionButton = createButton(
-            leftX
-                + directionButtonWidth
-                + BUTTON_GAP,
+            leftX + selectorWidth + BUTTON_GAP,
             secondRowY,
-            directionButtonWidth,
+            selectorWidth,
             Component.literal("Right"),
             () -> setDirection(
                 Scenario.MoveDirection.RIGHT
+            ),
+            KarakuriButton.Style.GHOST
+        );
+
+        leftMouseButton = createButton(
+            leftX,
+            firstRowY,
+            selectorWidth,
+            Component.literal("Left Click"),
+            () -> setMouseAction(
+                Scenario.MouseAction.LEFT_CLICK
+            ),
+            KarakuriButton.Style.GHOST
+        );
+
+        rightMouseButton = createButton(
+            leftX + selectorWidth + BUTTON_GAP,
+            firstRowY,
+            selectorWidth,
+            Component.literal("Right Click"),
+            () -> setMouseAction(
+                Scenario.MouseAction.RIGHT_CLICK
             ),
             KarakuriButton.Style.GHOST
         );
@@ -736,9 +797,8 @@ public final class ScenarioEditorScreen extends Screen {
             KarakuriButton.Style.GHOST
         );
 
-        int actionButtonWidth = (
-            columnWidth - BUTTON_GAP
-        ) / 2;
+        int actionButtonWidth =
+            (columnWidth - BUTTON_GAP) / 2;
 
         duplicateButton = createButton(
             rightX,
@@ -775,11 +835,14 @@ public final class ScenarioEditorScreen extends Screen {
 
         durationField.setBordered(false);
         durationField.setTextColor(0xFFF4F0F7);
+
         durationField.setTextColorUneditable(
             0xFF81798E
         );
+
         durationField.setTextShadow(false);
         durationField.setMaxLength(7);
+
         durationField.setHint(
             Component.literal("Seconds")
         );
@@ -796,12 +859,17 @@ public final class ScenarioEditorScreen extends Screen {
     }
 
     private void createFooterWidgets() {
-        int buttonWidth = layoutMode == LayoutMode.WIDE
-            ? 126
-            : Math.min(
-                108,
-                (panelWidth - 24 - BUTTON_GAP) / 2
-            );
+        int buttonWidth =
+            layoutMode == LayoutMode.WIDE
+                ? 126
+                : Math.min(
+                    108,
+                    (
+                        panelWidth
+                            - 24
+                            - BUTTON_GAP
+                    ) / 2
+                );
 
         int buttonY = footerY + 4;
 
@@ -865,11 +933,12 @@ public final class ScenarioEditorScreen extends Screen {
             font,
             title,
             panelX + 12,
-            panelY + (
-                layoutMode == LayoutMode.WIDE
-                    ? 20
-                    : 13
-            ),
+            panelY
+                + (
+                    layoutMode == LayoutMode.WIDE
+                        ? 20
+                        : 13
+                ),
             0xFFF5F1F8,
             false
         );
@@ -994,29 +1063,29 @@ public final class ScenarioEditorScreen extends Screen {
         GuiGraphics graphics,
         Scenario.Step step
     ) {
-        if (step instanceof Scenario.MoveStep) {
-            graphics.drawString(
-                font,
-                Component.literal("Direction"),
-                inspectorX + 10,
-                inspectorY + 58,
-                0xFF918699,
-                false
-            );
-        } else {
-            graphics.drawString(
-                font,
-                Component.literal("Timing action"),
-                inspectorX + 10,
-                inspectorY + 58,
-                0xFF918699,
-                false
-            );
+        String selectorLabel = switch (step) {
+            case Scenario.MoveStep moveStep ->
+                "Direction";
+            case Scenario.MouseStep mouseStep ->
+                "Mouse button";
+            case Scenario.WaitStep waitStep ->
+                "Timing action";
+        };
 
+        graphics.drawString(
+            font,
+            Component.literal(selectorLabel),
+            inspectorX + 10,
+            inspectorY + 58,
+            0xFF918699,
+            false
+        );
+
+        if (step instanceof Scenario.WaitStep) {
             graphics.drawString(
                 font,
                 Component.literal(
-                    "No movement direction required"
+                    "No button or direction required"
                 ),
                 inspectorX + 10,
                 inspectorY + 84,
@@ -1075,27 +1144,31 @@ public final class ScenarioEditorScreen extends Screen {
         int padding = 8;
         int columnGap = 10;
 
-        int contentWidth = inspectorWidth
-            - padding * 2;
+        int contentWidth =
+            inspectorWidth - padding * 2;
 
-        int columnWidth = (
-            contentWidth - columnGap
-        ) / 2;
+        int columnWidth =
+            (contentWidth - columnGap) / 2;
 
         int leftX = inspectorX + padding;
-        int rightX = leftX
-            + columnWidth
-            + columnGap;
+
+        int rightX =
+            leftX + columnWidth + columnGap;
+
+        String selectorLabel = switch (step) {
+            case Scenario.MoveStep moveStep ->
+                "Direction";
+            case Scenario.MouseStep mouseStep ->
+                "Mouse button";
+            case Scenario.WaitStep waitStep ->
+                "Timing action";
+        };
 
         graphics.drawString(
             font,
-            Component.literal(
-                step instanceof Scenario.MoveStep
-                    ? "Direction"
-                    : "Timing action"
-            ),
+            Component.literal(selectorLabel),
             leftX,
-            inspectorY + 32,
+            inspectorY + 44,
             0xFF918699,
             false
         );
@@ -1104,26 +1177,80 @@ public final class ScenarioEditorScreen extends Screen {
             font,
             Component.literal("Duration"),
             rightX,
-            inspectorY + 32,
+            inspectorY + 44,
             0xFF918699,
             false
         );
 
         if (
             step instanceof Scenario.WaitStep
-                && inspectorHeight >= 96
+                && inspectorHeight >= 116
         ) {
             graphics.drawString(
                 font,
                 Component.literal(
-                    "Wait does not use a direction"
+                    "Wait does not use an input"
                 ),
                 leftX,
-                inspectorY + 50,
+                inspectorY + 64,
                 0xFF716A79,
                 false
             );
         }
+    }
+
+    private void renderCenteredDurationValue(
+        GuiGraphics graphics
+    ) {
+        if (
+            durationField == null
+                || !durationField.visible
+                || durationField.isFocused()
+        ) {
+            return;
+        }
+
+        graphics.fill(
+            durationFrameX + 1,
+            durationFrameY + 1,
+            durationFrameX + durationFrameWidth - 1,
+            durationFrameY + BUTTON_HEIGHT - 1,
+            0xFF100E16
+        );
+
+        String rawValue =
+            durationField.getValue().trim();
+
+        String visibleValue = rawValue.isBlank()
+            ? "—"
+            : rawValue + " s";
+
+        Component text =
+            Component.literal(visibleValue);
+
+        int textX = durationFrameX
+            + (
+                durationFrameWidth
+                    - font.width(text)
+            ) / 2;
+
+        int textY = durationFrameY
+            + (
+                BUTTON_HEIGHT
+                    - font.lineHeight
+            ) / 2
+            + 1;
+
+        graphics.drawString(
+            font,
+            text,
+            textX,
+            textY,
+            durationFieldValid
+                ? 0xFFF4F0F7
+                : 0xFFE66777,
+            false
+        );
     }
 
     private void renderFooter(
@@ -1190,7 +1317,8 @@ public final class ScenarioEditorScreen extends Screen {
     private void insertMoveStep(
         Scenario.MoveDirection direction
     ) {
-        int insertIndex = selectedStepIndex + 1;
+        int insertIndex =
+            selectedStepIndex + 1;
 
         steps.add(
             insertIndex,
@@ -1201,14 +1329,12 @@ public final class ScenarioEditorScreen extends Screen {
         );
 
         selectStep(insertIndex);
-
-        if (layoutMode == LayoutMode.COMPACT) {
-            setCompactTab(CompactTab.WORKFLOW);
-        }
+        returnToWorkflow();
     }
 
     private void insertWaitStep() {
-        int insertIndex = selectedStepIndex + 1;
+        int insertIndex =
+            selectedStepIndex + 1;
 
         steps.add(
             insertIndex,
@@ -1218,14 +1344,36 @@ public final class ScenarioEditorScreen extends Screen {
         );
 
         selectStep(insertIndex);
+        returnToWorkflow();
+    }
 
+    private void insertMouseStep(
+        Scenario.MouseAction action
+    ) {
+        int insertIndex =
+            selectedStepIndex + 1;
+
+        steps.add(
+            insertIndex,
+            new Scenario.MouseStep(
+                action,
+                DEFAULT_MOUSE_DURATION_TICKS
+            )
+        );
+
+        selectStep(insertIndex);
+        returnToWorkflow();
+    }
+
+    private void returnToWorkflow() {
         if (layoutMode == LayoutMode.COMPACT) {
             setCompactTab(CompactTab.WORKFLOW);
         }
     }
 
     private void duplicateSelectedStep() {
-        int insertIndex = selectedStepIndex + 1;
+        int insertIndex =
+            selectedStepIndex + 1;
 
         steps.add(
             insertIndex,
@@ -1287,6 +1435,28 @@ public final class ScenarioEditorScreen extends Screen {
         updateButtons();
     }
 
+    private void setMouseAction(
+        Scenario.MouseAction action
+    ) {
+        Scenario.Step step = getSelectedStep();
+
+        if (
+            !(step instanceof Scenario.MouseStep mouseStep)
+        ) {
+            return;
+        }
+
+        steps.set(
+            selectedStepIndex,
+            new Scenario.MouseStep(
+                action,
+                mouseStep.durationTicks()
+            )
+        );
+
+        updateButtons();
+    }
+
     private void changeDuration(
         int offsetTicks
     ) {
@@ -1311,16 +1481,20 @@ public final class ScenarioEditorScreen extends Screen {
         }
 
         try {
-            double seconds = Double.parseDouble(value);
+            double seconds =
+                Double.parseDouble(value);
 
-            int durationTicks = (int) Math.round(
-                seconds * 20.0
-            );
+            int durationTicks =
+                (int) Math.round(
+                    seconds * 20.0
+                );
 
             if (
                 !Double.isFinite(seconds)
-                    || durationTicks < MIN_DURATION_TICKS
-                    || durationTicks > MAX_DURATION_TICKS
+                    || durationTicks
+                        < MIN_DURATION_TICKS
+                    || durationTicks
+                        > MAX_DURATION_TICKS
             ) {
                 durationFieldValid = false;
                 updateButtons();
@@ -1347,6 +1521,11 @@ public final class ScenarioEditorScreen extends Screen {
                 case Scenario.MoveStep moveStep ->
                     new Scenario.MoveStep(
                         moveStep.direction(),
+                        durationTicks
+                    );
+                case Scenario.MouseStep mouseStep ->
+                    new Scenario.MouseStep(
+                        mouseStep.action(),
                         durationTicks
                     );
                 case Scenario.WaitStep waitStep ->
@@ -1403,6 +1582,8 @@ public final class ScenarioEditorScreen extends Screen {
                 || backwardDirectionButton == null
                 || leftDirectionButton == null
                 || rightDirectionButton == null
+                || leftMouseButton == null
+                || rightMouseButton == null
                 || durationDecreaseButton == null
                 || durationIncreaseButton == null
                 || duplicateButton == null
@@ -1426,6 +1607,9 @@ public final class ScenarioEditorScreen extends Screen {
         boolean movement =
             step instanceof Scenario.MoveStep;
 
+        boolean mouse =
+            step instanceof Scenario.MouseStep;
+
         forwardDirectionButton.visible =
             inspectorVisible && movement;
 
@@ -1437,6 +1621,12 @@ public final class ScenarioEditorScreen extends Screen {
 
         rightDirectionButton.visible =
             inspectorVisible && movement;
+
+        leftMouseButton.visible =
+            inspectorVisible && mouse;
+
+        rightMouseButton.visible =
+            inspectorVisible && mouse;
 
         durationDecreaseButton.visible =
             inspectorVisible;
@@ -1453,29 +1643,49 @@ public final class ScenarioEditorScreen extends Screen {
         deleteButton.visible =
             inspectorVisible;
 
-        if (step instanceof Scenario.MoveStep moveStep) {
-            updateDirectionButton(
+        if (
+            step instanceof
+                Scenario.MoveStep moveStep
+        ) {
+            updateSelectorButton(
                 forwardDirectionButton,
                 moveStep.direction()
                     == Scenario.MoveDirection.FORWARD
             );
 
-            updateDirectionButton(
+            updateSelectorButton(
                 backwardDirectionButton,
                 moveStep.direction()
                     == Scenario.MoveDirection.BACKWARD
             );
 
-            updateDirectionButton(
+            updateSelectorButton(
                 leftDirectionButton,
                 moveStep.direction()
                     == Scenario.MoveDirection.LEFT
             );
 
-            updateDirectionButton(
+            updateSelectorButton(
                 rightDirectionButton,
                 moveStep.direction()
                     == Scenario.MoveDirection.RIGHT
+            );
+        }
+
+        if (
+            step instanceof
+                Scenario.MouseStep mouseStep
+        ) {
+            updateSelectorButton(
+                leftMouseButton,
+                mouseStep.action()
+                    == Scenario.MouseAction.LEFT_CLICK
+            );
+
+            updateSelectorButton(
+                rightMouseButton,
+                mouseStep.action()
+                    == Scenario.MouseAction.RIGHT_CLICK
             );
         }
 
@@ -1514,7 +1724,7 @@ public final class ScenarioEditorScreen extends Screen {
         }
     }
 
-    private void updateDirectionButton(
+    private void updateSelectorButton(
         KarakuriButton button,
         boolean selected
     ) {
@@ -1549,7 +1759,9 @@ public final class ScenarioEditorScreen extends Screen {
         if (!isScenarioNameValid()) {
             String name = nameField == null
                 ? initialName
-                : nameField.getValue().trim();
+                : nameField
+                    .getValue()
+                    .trim();
 
             if (name.isBlank()) {
                 return "Scenario name is required";
@@ -1568,7 +1780,9 @@ public final class ScenarioEditorScreen extends Screen {
     private boolean isScenarioNameValid() {
         String name = nameField == null
             ? initialName
-            : nameField.getValue().trim();
+            : nameField
+                .getValue()
+                .trim();
 
         return !name.isBlank()
             && !ScenarioLibrary.containsName(
@@ -1593,6 +1807,8 @@ public final class ScenarioEditorScreen extends Screen {
         return switch (step) {
             case Scenario.MoveStep moveStep ->
                 "Move " + moveStep.direction().label();
+            case Scenario.MouseStep mouseStep ->
+                "Hold " + mouseStep.action().label();
             case Scenario.WaitStep waitStep ->
                 "Wait";
         };
@@ -1608,6 +1824,11 @@ public final class ScenarioEditorScreen extends Screen {
                     case BACKWARD -> 0xFFF0A765;
                     case LEFT -> 0xFF67B6E8;
                     case RIGHT -> 0xFFB38AE8;
+                };
+            case Scenario.MouseStep mouseStep ->
+                switch (mouseStep.action()) {
+                    case LEFT_CLICK -> 0xFFE66777;
+                    case RIGHT_CLICK -> 0xFF67C7E8;
                 };
             case Scenario.WaitStep waitStep ->
                 0xFFA49BAD;

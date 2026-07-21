@@ -1,6 +1,7 @@
 package hanamuramiyu.karakuri.scenario;
 
 import hanamuramiyu.karakuri.task.ClientTask;
+import hanamuramiyu.karakuri.task.MouseButtonTask;
 import hanamuramiyu.karakuri.task.MoveTask;
 import hanamuramiyu.karakuri.task.SequenceTask;
 import hanamuramiyu.karakuri.task.WaitTask;
@@ -20,12 +21,19 @@ public final class ScenarioTaskFactory {
         return new SequenceTask(tasks);
     }
 
-    private static ClientTask createStepTask(Scenario.Step step) {
+    private static ClientTask createStepTask(
+        Scenario.Step step
+    ) {
         return switch (step) {
             case Scenario.MoveStep moveStep ->
                 new MoveTask(
                     moveStep.direction(),
                     moveStep.durationTicks()
+                );
+            case Scenario.MouseStep mouseStep ->
+                new MouseButtonTask(
+                    mouseStep.action(),
+                    mouseStep.durationTicks()
                 );
             case Scenario.WaitStep waitStep ->
                 new WaitTask(waitStep.durationTicks());

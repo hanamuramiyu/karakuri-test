@@ -32,6 +32,8 @@ public final class ScenarioActionLibrary {
     private final KarakuriButton leftButton;
     private final KarakuriButton rightButton;
     private final KarakuriButton waitButton;
+    private final KarakuriButton leftClickButton;
+    private final KarakuriButton rightClickButton;
 
     private final List<KarakuriButton> widgets;
 
@@ -46,7 +48,8 @@ public final class ScenarioActionLibrary {
         int height,
         Layout layout,
         Consumer<Scenario.MoveDirection> moveAction,
-        Runnable waitAction
+        Runnable waitAction,
+        Consumer<Scenario.MouseAction> mouseAction
     ) {
         this.font = font;
         this.x = x;
@@ -82,9 +85,8 @@ public final class ScenarioActionLibrary {
                 categoryX,
                 categoryY + 52,
                 categoryWidth,
-                Component.literal("Mouse  ·  Soon"),
-                () -> {
-                },
+                Component.literal("Mouse"),
+                () -> selectCategory(Category.MOUSE),
                 KarakuriButton.TextAlignment.LEFT
             );
 
@@ -113,9 +115,8 @@ public final class ScenarioActionLibrary {
                 y + height - 74
             );
 
-            int actionWidth = (
-                categoryWidth - BUTTON_GAP
-            ) / 2;
+            int actionWidth =
+                (categoryWidth - BUTTON_GAP) / 2;
 
             forwardButton = createButton(
                 categoryX,
@@ -169,11 +170,33 @@ public final class ScenarioActionLibrary {
                 waitAction,
                 KarakuriButton.TextAlignment.CENTER
             );
+
+            leftClickButton = createButton(
+                categoryX,
+                actionY,
+                actionWidth,
+                Component.literal("Left Click"),
+                () -> mouseAction.accept(
+                    Scenario.MouseAction.LEFT_CLICK
+                ),
+                KarakuriButton.TextAlignment.CENTER
+            );
+
+            rightClickButton = createButton(
+                categoryX + actionWidth + BUTTON_GAP,
+                actionY,
+                actionWidth,
+                Component.literal("Right Click"),
+                () -> mouseAction.accept(
+                    Scenario.MouseAction.RIGHT_CLICK
+                ),
+                KarakuriButton.TextAlignment.CENTER
+            );
         } else {
             int availableWidth = width - PADDING * 2;
-            int categoryWidth = (
-                availableWidth - BUTTON_GAP * 4
-            ) / 5;
+
+            int categoryWidth =
+                (availableWidth - BUTTON_GAP * 4) / 5;
 
             int categoryX = x + PADDING;
             int categoryY = y + 28;
@@ -188,8 +211,7 @@ public final class ScenarioActionLibrary {
             );
 
             timingCategoryButton = createButton(
-                categoryX
-                    + (categoryWidth + BUTTON_GAP),
+                categoryX + categoryWidth + BUTTON_GAP,
                 categoryY,
                 categoryWidth,
                 Component.literal("Time"),
@@ -203,8 +225,7 @@ public final class ScenarioActionLibrary {
                 categoryY,
                 categoryWidth,
                 Component.literal("Mouse"),
-                () -> {
-                },
+                () -> selectCategory(Category.MOUSE),
                 KarakuriButton.TextAlignment.CENTER
             );
 
@@ -231,9 +252,9 @@ public final class ScenarioActionLibrary {
             );
 
             int actionY = y + 60;
-            int actionWidth = (
-                availableWidth - BUTTON_GAP * 3
-            ) / 4;
+
+            int actionWidth =
+                (availableWidth - BUTTON_GAP * 3) / 4;
 
             forwardButton = createButton(
                 categoryX,
@@ -247,8 +268,7 @@ public final class ScenarioActionLibrary {
             );
 
             backwardButton = createButton(
-                categoryX
-                    + (actionWidth + BUTTON_GAP),
+                categoryX + actionWidth + BUTTON_GAP,
                 actionY,
                 actionWidth,
                 Component.literal("Backward"),
@@ -290,9 +310,35 @@ public final class ScenarioActionLibrary {
                 waitAction,
                 KarakuriButton.TextAlignment.CENTER
             );
+
+            int mouseButtonWidth =
+                (availableWidth - BUTTON_GAP) / 2;
+
+            leftClickButton = createButton(
+                categoryX,
+                actionY,
+                mouseButtonWidth,
+                Component.literal("Left Click"),
+                () -> mouseAction.accept(
+                    Scenario.MouseAction.LEFT_CLICK
+                ),
+                KarakuriButton.TextAlignment.CENTER
+            );
+
+            rightClickButton = createButton(
+                categoryX
+                    + mouseButtonWidth
+                    + BUTTON_GAP,
+                actionY,
+                mouseButtonWidth,
+                Component.literal("Right Click"),
+                () -> mouseAction.accept(
+                    Scenario.MouseAction.RIGHT_CLICK
+                ),
+                KarakuriButton.TextAlignment.CENTER
+            );
         }
 
-        mouseCategoryButton.active = false;
         blocksCategoryButton.active = false;
         inventoryCategoryButton.active = false;
 
@@ -306,7 +352,9 @@ public final class ScenarioActionLibrary {
             backwardButton,
             leftButton,
             rightButton,
-            waitButton
+            waitButton,
+            leftClickButton,
+            rightClickButton
         );
 
         updateWidgets();
@@ -459,16 +507,30 @@ public final class ScenarioActionLibrary {
                 : KarakuriButton.Style.GHOST
         );
 
+        mouseCategoryButton.setStyle(
+            selectedCategory == Category.MOUSE
+                ? KarakuriButton.Style.PRIMARY
+                : KarakuriButton.Style.GHOST
+        );
+
         boolean movement =
             selectedCategory == Category.MOVEMENT;
+
+        boolean timing =
+            selectedCategory == Category.TIMING;
+
+        boolean mouse =
+            selectedCategory == Category.MOUSE;
 
         forwardButton.visible = movement;
         backwardButton.visible = movement;
         leftButton.visible = movement;
         rightButton.visible = movement;
 
-        waitButton.visible =
-            selectedCategory == Category.TIMING;
+        waitButton.visible = timing;
+
+        leftClickButton.visible = mouse;
+        rightClickButton.visible = mouse;
 
         forwardButton.setStyle(
             KarakuriButton.Style.SECONDARY
@@ -489,6 +551,14 @@ public final class ScenarioActionLibrary {
         waitButton.setStyle(
             KarakuriButton.Style.SECONDARY
         );
+
+        leftClickButton.setStyle(
+            KarakuriButton.Style.SECONDARY
+        );
+
+        rightClickButton.setStyle(
+            KarakuriButton.Style.SECONDARY
+        );
     }
 
     public enum Layout {
@@ -498,7 +568,8 @@ public final class ScenarioActionLibrary {
 
     private enum Category {
         MOVEMENT("Movement"),
-        TIMING("Timing");
+        TIMING("Timing"),
+        MOUSE("Mouse");
 
         private final String label;
 

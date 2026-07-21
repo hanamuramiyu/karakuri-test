@@ -49,16 +49,23 @@ public final class ScenarioWorkflowCanvas {
         this.contentListener = contentListener;
     }
 
-    public void setBounds(int x, int y, int width, int height) {
+    public void setBounds(
+        int x,
+        int y,
+        int width,
+        int height
+    ) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
+
         scrollOffset = Math.clamp(
             scrollOffset,
             0,
             getMaxScrollOffset()
         );
+
         ensureSelectedVisible();
     }
 
@@ -76,6 +83,7 @@ public final class ScenarioWorkflowCanvas {
             y + height,
             0xFF100F17
         );
+
         graphics.renderOutline(
             x,
             y,
@@ -83,6 +91,7 @@ public final class ScenarioWorkflowCanvas {
             height,
             0xFF393246
         );
+
         graphics.enableScissor(
             x,
             y,
@@ -94,6 +103,7 @@ public final class ScenarioWorkflowCanvas {
         renderCards(graphics, mouseX, mouseY);
 
         graphics.disableScissor();
+
         graphics.drawString(
             font,
             footer,
@@ -104,7 +114,9 @@ public final class ScenarioWorkflowCanvas {
         );
     }
 
-    public boolean mouseClicked(MouseButtonEvent event) {
+    public boolean mouseClicked(
+        MouseButtonEvent event
+    ) {
         if (
             event.button() != 0
                 || !contains(event.x(), event.y())
@@ -125,12 +137,16 @@ public final class ScenarioWorkflowCanvas {
         pressedIndex = index;
         dragStartX = event.x();
         dragMouseX = event.x();
-        dragOffsetX = event.x() - getCardX(index);
+        dragOffsetX =
+            event.x() - getCardX(index);
         dragging = false;
+
         return true;
     }
 
-    public boolean mouseDragged(MouseButtonEvent event) {
+    public boolean mouseDragged(
+        MouseButtonEvent event
+    ) {
         if (
             pressedIndex < 0
                 || event.button() != 0
@@ -157,11 +173,11 @@ public final class ScenarioWorkflowCanvas {
         );
 
         if (targetIndex != pressedIndex) {
-            Scenario.Step step = steps.remove(
-                pressedIndex
-            );
+            Scenario.Step step =
+                steps.remove(pressedIndex);
 
             steps.add(targetIndex, step);
+
             pressedIndex = targetIndex;
             selectedIndex = targetIndex;
             contentListener.run();
@@ -199,11 +215,13 @@ public final class ScenarioWorkflowCanvas {
                 && verticalAmount != 0.0
         ) {
             select(index);
+
             changeSelectedDuration(
                 verticalAmount > 0.0
                     ? DURATION_STEP_TICKS
                     : -DURATION_STEP_TICKS
             );
+
             return true;
         }
 
@@ -229,6 +247,7 @@ public final class ScenarioWorkflowCanvas {
             0,
             steps.size() - 1
         );
+
         ensureSelectedVisible();
     }
 
@@ -238,22 +257,24 @@ public final class ScenarioWorkflowCanvas {
             0,
             steps.size() - 1
         );
+
         return selectedIndex;
     }
 
     private void renderConnections(
         GuiGraphics graphics
     ) {
-        int centerY = getCardY()
-            + CARD_HEIGHT / 2;
+        int centerY =
+            getCardY() + CARD_HEIGHT / 2;
 
         for (
             int index = 0;
             index < steps.size() - 1;
             index++
         ) {
-            int startX = getCardX(index)
-                + getCardWidth();
+            int startX =
+                getCardX(index) + getCardWidth();
+
             int endX = getCardX(index + 1);
 
             graphics.fill(
@@ -263,6 +284,7 @@ public final class ScenarioWorkflowCanvas {
                 centerY + 1,
                 0xFF625A70
             );
+
             graphics.drawString(
                 font,
                 Component.literal(">"),
@@ -297,6 +319,7 @@ public final class ScenarioWorkflowCanvas {
                     cardX,
                     cardY
                 );
+
                 continue;
             }
 
@@ -372,6 +395,7 @@ public final class ScenarioWorkflowCanvas {
             cardY + CARD_HEIGHT,
             background
         );
+
         graphics.renderOutline(
             cardX,
             cardY,
@@ -389,6 +413,7 @@ public final class ScenarioWorkflowCanvas {
             cardY + CARD_HEIGHT,
             accent
         );
+
         graphics.fill(
             cardX + 10,
             cardY + 10,
@@ -396,6 +421,7 @@ public final class ScenarioWorkflowCanvas {
             cardY + 30,
             0xFF16131D
         );
+
         graphics.renderOutline(
             cardX + 10,
             cardY + 10,
@@ -404,9 +430,8 @@ public final class ScenarioWorkflowCanvas {
             accent
         );
 
-        Component icon = Component.literal(
-            getIcon(step)
-        );
+        Component icon =
+            Component.literal(getIcon(step));
 
         graphics.drawString(
             font,
@@ -416,16 +441,16 @@ public final class ScenarioWorkflowCanvas {
             accent,
             false
         );
+
         graphics.drawString(
             font,
-            Component.literal(
-                getTitle(step)
-            ),
+            Component.literal(getTitle(step)),
             cardX + 38,
             cardY + 10,
             0xFFF4F4F7,
             false
         );
+
         graphics.drawString(
             font,
             Component.literal(
@@ -439,9 +464,8 @@ public final class ScenarioWorkflowCanvas {
             false
         );
 
-        Component indexText = Component.literal(
-            "#" + (index + 1)
-        );
+        Component indexText =
+            Component.literal("#" + (index + 1));
 
         graphics.drawString(
             font,
@@ -454,6 +478,7 @@ public final class ScenarioWorkflowCanvas {
             0xFF81798E,
             false
         );
+
         graphics.drawString(
             font,
             Component.literal("::"),
@@ -478,6 +503,7 @@ public final class ScenarioWorkflowCanvas {
             cardY + CARD_HEIGHT,
             0x552A2432
         );
+
         graphics.renderOutline(
             cardX,
             cardY,
@@ -486,9 +512,8 @@ public final class ScenarioWorkflowCanvas {
             0xFF756682
         );
 
-        Component text = Component.literal(
-            "Drop here"
-        );
+        Component text =
+            Component.literal("Drop here");
 
         graphics.drawString(
             font,
@@ -510,7 +535,9 @@ public final class ScenarioWorkflowCanvas {
             0,
             steps.size() - 1
         );
+
         ensureSelectedVisible();
+
         selectionListener.accept(
             selectedIndex
         );
@@ -519,9 +546,8 @@ public final class ScenarioWorkflowCanvas {
     private void changeSelectedDuration(
         int offsetTicks
     ) {
-        Scenario.Step step = steps.get(
-            getSelectedIndex()
-        );
+        Scenario.Step step =
+            steps.get(getSelectedIndex());
 
         int durationTicks = Math.clamp(
             step.durationTicks() + offsetTicks,
@@ -535,6 +561,11 @@ public final class ScenarioWorkflowCanvas {
                 case Scenario.MoveStep moveStep ->
                     new Scenario.MoveStep(
                         moveStep.direction(),
+                        durationTicks
+                    );
+                case Scenario.MouseStep mouseStep ->
+                    new Scenario.MouseStep(
+                        mouseStep.action(),
                         durationTicks
                     );
                 case Scenario.WaitStep waitStep ->
@@ -562,8 +593,8 @@ public final class ScenarioWorkflowCanvas {
                     + CARD_GAP
             );
 
-        int localRight = localLeft
-            + getCardWidth();
+        int localRight =
+            localLeft + getCardWidth();
 
         if (localLeft - scrollOffset < 8) {
             scrollOffset = localLeft - 8;
@@ -571,9 +602,8 @@ public final class ScenarioWorkflowCanvas {
             localRight - scrollOffset
                 > width - 8
         ) {
-            scrollOffset = localRight
-                - width
-                + 8;
+            scrollOffset =
+                localRight - width + 8;
         }
 
         scrollOffset = Math.clamp(
@@ -602,8 +632,8 @@ public final class ScenarioWorkflowCanvas {
     private int getDragTargetIndex(
         double mouseX
     ) {
-        int stride = getCardWidth()
-            + CARD_GAP;
+        int stride =
+            getCardWidth() + CARD_GAP;
 
         double localX = mouseX
             - x
@@ -655,11 +685,9 @@ public final class ScenarioWorkflowCanvas {
         int cardY
     ) {
         return mouseX >= cardX
-            && mouseX
-                < cardX + getCardWidth()
+            && mouseX < cardX + getCardWidth()
             && mouseY >= cardY
-            && mouseY
-                < cardY + CARD_HEIGHT;
+            && mouseY < cardY + CARD_HEIGHT;
     }
 
     private boolean contains(
@@ -705,8 +733,7 @@ public final class ScenarioWorkflowCanvas {
 
     private int getMaxScrollOffset() {
         int totalWidth = 24
-            + steps.size()
-            * getCardWidth()
+            + steps.size() * getCardWidth()
             + Math.max(
                 0,
                 steps.size() - 1
@@ -729,6 +756,11 @@ public final class ScenarioWorkflowCanvas {
                     case LEFT -> 0xFF67B6E8;
                     case RIGHT -> 0xFFB38AE8;
                 };
+            case Scenario.MouseStep mouseStep ->
+                switch (mouseStep.action()) {
+                    case LEFT_CLICK -> 0xFFE66777;
+                    case RIGHT_CLICK -> 0xFF67C7E8;
+                };
             case Scenario.WaitStep waitStep ->
                 0xFFA49BAD;
         };
@@ -745,6 +777,11 @@ public final class ScenarioWorkflowCanvas {
                     case LEFT -> "L";
                     case RIGHT -> "R";
                 };
+            case Scenario.MouseStep mouseStep ->
+                switch (mouseStep.action()) {
+                    case LEFT_CLICK -> "1";
+                    case RIGHT_CLICK -> "2";
+                };
             case Scenario.WaitStep waitStep ->
                 "W";
         };
@@ -755,10 +792,9 @@ public final class ScenarioWorkflowCanvas {
     ) {
         return switch (step) {
             case Scenario.MoveStep moveStep ->
-                "Move "
-                    + moveStep
-                    .direction()
-                    .label();
+                "Move " + moveStep.direction().label();
+            case Scenario.MouseStep mouseStep ->
+                mouseStep.action().label();
             case Scenario.WaitStep waitStep ->
                 "Wait";
         };

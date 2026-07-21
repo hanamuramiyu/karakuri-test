@@ -18,7 +18,7 @@ public record Scenario(String name, List<Step> steps) {
         steps = List.copyOf(steps);
     }
 
-    public sealed interface Step permits MoveStep, WaitStep {
+    public sealed interface Step permits MoveStep, MouseStep, WaitStep {
         int durationTicks();
 
         String label();
@@ -58,7 +58,42 @@ public record Scenario(String name, List<Step> steps) {
                 }
             }
 
-            throw new IllegalArgumentException("Unknown movement direction: " + id);
+            throw new IllegalArgumentException(
+                "Unknown movement direction: " + id
+            );
+        }
+    }
+
+    public enum MouseAction {
+        LEFT_CLICK("left_click", "Left Click"),
+        RIGHT_CLICK("right_click", "Right Click");
+
+        private final String id;
+        private final String label;
+
+        MouseAction(String id, String label) {
+            this.id = id;
+            this.label = label;
+        }
+
+        public String id() {
+            return id;
+        }
+
+        public String label() {
+            return label;
+        }
+
+        public static MouseAction fromId(String id) {
+            for (MouseAction action : values()) {
+                if (action.id.equals(id)) {
+                    return action;
+                }
+            }
+
+            throw new IllegalArgumentException(
+                "Unknown mouse action: " + id
+            );
         }
     }
 
@@ -71,6 +106,7 @@ public record Scenario(String name, List<Step> steps) {
                 direction,
                 "Movement direction must not be null"
             );
+
             validateDuration(durationTicks);
         }
 
@@ -78,6 +114,28 @@ public record Scenario(String name, List<Step> steps) {
         public String label() {
             return "Move "
                 + direction.label().toLowerCase(Locale.ROOT)
+                + " for "
+                + formatDuration(durationTicks);
+        }
+    }
+
+    public record MouseStep(
+        MouseAction action,
+        int durationTicks
+    ) implements Step {
+        public MouseStep {
+            action = Objects.requireNonNull(
+                action,
+                "Mouse action must not be null"
+            );
+
+            validateDuration(durationTicks);
+        }
+
+        @Override
+        public String label() {
+            return "Hold "
+                + action.label().toLowerCase(Locale.ROOT)
                 + " for "
                 + formatDuration(durationTicks);
         }
