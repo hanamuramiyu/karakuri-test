@@ -2,6 +2,7 @@ package hanamuramiyu.karakuri.scenario;
 
 import hanamuramiyu.karakuri.task.CameraTask;
 import hanamuramiyu.karakuri.task.ClientTask;
+import hanamuramiyu.karakuri.task.HotbarTask;
 import hanamuramiyu.karakuri.task.MouseButtonTask;
 import hanamuramiyu.karakuri.task.MoveTask;
 import hanamuramiyu.karakuri.task.SequenceTask;
@@ -33,6 +34,9 @@ public final class ScenarioTaskFactory {
         return switch (step) {
             case Scenario.CameraStep cameraStep ->
                 new CameraTask(cameraStep);
+
+            case Scenario.HotbarStep hotbarStep ->
+                new HotbarTask(hotbarStep);
 
             case Scenario.MoveStep moveStep ->
                 new MoveTask(moveStep);

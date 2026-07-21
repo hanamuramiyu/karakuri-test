@@ -43,6 +43,8 @@ public final class ScenarioActionLibrary {
     private final KarakuriButton cameraUpButton;
     private final KarakuriButton cameraDownButton;
 
+    private final KarakuriButton selectHotbarSlotButton;
+
     private final List<KarakuriButton> widgets;
 
     private Category selectedCategory =
@@ -60,7 +62,8 @@ public final class ScenarioActionLibrary {
         Consumer<Scenario.MoveDirection> moveAction,
         Runnable waitAction,
         Consumer<Scenario.MouseAction> mouseAction,
-        Consumer<Scenario.CameraDirection> cameraAction
+        Consumer<Scenario.CameraDirection> cameraAction,
+        Runnable hotbarAction
     ) {
         this.font = font;
         this.x = x;
@@ -146,11 +149,10 @@ public final class ScenarioActionLibrary {
                     categoryX,
                     categoryY + 130,
                     categoryWidth,
-                    Component.literal(
-                        "Inventory  ·  Soon"
+                    Component.literal("Inventory"),
+                    () -> selectCategory(
+                        Category.INVENTORY
                     ),
-                    () -> {
-                    },
                     KarakuriButton
                         .TextAlignment.LEFT
                 );
@@ -305,6 +307,19 @@ public final class ScenarioActionLibrary {
                 KarakuriButton
                     .TextAlignment.CENTER
             );
+
+            selectHotbarSlotButton =
+                createButton(
+                    categoryX,
+                    actionY,
+                    categoryWidth,
+                    Component.literal(
+                        "Select Hotbar Slot"
+                    ),
+                    hotbarAction,
+                    KarakuriButton
+                        .TextAlignment.CENTER
+                );
         } else {
             int availableWidth =
                 width - PADDING * 2;
@@ -400,9 +415,10 @@ public final class ScenarioActionLibrary {
                         ) * 2,
                     secondCategoryY,
                     categoryWidth,
-                    Component.literal("Items"),
-                    () -> {
-                    },
+                    Component.literal("Inventory"),
+                    () -> selectCategory(
+                        Category.INVENTORY
+                    ),
                     KarakuriButton
                         .TextAlignment.CENTER
                 );
@@ -572,10 +588,22 @@ public final class ScenarioActionLibrary {
                 KarakuriButton
                     .TextAlignment.CENTER
             );
+
+            selectHotbarSlotButton =
+                createButton(
+                    categoryX,
+                    actionY,
+                    availableWidth,
+                    Component.literal(
+                        "Select Hotbar Slot"
+                    ),
+                    hotbarAction,
+                    KarakuriButton
+                        .TextAlignment.CENTER
+                );
         }
 
         blocksCategoryButton.active = false;
-        inventoryCategoryButton.active = false;
 
         widgets = List.of(
             movementCategoryButton,
@@ -594,7 +622,8 @@ public final class ScenarioActionLibrary {
             cameraLeftButton,
             cameraRightButton,
             cameraUpButton,
-            cameraDownButton
+            cameraDownButton,
+            selectHotbarSlotButton
         );
 
         updateWidgets();
@@ -604,12 +633,16 @@ public final class ScenarioActionLibrary {
         return widgets;
     }
 
-    public void setVisible(boolean visible) {
+    public void setVisible(
+        boolean visible
+    ) {
         this.visible = visible;
         updateWidgets();
     }
 
-    public void render(GuiGraphics graphics) {
+    public void render(
+        GuiGraphics graphics
+    ) {
         if (!visible) {
             return;
         }
@@ -640,7 +673,9 @@ public final class ScenarioActionLibrary {
 
         graphics.drawString(
             font,
-            Component.literal("Action Library"),
+            Component.literal(
+                "Action Library"
+            ),
             x + PADDING,
             y + 9,
             0xFFF1ECF5,
@@ -650,7 +685,9 @@ public final class ScenarioActionLibrary {
         if (layout == Layout.SIDEBAR) {
             graphics.drawString(
                 font,
-                Component.literal("Categories"),
+                Component.literal(
+                    "Categories"
+                ),
                 x + PADDING,
                 y + 20,
                 0xFF81778A,
@@ -740,40 +777,59 @@ public final class ScenarioActionLibrary {
         }
 
         movementCategoryButton.setStyle(
-            selectedCategory == Category.MOVEMENT
-                ? KarakuriButton.Style.PRIMARY
-                : KarakuriButton.Style.GHOST
+            selectedCategory
+                == Category.MOVEMENT
+                    ? KarakuriButton.Style.PRIMARY
+                    : KarakuriButton.Style.GHOST
         );
 
         timingCategoryButton.setStyle(
-            selectedCategory == Category.TIMING
-                ? KarakuriButton.Style.PRIMARY
-                : KarakuriButton.Style.GHOST
+            selectedCategory
+                == Category.TIMING
+                    ? KarakuriButton.Style.PRIMARY
+                    : KarakuriButton.Style.GHOST
         );
 
         mouseCategoryButton.setStyle(
-            selectedCategory == Category.MOUSE
-                ? KarakuriButton.Style.PRIMARY
-                : KarakuriButton.Style.GHOST
+            selectedCategory
+                == Category.MOUSE
+                    ? KarakuriButton.Style.PRIMARY
+                    : KarakuriButton.Style.GHOST
         );
 
         cameraCategoryButton.setStyle(
-            selectedCategory == Category.CAMERA
-                ? KarakuriButton.Style.PRIMARY
-                : KarakuriButton.Style.GHOST
+            selectedCategory
+                == Category.CAMERA
+                    ? KarakuriButton.Style.PRIMARY
+                    : KarakuriButton.Style.GHOST
+        );
+
+        inventoryCategoryButton.setStyle(
+            selectedCategory
+                == Category.INVENTORY
+                    ? KarakuriButton.Style.PRIMARY
+                    : KarakuriButton.Style.GHOST
         );
 
         boolean movement =
-            selectedCategory == Category.MOVEMENT;
+            selectedCategory
+                == Category.MOVEMENT;
 
         boolean timing =
-            selectedCategory == Category.TIMING;
+            selectedCategory
+                == Category.TIMING;
 
         boolean mouse =
-            selectedCategory == Category.MOUSE;
+            selectedCategory
+                == Category.MOUSE;
 
         boolean camera =
-            selectedCategory == Category.CAMERA;
+            selectedCategory
+                == Category.CAMERA;
+
+        boolean inventory =
+            selectedCategory
+                == Category.INVENTORY;
 
         forwardButton.visible = movement;
         backwardButton.visible = movement;
@@ -789,6 +845,9 @@ public final class ScenarioActionLibrary {
         cameraRightButton.visible = camera;
         cameraUpButton.visible = camera;
         cameraDownButton.visible = camera;
+
+        selectHotbarSlotButton.visible =
+            inventory;
 
         forwardButton.setStyle(
             KarakuriButton.Style.SECONDARY
@@ -833,6 +892,10 @@ public final class ScenarioActionLibrary {
         cameraDownButton.setStyle(
             KarakuriButton.Style.SECONDARY
         );
+
+        selectHotbarSlotButton.setStyle(
+            KarakuriButton.Style.SECONDARY
+        );
     }
 
     public enum Layout {
@@ -844,7 +907,8 @@ public final class ScenarioActionLibrary {
         MOVEMENT("Movement"),
         TIMING("Timing"),
         MOUSE("Mouse"),
-        CAMERA("Camera");
+        CAMERA("Camera"),
+        INVENTORY("Hotbar");
 
         private final String label;
 

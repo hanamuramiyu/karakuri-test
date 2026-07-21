@@ -210,7 +210,8 @@ public final class ScenarioEditorScreen extends Screen {
                 this::insertMoveStep,
                 this::insertWaitStep,
                 this::insertMouseStep,
-                this::insertCameraStep
+                this::insertCameraStep,
+                this::insertHotbarStep
             );
 
         for (
@@ -2206,6 +2207,31 @@ public final class ScenarioEditorScreen extends Screen {
         if (
             step
                 instanceof
+                Scenario.HotbarStep
+        ) {
+            drawInspectorLabel(
+                graphics,
+                "Hotbar slot",
+                150
+            );
+
+            graphics.drawString(
+                font,
+                Component.literal(
+                    "Selects the item held in the main hand"
+                ),
+                inspectorX + 10,
+                inspectorY + 216,
+                0xFF81798E,
+                false
+            );
+
+            return;
+        }
+
+        if (
+            step
+                instanceof
                 Scenario.MoveStep moveStep
         ) {
             drawInspectorLabel(
@@ -2385,11 +2411,14 @@ public final class ScenarioEditorScreen extends Screen {
     ) {
         String label =
             switch (step) {
-                case Scenario.MoveStep moveStep ->
-                    "Direction / style / jumping";
-
                 case Scenario.CameraStep cameraStep ->
                     "Direction / motion";
+
+                case Scenario.HotbarStep hotbarStep ->
+                    "Select active hotbar slot";
+
+                case Scenario.MoveStep moveStep ->
+                    "Direction / style / jumping";
 
                 case Scenario.MouseStep mouseStep ->
                     "Button / input / stop";
@@ -2485,6 +2514,25 @@ public final class ScenarioEditorScreen extends Screen {
 
         Scenario.Step step =
             getSelectedStep();
+
+        if (
+            step
+                instanceof
+                Scenario.HotbarStep hotbarStep
+        ) {
+            coverFrameAndRenderValue(
+                graphics,
+                primaryFrameX,
+                primaryFrameY,
+                primaryFrameWidth,
+                "Slot "
+                    + (
+                        hotbarStep.slot()
+                            + 1
+                    ),
+                0xFFF4F0F7
+            );
+        }
 
         if (usesCps(step)) {
             renderCenteredFrameText(
@@ -2785,6 +2833,24 @@ public final class ScenarioEditorScreen extends Screen {
                     .DEFAULT_ANGLE_DEGREES,
                 Scenario.CameraStep
                     .DEFAULT_DURATION_TICKS
+            )
+        );
+
+        selectStep(insertIndex);
+        returnToWorkflow();
+    }
+
+    private void insertHotbarStep() {
+        stopRunningTest();
+
+        int insertIndex =
+            selectedStepIndex + 1;
+
+        steps.add(
+            insertIndex,
+            new Scenario.HotbarStep(
+                Scenario.HotbarStep
+                    .DEFAULT_SLOT
             )
         );
 
@@ -3138,6 +3204,29 @@ public final class ScenarioEditorScreen extends Screen {
         if (
             step
                 instanceof
+                Scenario.HotbarStep hotbarStep
+        ) {
+            steps.set(
+                selectedStepIndex,
+                hotbarStep.withSlot(
+                    Math.clamp(
+                        hotbarStep.slot()
+                            + direction,
+                        Scenario.HotbarStep
+                            .MIN_SLOT,
+                        Scenario.HotbarStep
+                            .MAX_SLOT
+                    )
+                )
+            );
+
+            updateButtons();
+            return;
+        }
+
+        if (
+            step
+                instanceof
                 Scenario.MouseStep mouseStep
                 && mouseStep.inputMode()
                     == Scenario.MouseInputMode
@@ -3345,6 +3434,9 @@ public final class ScenarioEditorScreen extends Screen {
                     cameraStep.withDurationTicks(
                         durationTicks
                     );
+
+                case Scenario.HotbarStep hotbarStep ->
+                    hotbarStep;
 
                 case Scenario.MoveStep moveStep ->
                     moveStep.withDurationTicks(
@@ -3573,6 +3665,11 @@ public final class ScenarioEditorScreen extends Screen {
                 instanceof
                 Scenario.MouseStep;
 
+        boolean hotbar =
+            step
+                instanceof
+                Scenario.HotbarStep;
+
         boolean clickMode =
             mouse
                 && (
@@ -3596,7 +3693,8 @@ public final class ScenarioEditorScreen extends Screen {
 
         boolean primaryValueUsed =
             durationUsed
-                || clickCountUsed;
+                || clickCountUsed
+                || hotbar;
 
         forwardDirectionButton.visible =
             inspectorVisible && movement;
@@ -3920,6 +4018,20 @@ public final class ScenarioEditorScreen extends Screen {
                 mouseStep.clickCount()
                     < Scenario.MouseStep
                         .MAX_CLICK_COUNT;
+        } else if (
+            step
+                instanceof
+                Scenario.HotbarStep hotbarStep
+        ) {
+            primaryDecreaseButton.active =
+                hotbarStep.slot()
+                    > Scenario.HotbarStep
+                        .MIN_SLOT;
+
+            primaryIncreaseButton.active =
+                hotbarStep.slot()
+                    < Scenario.HotbarStep
+                        .MAX_SLOT;
         }
 
         TaskStatus status =
@@ -4020,9 +4132,25 @@ public final class ScenarioEditorScreen extends Screen {
             Scenario.CameraStep;
     }
 
+    private boolean usesHotbarSlot(
+        Scenario.Step step
+    ) {
+        return step
+            instanceof
+            Scenario.HotbarStep;
+    }
+
     private boolean usesDuration(
         Scenario.Step step
     ) {
+        if (
+            step
+                instanceof
+                Scenario.HotbarStep
+        ) {
+            return false;
+        }
+
         if (
             step
                 instanceof
@@ -4064,7 +4192,8 @@ public final class ScenarioEditorScreen extends Screen {
         Scenario.Step step
     ) {
         return usesDuration(step)
-            || usesClickCount(step);
+            || usesClickCount(step)
+            || usesHotbarSlot(step);
     }
 
     private boolean isPrimaryValueValid(
@@ -4253,6 +4382,13 @@ public final class ScenarioEditorScreen extends Screen {
                     .direction()
                     .label();
 
+            case Scenario.HotbarStep hotbarStep ->
+                "Select Hotbar Slot "
+                    + (
+                        hotbarStep.slot()
+                            + 1
+                    );
+
             case Scenario.MoveStep moveStep -> {
                 String movement =
                     moveStep.mode().label()
@@ -4298,6 +4434,9 @@ public final class ScenarioEditorScreen extends Screen {
                     case DOWN ->
                         0xFFF0A765;
                 };
+
+            case Scenario.HotbarStep hotbarStep ->
+                0xFFE8D26A;
 
             case Scenario.MoveStep moveStep ->
                 switch (moveStep.direction()) {

@@ -51,28 +51,21 @@ public final class ScenarioRepository {
 
     public static List<Scenario> load() {
         try {
-            Files.createDirectories(
-                SCENARIO_DIRECTORY
-            );
-
+            Files.createDirectories(SCENARIO_DIRECTORY);
             migrateLegacyFile();
 
-            List<Path> scenarioFiles =
-                listScenarioFiles();
+            List<Path> scenarioFiles = listScenarioFiles();
 
             if (scenarioFiles.isEmpty()) {
                 return List.of();
             }
 
-            List<Scenario> scenarios =
-                new ArrayList<>();
+            List<Scenario> scenarios = new ArrayList<>();
 
             for (Path scenarioFile : scenarioFiles) {
                 try {
                     scenarios.add(
-                        readScenarioFile(
-                            scenarioFile
-                        )
+                        readScenarioFile(scenarioFile)
                     );
                 } catch (
                     IOException
@@ -523,6 +516,16 @@ public final class ScenarioRepository {
                     durationTicks
                 );
 
+            case "hotbar" ->
+                new Scenario.HotbarStep(
+                    getOptionalInt(
+                        object,
+                        "slot",
+                        Scenario.HotbarStep
+                            .DEFAULT_SLOT
+                    )
+                );
+
             case "move" ->
                 new Scenario.MoveStep(
                     Scenario.MoveDirection.fromId(
@@ -669,6 +672,23 @@ public final class ScenarioRepository {
                 object.addProperty(
                     "durationTicks",
                     cameraStep.durationTicks()
+                );
+            }
+
+            case Scenario.HotbarStep hotbarStep -> {
+                object.addProperty(
+                    "type",
+                    "hotbar"
+                );
+
+                object.addProperty(
+                    "slot",
+                    hotbarStep.slot()
+                );
+
+                object.addProperty(
+                    "durationTicks",
+                    hotbarStep.durationTicks()
                 );
             }
 

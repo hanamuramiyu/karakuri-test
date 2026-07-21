@@ -9,6 +9,7 @@ public record Scenario(String name, List<Step> steps) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Scenario name must not be blank");
         }
+
         if (steps == null || steps.isEmpty()) {
             throw new IllegalArgumentException("Scenario must contain at least one step");
         }
@@ -25,7 +26,12 @@ public record Scenario(String name, List<Step> steps) {
         }
     }
 
-    public sealed interface Step permits CameraStep, MoveStep, MouseStep, WaitStep {
+    public sealed interface Step permits
+        CameraStep,
+        HotbarStep,
+        MoveStep,
+        MouseStep,
+        WaitStep {
         int durationTicks();
 
         String label();
@@ -68,6 +74,7 @@ public record Scenario(String name, List<Step> steps) {
                     return direction;
                 }
             }
+
             throw new IllegalArgumentException(
                 "Unknown movement direction: " + id
             );
@@ -101,6 +108,7 @@ public record Scenario(String name, List<Step> steps) {
                     return mode;
                 }
             }
+
             throw new IllegalArgumentException(
                 "Unknown movement mode: " + id
             );
@@ -135,6 +143,7 @@ public record Scenario(String name, List<Step> steps) {
                     return direction;
                 }
             }
+
             throw new IllegalArgumentException(
                 "Unknown camera direction: " + id
             );
@@ -167,6 +176,7 @@ public record Scenario(String name, List<Step> steps) {
                     return motion;
                 }
             }
+
             throw new IllegalArgumentException(
                 "Unknown camera motion: " + id
             );
@@ -199,6 +209,7 @@ public record Scenario(String name, List<Step> steps) {
                     return action;
                 }
             }
+
             throw new IllegalArgumentException(
                 "Unknown mouse action: " + id
             );
@@ -231,6 +242,7 @@ public record Scenario(String name, List<Step> steps) {
                     return mode;
                 }
             }
+
             throw new IllegalArgumentException(
                 "Unknown mouse input mode: " + id
             );
@@ -264,6 +276,7 @@ public record Scenario(String name, List<Step> steps) {
                     return mode;
                 }
             }
+
             throw new IllegalArgumentException(
                 "Unknown mouse stop mode: " + id
             );
@@ -286,6 +299,7 @@ public record Scenario(String name, List<Step> steps) {
                 direction,
                 "Camera direction must not be null"
             );
+
             motion = Objects.requireNonNull(
                 motion,
                 "Camera motion must not be null"
@@ -308,10 +322,7 @@ public record Scenario(String name, List<Step> steps) {
             String angle = angleDegrees + "°";
 
             if (motion == CameraMotion.INSTANT) {
-                return direction.label()
-                    + " "
-                    + angle
-                    + " instantly";
+                return direction.label() + " " + angle + " instantly";
             }
 
             return direction.label()
@@ -366,6 +377,34 @@ public record Scenario(String name, List<Step> steps) {
         }
     }
 
+    public record HotbarStep(int slot) implements Step {
+        public static final int MIN_SLOT = 0;
+        public static final int MAX_SLOT = 8;
+        public static final int DEFAULT_SLOT = 0;
+
+        public HotbarStep {
+            if (slot < MIN_SLOT || slot > MAX_SLOT) {
+                throw new IllegalArgumentException(
+                    "Hotbar slot must be between 0 and 8"
+                );
+            }
+        }
+
+        @Override
+        public int durationTicks() {
+            return 1;
+        }
+
+        @Override
+        public String label() {
+            return "Select hotbar slot " + (slot + 1);
+        }
+
+        public HotbarStep withSlot(int updatedSlot) {
+            return new HotbarStep(updatedSlot);
+        }
+    }
+
     public record MoveStep(
         MoveDirection direction,
         MoveMode mode,
@@ -389,6 +428,7 @@ public record Scenario(String name, List<Step> steps) {
                 direction,
                 "Movement direction must not be null"
             );
+
             mode = Objects.requireNonNull(
                 mode,
                 "Movement mode must not be null"
@@ -401,8 +441,7 @@ public record Scenario(String name, List<Step> steps) {
         public String label() {
             String movement = mode.label()
                 + " "
-                + direction.label()
-                    .toLowerCase(Locale.ROOT);
+                + direction.label().toLowerCase(Locale.ROOT);
 
             if (jumping) {
                 movement = "Jump while "
@@ -479,10 +518,12 @@ public record Scenario(String name, List<Step> steps) {
                 action,
                 "Mouse action must not be null"
             );
+
             inputMode = Objects.requireNonNull(
                 inputMode,
                 "Mouse input mode must not be null"
             );
+
             stopMode = Objects.requireNonNull(
                 stopMode,
                 "Mouse stop mode must not be null"
@@ -579,8 +620,7 @@ public record Scenario(String name, List<Step> steps) {
                 case DURATION -> Math.max(
                     1,
                     Math.ceilDiv(
-                        durationTicks
-                            * clicksPerSecondHalfSteps,
+                        durationTicks * clicksPerSecondHalfSteps,
                         40
                     )
                 );
@@ -701,17 +741,14 @@ public record Scenario(String name, List<Step> steps) {
         }
     }
 
-    public record WaitStep(
-        int durationTicks
-    ) implements Step {
+    public record WaitStep(int durationTicks) implements Step {
         public WaitStep {
             validateDuration(durationTicks);
         }
 
         @Override
         public String label() {
-            return "Wait for "
-                + formatDuration(durationTicks);
+            return "Wait for " + formatDuration(durationTicks);
         }
     }
 

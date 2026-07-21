@@ -101,6 +101,7 @@ public final class ScenarioWorkflowCanvas {
         );
 
         renderConnections(graphics);
+
         renderCards(
             graphics,
             mouseX,
@@ -599,6 +600,18 @@ public final class ScenarioWorkflowCanvas {
                         )
                     );
 
+                case Scenario.HotbarStep hotbarStep ->
+                    hotbarStep.withSlot(
+                        Math.clamp(
+                            hotbarStep.slot()
+                                + direction,
+                            Scenario.HotbarStep
+                                .MIN_SLOT,
+                            Scenario.HotbarStep
+                                .MAX_SLOT
+                        )
+                    );
+
                 case Scenario.MoveStep moveStep ->
                     moveStep.withDurationTicks(
                         Math.clamp(
@@ -885,6 +898,9 @@ public final class ScenarioWorkflowCanvas {
                         0xFFF0A765;
                 };
 
+            case Scenario.HotbarStep hotbarStep ->
+                0xFFE8D26A;
+
             case Scenario.MoveStep moveStep ->
                 switch (moveStep.direction()) {
                     case FORWARD ->
@@ -922,6 +938,11 @@ public final class ScenarioWorkflowCanvas {
                     case DOWN -> "v";
                 };
 
+            case Scenario.HotbarStep hotbarStep ->
+                Integer.toString(
+                    hotbarStep.slot() + 1
+                );
+
             case Scenario.MoveStep moveStep ->
                 switch (moveStep.direction()) {
                     case FORWARD -> "F";
@@ -949,6 +970,9 @@ public final class ScenarioWorkflowCanvas {
                 cameraStep
                     .direction()
                     .label();
+
+            case Scenario.HotbarStep hotbarStep ->
+                "Select Slot";
 
             case Scenario.MoveStep moveStep ->
                 moveStep.mode().label()
@@ -979,6 +1003,13 @@ public final class ScenarioWorkflowCanvas {
                             + Scenario.formatDuration(
                                 cameraStep.durationTicks()
                             );
+
+            case Scenario.HotbarStep hotbarStep ->
+                "Hotbar "
+                    + (
+                        hotbarStep.slot()
+                            + 1
+                    );
 
             case Scenario.MoveStep moveStep ->
                 (
