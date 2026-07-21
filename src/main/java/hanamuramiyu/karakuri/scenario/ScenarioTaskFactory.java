@@ -15,13 +15,13 @@ public final class ScenarioTaskFactory {
     public static ClientTask create(Scenario scenario) {
         List<ClientTask> tasks = scenario.steps()
             .stream()
-            .map(ScenarioTaskFactory::createStepTask)
+            .map(ScenarioTaskFactory::createStep)
             .toList();
 
         return new SequenceTask(tasks);
     }
 
-    private static ClientTask createStepTask(
+    public static ClientTask createStep(
         Scenario.Step step
     ) {
         return switch (step) {
@@ -31,10 +31,7 @@ public final class ScenarioTaskFactory {
                     moveStep.durationTicks()
                 );
             case Scenario.MouseStep mouseStep ->
-                new MouseButtonTask(
-                    mouseStep.action(),
-                    mouseStep.durationTicks()
-                );
+                new MouseButtonTask(mouseStep);
             case Scenario.WaitStep waitStep ->
                 new WaitTask(waitStep.durationTicks());
         };

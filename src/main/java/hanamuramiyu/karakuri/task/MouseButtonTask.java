@@ -5,34 +5,34 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 
 public final class MouseButtonTask implements ClientTask {
-    private final Scenario.MouseAction action;
+    private final Scenario.MouseStep step;
 
-    private int remainingTicks;
+    private int elapsedTicks;
+    private int completedClicks;
+    private boolean pressed;
     private boolean finished;
 
-    public MouseButtonTask(
-        Scenario.MouseAction action,
-        int durationTicks
-    ) {
-        if (action == null) {
+    public MouseButtonTask(Scenario.MouseStep step) {
+        if (step == null) {
             throw new IllegalArgumentException(
-                "Mouse action must not be null"
+                "Mouse step must not be null"
             );
         }
 
-        if (durationTicks <= 0) {
-            throw new IllegalArgumentException(
-                "Duration must be greater than zero"
-            );
-        }
-
-        this.action = action;
-        this.remainingTicks = durationTicks;
+        this.step = step;
     }
 
     @Override
     public void start(Minecraft client) {
-        setPressed(client, true);
+        if (
+            step.inputMode()
+                == Scenario.MouseInputMode.HOLD
+        ) {
+            setPressed(client, true);
+            return;
+        }
+
+        press(client);
     }
 
     @Override
@@ -41,13 +41,17 @@ public final class MouseButtonTask implements ClientTask {
             return;
         }
 
-        setPressed(client, true);
-        remainingTicks--;
+        elapsedTicks++;
 
-        if (remainingTicks <= 0) {
-            finished = true;
-            setPressed(client, false);
+        if (
+            step.inputMode()
+                == Scenario.MouseInputMode.HOLD
+        ) {
+            tickHold(client);
+            return;
         }
+
+        tickClick(client);
     }
 
     @Override
@@ -57,15 +61,19 @@ public final class MouseButtonTask implements ClientTask {
 
     @Override
     public void resume(Minecraft client) {
-        if (!finished) {
+        if (
+            !finished
+                && step.inputMode()
+                    == Scenario.MouseInputMode.HOLD
+        ) {
             setPressed(client, true);
         }
     }
 
     @Override
     public void stop(Minecraft client) {
-        finished = true;
         setPressed(client, false);
+        finished = true;
     }
 
     @Override
@@ -73,15 +81,75 @@ public final class MouseButtonTask implements ClientTask {
         return finished;
     }
 
+    private void tickHold(Minecraft client) {
+        if (
+            step.stopMode()
+                == Scenario.MouseStopMode.MANUAL
+        ) {
+            setPressed(client, true);
+            return;
+        }
+
+        if (elapsedTicks >= step.durationTicks()) {
+            setPressed(client, false);
+            finished = true;
+            return;
+        }
+
+        setPressed(client, true);
+    }
+
+    private void tickClick(Minecraft client) {
+        if (pressed) {
+            setPressed(client, false);
+
+            if (shouldFinishClicking()) {
+                finished = true;
+            }
+
+            return;
+        }
+
+        if (shouldFinishClicking()) {
+            finished = true;
+            return;
+        }
+
+        int nextPressTick = Math.ceilDiv(
+            completedClicks * 40,
+            step.clicksPerSecondHalfSteps()
+        );
+
+        if (elapsedTicks >= nextPressTick) {
+            press(client);
+        }
+    }
+
+    private boolean shouldFinishClicking() {
+        return switch (step.stopMode()) {
+            case DURATION ->
+                elapsedTicks >= step.durationTicks();
+            case CLICK_COUNT ->
+                completedClicks >= step.clickCount();
+            case MANUAL -> false;
+        };
+    }
+
+    private void press(Minecraft client) {
+        setPressed(client, true);
+        completedClicks++;
+    }
+
     private void setPressed(
         Minecraft client,
-        boolean pressed
+        boolean value
     ) {
-        getKey(client).setDown(pressed);
+        pressed = value;
+        getKey(client).setDown(value);
     }
 
     private KeyMapping getKey(Minecraft client) {
-        return switch (action) {
+        return switch (step.action()) {
             case LEFT_CLICK -> client.options.keyAttack;
             case RIGHT_CLICK -> client.options.keyUse;
         };
