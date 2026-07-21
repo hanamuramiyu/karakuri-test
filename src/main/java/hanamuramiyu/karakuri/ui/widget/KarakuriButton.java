@@ -12,7 +12,9 @@ import java.util.Objects;
 public final class KarakuriButton extends AbstractWidget {
     private final Font font;
     private final Runnable onPress;
-    private final Style style;
+
+    private Style style;
+    private TextAlignment textAlignment = TextAlignment.CENTER;
 
     public KarakuriButton(
         Font font,
@@ -53,15 +55,15 @@ public final class KarakuriButton extends AbstractWidget {
 
         int backgroundColor = active
             ? style.backgroundColor(highlighted)
-            : 0xFF1A1820;
+            : 0xFF18161D;
 
         int outlineColor = active
             ? style.outlineColor(highlighted)
-            : 0xFF36313D;
+            : 0xFF332F39;
 
         int textColor = active
             ? style.textColor()
-            : 0xFF68616F;
+            : 0xFF66606B;
 
         graphics.fill(
             getX(),
@@ -87,12 +89,17 @@ public final class KarakuriButton extends AbstractWidget {
                 getY() + height,
                 active
                     ? style.accentColor()
-                    : 0xFF36313D
+                    : 0xFF332F39
             );
         }
 
-        int textX = getX()
-            + (width - font.width(getMessage())) / 2;
+        int textX = switch (textAlignment) {
+            case LEFT -> getX() + 10;
+            case CENTER ->
+                getX() + (width - font.width(getMessage())) / 2;
+            case RIGHT ->
+                getX() + width - 10 - font.width(getMessage());
+        };
 
         int textY = getY()
             + (height - font.lineHeight) / 2
@@ -123,6 +130,28 @@ public final class KarakuriButton extends AbstractWidget {
         NarrationElementOutput output
     ) {
         defaultButtonNarrationText(output);
+    }
+
+    public void setStyle(Style style) {
+        this.style = Objects.requireNonNull(
+            style,
+            "Button style must not be null"
+        );
+    }
+
+    public void setTextAlignment(
+        TextAlignment textAlignment
+    ) {
+        this.textAlignment = Objects.requireNonNull(
+            textAlignment,
+            "Text alignment must not be null"
+        );
+    }
+
+    public enum TextAlignment {
+        LEFT,
+        CENTER,
+        RIGHT
     }
 
     public enum Style {
