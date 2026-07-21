@@ -15,7 +15,7 @@ import net.minecraft.network.chat.Component;
 import java.util.List;
 
 public final class KarakuriScreen extends Screen {
-    private static final int PANEL_HEIGHT = 230;
+    private static final int PANEL_HEIGHT = 280;
     private static final int PANEL_MAX_WIDTH = 360;
     private static final int PANEL_MARGIN = 20;
     private static final int CONTENT_MARGIN = 16;
@@ -23,10 +23,12 @@ public final class KarakuriScreen extends Screen {
     private static final int BUTTON_HEIGHT = 20;
     private static final int WALK_DURATION_TICKS = 40;
     private static final int WAIT_DURATION_TICKS = 20;
-    private static final int TEST_REPEAT_COUNT = 3;
 
     private final Screen parent;
 
+    private ExecutionMode executionMode = ExecutionMode.ONCE;
+
+    private Button modeButton;
     private Button startButton;
     private Button pauseButton;
     private Button stopButton;
@@ -42,14 +44,28 @@ public final class KarakuriScreen extends Screen {
         int panelY = getPanelY();
         int contentWidth = getPanelWidth() - CONTENT_MARGIN * 2;
         int buttonWidth = (contentWidth - BUTTON_GAP * 2) / 3;
-        int buttonY = panelY + PANEL_HEIGHT - CONTENT_MARGIN - BUTTON_HEIGHT;
+        int modeButtonY = panelY + 214;
+        int controlButtonY = panelY + 244;
+
+        modeButton = Button.builder(
+            Component.empty(),
+            button -> {
+                executionMode = executionMode.next();
+                updateButtons();
+            }
+        ).bounds(
+            panelX + CONTENT_MARGIN,
+            modeButtonY,
+            contentWidth,
+            BUTTON_HEIGHT
+        ).build();
 
         startButton = Button.builder(
             Component.literal("Start"),
             button -> startOrResume()
         ).bounds(
             panelX + CONTENT_MARGIN,
-            buttonY,
+            controlButtonY,
             buttonWidth,
             BUTTON_HEIGHT
         ).build();
@@ -59,7 +75,7 @@ public final class KarakuriScreen extends Screen {
             button -> TaskManager.pause(minecraft)
         ).bounds(
             panelX + CONTENT_MARGIN + buttonWidth + BUTTON_GAP,
-            buttonY,
+            controlButtonY,
             buttonWidth,
             BUTTON_HEIGHT
         ).build();
@@ -69,11 +85,12 @@ public final class KarakuriScreen extends Screen {
             button -> TaskManager.stop(minecraft)
         ).bounds(
             panelX + CONTENT_MARGIN + (buttonWidth + BUTTON_GAP) * 2,
-            buttonY,
+            controlButtonY,
             buttonWidth,
             BUTTON_HEIGHT
         ).build();
 
+        addRenderableWidget(modeButton);
         addRenderableWidget(startButton);
         addRenderableWidget(pauseButton);
         addRenderableWidget(stopButton);
@@ -135,9 +152,9 @@ public final class KarakuriScreen extends Screen {
         );
         graphics.drawString(
             font,
-            Component.literal("Repeat 3 times"),
+            Component.literal(executionMode.description()),
             panelX + CONTENT_MARGIN,
-            panelY + 104,
+            panelY + 106,
             0xFFF4F4F7,
             false
         );
@@ -146,7 +163,7 @@ public final class KarakuriScreen extends Screen {
             font,
             Component.literal("Current session"),
             panelX + CONTENT_MARGIN,
-            panelY + 130,
+            panelY + 136,
             0xFF9999AA,
             false
         );
@@ -154,7 +171,7 @@ public final class KarakuriScreen extends Screen {
             font,
             Component.literal("Controls only the active account"),
             panelX + CONTENT_MARGIN,
-            panelY + 148,
+            panelY + 154,
             0xFFF4F4F7,
             false
         );
@@ -163,7 +180,7 @@ public final class KarakuriScreen extends Screen {
             font,
             Component.literal("Status"),
             panelX + CONTENT_MARGIN,
-            panelY + 172,
+            panelY + 178,
             0xFF9999AA,
             false
         );
@@ -171,7 +188,7 @@ public final class KarakuriScreen extends Screen {
             font,
             Component.literal(status.label()),
             panelX + CONTENT_MARGIN,
-            panelY + 188,
+            panelY + 196,
             getStatusColor(status),
             false
         );
@@ -198,7 +215,7 @@ public final class KarakuriScreen extends Screen {
         TaskManager.start(
             new RepeatTask(
                 KarakuriScreen::createTestSequence,
-                TEST_REPEAT_COUNT
+                executionMode.repeatCount()
             ),
             minecraft
         );
@@ -215,11 +232,21 @@ public final class KarakuriScreen extends Screen {
     }
 
     private void updateButtons() {
-        if (startButton == null || pauseButton == null || stopButton == null) {
+        if (
+            modeButton == null
+                || startButton == null
+                || pauseButton == null
+                || stopButton == null
+        ) {
             return;
         }
 
         TaskStatus status = TaskManager.getStatus();
+
+        modeButton.setMessage(
+            Component.literal("Mode: " + executionMode.label())
+        );
+        modeButton.active = status == TaskStatus.IDLE;
 
         startButton.setMessage(
             Component.literal(status == TaskStatus.PAUSED ? "Resume" : "Start")
@@ -257,5 +284,36 @@ public final class KarakuriScreen extends Screen {
     ) {
         int x = (width - font.width(text)) / 2;
         graphics.drawString(font, text, x, y, color, false);
+    }
+
+    private enum ExecutionMode {
+        ONCE("Once", "Run the sequence one time", 1),
+        LOOP("Loop", "Repeat until stopped", RepeatTask.INFINITE);
+
+        private final String label;
+        private final String description;
+        private final int repeatCount;
+
+        ExecutionMode(String label, String description, int repeatCount) {
+            this.label = label;
+            this.description = description;
+            this.repeatCount = repeatCount;
+        }
+
+        private String label() {
+            return label;
+        }
+
+        private String description() {
+            return description;
+        }
+
+        private int repeatCount() {
+            return repeatCount;
+        }
+
+        private ExecutionMode next() {
+            return this == ONCE ? LOOP : ONCE;
+        }
     }
 }

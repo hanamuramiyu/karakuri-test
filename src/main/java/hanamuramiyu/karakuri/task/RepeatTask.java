@@ -5,6 +5,8 @@ import net.minecraft.client.Minecraft;
 import java.util.function.Supplier;
 
 public final class RepeatTask implements ClientTask {
+    public static final int INFINITE = -1;
+
     private final Supplier<ClientTask> taskFactory;
     private final int repeatCount;
 
@@ -18,8 +20,8 @@ public final class RepeatTask implements ClientTask {
             throw new IllegalArgumentException("Task factory must not be null");
         }
 
-        if (repeatCount <= 0) {
-            throw new IllegalArgumentException("Repeat count must be greater than zero");
+        if (repeatCount == 0 || repeatCount < INFINITE) {
+            throw new IllegalArgumentException("Repeat count must be positive or infinite");
         }
 
         this.taskFactory = taskFactory;
@@ -84,7 +86,7 @@ public final class RepeatTask implements ClientTask {
     }
 
     private void startNextTask(Minecraft client) {
-        while (completedRepeats < repeatCount) {
+        while (hasNextRepeat()) {
             currentTask = taskFactory.get();
 
             if (currentTask == null) {
@@ -103,5 +105,9 @@ public final class RepeatTask implements ClientTask {
         }
 
         finished = true;
+    }
+
+    private boolean hasNextRepeat() {
+        return repeatCount == INFINITE || completedRepeats < repeatCount;
     }
 }
