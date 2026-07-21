@@ -35,15 +35,16 @@ public final class ScenarioRepository {
         .setPrettyPrinting()
         .create();
 
-    private static final Path CONFIG_DIRECTORY = FabricLoader.getInstance()
-        .getConfigDir()
-        .resolve(Karakuri.MOD_ID);
+    private static final Path CONFIG_DIRECTORY =
+        FabricLoader.getInstance()
+            .getConfigDir()
+            .resolve(Karakuri.MOD_ID);
 
-    private static final Path SCENARIO_DIRECTORY = CONFIG_DIRECTORY
-        .resolve("scenarios");
+    private static final Path SCENARIO_DIRECTORY =
+        CONFIG_DIRECTORY.resolve("scenarios");
 
-    private static final Path LEGACY_FILE_PATH = CONFIG_DIRECTORY
-        .resolve("scenarios.json");
+    private static final Path LEGACY_FILE_PATH =
+        CONFIG_DIRECTORY.resolve("scenarios.json");
 
     private ScenarioRepository() {
     }
@@ -51,48 +52,33 @@ public final class ScenarioRepository {
     public static List<Scenario> load() {
         try {
             Files.createDirectories(SCENARIO_DIRECTORY);
+            migrateLegacyFile();
 
-            List<Path> scenarioFiles = listScenarioFiles();
-
-            if (scenarioFiles.isEmpty() && Files.exists(LEGACY_FILE_PATH)) {
-                List<Scenario> migratedScenarios = loadLegacyScenarios();
-
-                if (
-                    !migratedScenarios.isEmpty()
-                        && writeScenarioFiles(migratedScenarios)
-                ) {
-                    backupLegacyFile();
-                    scenarioFiles = listScenarioFiles();
-                }
-            }
+            List<Path> scenarioFiles =
+                listScenarioFiles();
 
             if (scenarioFiles.isEmpty()) {
-                List<Scenario> defaultScenarios = createDefaultScenarios();
-                writeScenarioFiles(defaultScenarios);
-                return defaultScenarios;
+                return List.of();
             }
 
-            List<Scenario> scenarios = new ArrayList<>();
+            List<Scenario> scenarios =
+                new ArrayList<>();
 
             for (Path scenarioFile : scenarioFiles) {
                 try {
-                    scenarios.add(readScenarioFile(scenarioFile));
-                } catch (IOException | RuntimeException exception) {
+                    scenarios.add(
+                        readScenarioFile(scenarioFile)
+                    );
+                } catch (
+                    IOException
+                        | RuntimeException exception
+                ) {
                     Karakuri.LOGGER.error(
                         "Failed to load scenario from {}",
                         scenarioFile,
                         exception
                     );
                 }
-            }
-
-            if (scenarios.isEmpty()) {
-                Karakuri.LOGGER.error(
-                    "No valid Karakuri scenario files were found in {}",
-                    SCENARIO_DIRECTORY
-                );
-
-                return createDefaultScenarios();
             }
 
             return List.copyOf(scenarios);
@@ -103,54 +89,106 @@ public final class ScenarioRepository {
                 exception
             );
 
-            return createDefaultScenarios();
+            return List.of();
         }
     }
 
-    public static void save(List<Scenario> scenarios) {
-        if (scenarios == null || scenarios.isEmpty()) {
+    public static void save(
+        List<Scenario> scenarios
+    ) {
+        if (scenarios == null) {
             throw new IllegalArgumentException(
-                "Scenario list must not be empty"
+                "Scenario list must not be null"
             );
         }
 
         writeScenarioFiles(scenarios);
     }
 
+    private static void migrateLegacyFile()
+        throws IOException {
+        if (
+            Files.notExists(LEGACY_FILE_PATH)
+                || !listScenarioFiles().isEmpty()
+        ) {
+            return;
+        }
+
+        List<Scenario> migratedScenarios =
+            loadLegacyScenarios();
+
+        if (migratedScenarios == null) {
+            return;
+        }
+
+        if (writeScenarioFiles(migratedScenarios)) {
+            backupLegacyFile();
+        }
+    }
+
     private static boolean writeScenarioFiles(
         List<Scenario> scenarios
     ) {
         try {
-            Files.createDirectories(SCENARIO_DIRECTORY);
+            Files.createDirectories(
+                SCENARIO_DIRECTORY
+            );
 
-            Set<String> usedFileNames = new HashSet<>();
-            Set<Path> expectedFiles = new HashSet<>();
+            Set<String> usedFileNames =
+                new HashSet<>();
+
+            Set<Path> expectedFiles =
+                new HashSet<>();
 
             for (Scenario scenario : scenarios) {
-                String fileName = createUniqueFileName(
-                    scenario.name(),
-                    usedFileNames
+                String fileName =
+                    createUniqueFileName(
+                        scenario.name(),
+                        usedFileNames
+                    );
+
+                Path scenarioFile =
+                    SCENARIO_DIRECTORY.resolve(
+                        fileName
+                    );
+
+                writeScenarioFile(
+                    scenarioFile,
+                    scenario
                 );
 
-                Path scenarioFile = SCENARIO_DIRECTORY.resolve(fileName);
-                writeScenarioFile(scenarioFile, scenario);
                 expectedFiles.add(
-                    scenarioFile.toAbsolutePath().normalize()
+                    scenarioFile
+                        .toAbsolutePath()
+                        .normalize()
                 );
             }
 
-            for (Path existingFile : listScenarioFiles()) {
-                Path normalizedFile = existingFile
-                    .toAbsolutePath()
-                    .normalize();
+            for (
+                Path existingFile :
+                listScenarioFiles()
+            ) {
+                Path normalizedFile =
+                    existingFile
+                        .toAbsolutePath()
+                        .normalize();
 
-                if (!expectedFiles.contains(normalizedFile)) {
-                    Files.deleteIfExists(existingFile);
+                if (
+                    !expectedFiles.contains(
+                        normalizedFile
+                    )
+                ) {
+                    Files.deleteIfExists(
+                        existingFile
+                    );
                 }
             }
 
             return true;
-        } catch (IOException | RuntimeException exception) {
+        } catch (
+            IOException
+                | RuntimeException exception
+        ) {
             Karakuri.LOGGER.error(
                 "Failed to save scenarios to {}",
                 SCENARIO_DIRECTORY,
@@ -165,12 +203,14 @@ public final class ScenarioRepository {
         Path path
     ) throws IOException {
         try (
-            Reader reader = Files.newBufferedReader(
-                path,
-                StandardCharsets.UTF_8
-            )
+            Reader reader =
+                Files.newBufferedReader(
+                    path,
+                    StandardCharsets.UTF_8
+                )
         ) {
-            JsonElement rootElement = JsonParser.parseReader(reader);
+            JsonElement rootElement =
+                JsonParser.parseReader(reader);
 
             if (!rootElement.isJsonObject()) {
                 throw new JsonParseException(
@@ -178,13 +218,19 @@ public final class ScenarioRepository {
                 );
             }
 
-            JsonObject root = rootElement.getAsJsonObject();
-            int schemaVersion = getRequiredInt(
-                root,
-                "schemaVersion"
-            );
+            JsonObject root =
+                rootElement.getAsJsonObject();
 
-            if (schemaVersion != SCHEMA_VERSION) {
+            int schemaVersion =
+                getRequiredInt(
+                    root,
+                    "schemaVersion"
+                );
+
+            if (
+                schemaVersion
+                    != SCHEMA_VERSION
+            ) {
                 throw new JsonParseException(
                     "Unsupported scenario schema version: "
                         + schemaVersion
@@ -199,35 +245,47 @@ public final class ScenarioRepository {
         Path path,
         Scenario scenario
     ) throws IOException {
-        JsonObject root = serializeScenario(scenario);
-        Path temporaryPath = path.resolveSibling(
-            path.getFileName() + ".tmp"
-        );
+        JsonObject root =
+            serializeScenario(scenario);
+
+        Path temporaryPath =
+            path.resolveSibling(
+                path.getFileName() + ".tmp"
+            );
 
         try {
             try (
-                Writer writer = Files.newBufferedWriter(
-                    temporaryPath,
-                    StandardCharsets.UTF_8
-                )
+                Writer writer =
+                    Files.newBufferedWriter(
+                        temporaryPath,
+                        StandardCharsets.UTF_8
+                    )
             ) {
                 GSON.toJson(root, writer);
             }
 
-            moveTemporaryFile(temporaryPath, path);
+            moveTemporaryFile(
+                temporaryPath,
+                path
+            );
         } finally {
-            Files.deleteIfExists(temporaryPath);
+            Files.deleteIfExists(
+                temporaryPath
+            );
         }
     }
 
-    private static List<Scenario> loadLegacyScenarios() {
+    private static List<Scenario>
+    loadLegacyScenarios() {
         try (
-            Reader reader = Files.newBufferedReader(
-                LEGACY_FILE_PATH,
-                StandardCharsets.UTF_8
-            )
+            Reader reader =
+                Files.newBufferedReader(
+                    LEGACY_FILE_PATH,
+                    StandardCharsets.UTF_8
+                )
         ) {
-            JsonElement rootElement = JsonParser.parseReader(reader);
+            JsonElement rootElement =
+                JsonParser.parseReader(reader);
 
             if (!rootElement.isJsonObject()) {
                 throw new JsonParseException(
@@ -235,45 +293,64 @@ public final class ScenarioRepository {
                 );
             }
 
-            JsonObject root = rootElement.getAsJsonObject();
-            int schemaVersion = getRequiredInt(
-                root,
-                "schemaVersion"
-            );
+            JsonObject root =
+                rootElement.getAsJsonObject();
 
-            if (schemaVersion != SCHEMA_VERSION) {
+            int schemaVersion =
+                getRequiredInt(
+                    root,
+                    "schemaVersion"
+                );
+
+            if (
+                schemaVersion
+                    != SCHEMA_VERSION
+            ) {
                 throw new JsonParseException(
                     "Unsupported legacy scenario schema version: "
                         + schemaVersion
                 );
             }
 
-            JsonArray scenarioArray = getRequiredArray(
-                root,
-                "scenarios"
-            );
+            JsonArray scenarioArray =
+                getRequiredArray(
+                    root,
+                    "scenarios"
+                );
 
-            List<Scenario> scenarios = new ArrayList<>();
+            List<Scenario> scenarios =
+                new ArrayList<>();
 
-            for (JsonElement scenarioElement : scenarioArray) {
-                scenarios.add(parseScenario(scenarioElement));
+            for (
+                JsonElement scenarioElement :
+                scenarioArray
+            ) {
+                scenarios.add(
+                    parseScenario(
+                        scenarioElement
+                    )
+                );
             }
 
             return List.copyOf(scenarios);
-        } catch (IOException | RuntimeException exception) {
+        } catch (
+            IOException
+                | RuntimeException exception
+        ) {
             Karakuri.LOGGER.error(
                 "Failed to migrate legacy scenarios from {}",
                 LEGACY_FILE_PATH,
                 exception
             );
 
-            return List.of();
+            return null;
         }
     }
 
     private static void backupLegacyFile() {
         try {
-            Path backupPath = findAvailableBackupPath();
+            Path backupPath =
+                findAvailableBackupPath();
 
             Files.move(
                 LEGACY_FILE_PATH,
@@ -294,134 +371,225 @@ public final class ScenarioRepository {
         }
     }
 
-    private static Path findAvailableBackupPath() {
-        Path backupPath = CONFIG_DIRECTORY.resolve(
-            "scenarios.json.bak"
-        );
+    private static Path
+    findAvailableBackupPath() {
+        Path backupPath =
+            CONFIG_DIRECTORY.resolve(
+                "scenarios.json.bak"
+            );
 
         int suffix = 2;
 
         while (Files.exists(backupPath)) {
-            backupPath = CONFIG_DIRECTORY.resolve(
-                "scenarios.json.bak." + suffix
-            );
+            backupPath =
+                CONFIG_DIRECTORY.resolve(
+                    "scenarios.json.bak."
+                        + suffix
+                );
+
             suffix++;
         }
 
         return backupPath;
     }
 
-    private static List<Path> listScenarioFiles()
-        throws IOException {
-        if (Files.notExists(SCENARIO_DIRECTORY)) {
+    private static List<Path>
+    listScenarioFiles() throws IOException {
+        if (
+            Files.notExists(
+                SCENARIO_DIRECTORY
+            )
+        ) {
             return List.of();
         }
 
-        try (Stream<Path> paths = Files.list(SCENARIO_DIRECTORY)) {
+        try (
+            Stream<Path> paths =
+                Files.list(
+                    SCENARIO_DIRECTORY
+                )
+        ) {
             return paths
                 .filter(Files::isRegularFile)
                 .filter(
                     path -> path
                         .getFileName()
                         .toString()
-                        .endsWith(FILE_EXTENSION)
+                        .endsWith(
+                            FILE_EXTENSION
+                        )
                 )
                 .sorted(
                     Comparator.comparing(
-                        path -> path.getFileName().toString()
+                        path -> path
+                            .getFileName()
+                            .toString()
                     )
                 )
                 .toList();
         }
     }
 
-    private static Scenario parseScenario(JsonElement element) {
+    private static Scenario parseScenario(
+        JsonElement element
+    ) {
         if (!element.isJsonObject()) {
             throw new JsonParseException(
                 "Scenario must be an object"
             );
         }
 
-        JsonObject object = element.getAsJsonObject();
-        String name = getRequiredString(object, "name");
-        JsonArray stepArray = getRequiredArray(object, "steps");
-        List<Scenario.Step> steps = new ArrayList<>();
+        JsonObject object =
+            element.getAsJsonObject();
 
-        for (JsonElement stepElement : stepArray) {
-            steps.add(parseStep(stepElement));
+        String name =
+            getRequiredString(
+                object,
+                "name"
+            );
+
+        JsonArray stepArray =
+            getRequiredArray(
+                object,
+                "steps"
+            );
+
+        List<Scenario.Step> steps =
+            new ArrayList<>();
+
+        for (
+            JsonElement stepElement :
+            stepArray
+        ) {
+            steps.add(
+                parseStep(stepElement)
+            );
         }
 
         return new Scenario(name, steps);
     }
 
-    private static Scenario.Step parseStep(JsonElement element) {
+    private static Scenario.Step parseStep(
+        JsonElement element
+    ) {
         if (!element.isJsonObject()) {
             throw new JsonParseException(
                 "Scenario step must be an object"
             );
         }
 
-        JsonObject object = element.getAsJsonObject();
-        String type = getRequiredString(object, "type");
-        int durationTicks = getRequiredInt(
-            object,
-            "durationTicks"
-        );
+        JsonObject object =
+            element.getAsJsonObject();
+
+        String type =
+            getRequiredString(
+                object,
+                "type"
+            );
+
+        int durationTicks =
+            getRequiredInt(
+                object,
+                "durationTicks"
+            );
 
         return switch (type) {
-            case "move" -> new Scenario.MoveStep(
-                Scenario.MoveDirection.fromId(
-                    getRequiredString(object, "direction")
-                ),
-                durationTicks
-            );
-            case "walk_forward" -> new Scenario.MoveStep(
-                Scenario.MoveDirection.FORWARD,
-                durationTicks
-            );
-            case "wait" -> new Scenario.WaitStep(durationTicks);
-            default -> throw new JsonParseException(
-                "Unknown scenario step type: " + type
-            );
+            case "move" ->
+                new Scenario.MoveStep(
+                    Scenario.MoveDirection.fromId(
+                        getRequiredString(
+                            object,
+                            "direction"
+                        )
+                    ),
+                    durationTicks
+                );
+            case "walk_forward" ->
+                new Scenario.MoveStep(
+                    Scenario.MoveDirection.FORWARD,
+                    durationTicks
+                );
+            case "wait" ->
+                new Scenario.WaitStep(
+                    durationTicks
+                );
+            default ->
+                throw new JsonParseException(
+                    "Unknown scenario step type: "
+                        + type
+                );
         };
     }
 
-    private static JsonObject serializeScenario(
+    private static JsonObject
+    serializeScenario(
         Scenario scenario
     ) {
-        JsonObject object = new JsonObject();
-        object.addProperty("schemaVersion", SCHEMA_VERSION);
-        object.addProperty("name", scenario.name());
+        JsonObject object =
+            new JsonObject();
 
-        JsonArray stepArray = new JsonArray();
+        object.addProperty(
+            "schemaVersion",
+            SCHEMA_VERSION
+        );
 
-        for (Scenario.Step step : scenario.steps()) {
-            stepArray.add(serializeStep(step));
+        object.addProperty(
+            "name",
+            scenario.name()
+        );
+
+        JsonArray stepArray =
+            new JsonArray();
+
+        for (
+            Scenario.Step step :
+            scenario.steps()
+        ) {
+            stepArray.add(
+                serializeStep(step)
+            );
         }
 
-        object.add("steps", stepArray);
+        object.add(
+            "steps",
+            stepArray
+        );
+
         return object;
     }
 
     private static JsonObject serializeStep(
         Scenario.Step step
     ) {
-        JsonObject object = new JsonObject();
+        JsonObject object =
+            new JsonObject();
 
         switch (step) {
             case Scenario.MoveStep moveStep -> {
-                object.addProperty("type", "move");
+                object.addProperty(
+                    "type",
+                    "move"
+                );
+
                 object.addProperty(
                     "direction",
-                    moveStep.direction().id()
+                    moveStep
+                        .direction()
+                        .id()
                 );
+
                 object.addProperty(
                     "durationTicks",
                     moveStep.durationTicks()
                 );
             }
+
             case Scenario.WaitStep waitStep -> {
-                object.addProperty("type", "wait");
+                object.addProperty(
+                    "type",
+                    "wait"
+                );
+
                 object.addProperty(
                     "durationTicks",
                     waitStep.durationTicks()
@@ -432,37 +600,57 @@ public final class ScenarioRepository {
         return object;
     }
 
-    private static String createUniqueFileName(
+    private static String
+    createUniqueFileName(
         String scenarioName,
         Set<String> usedFileNames
     ) {
-        String baseName = createFileBaseName(scenarioName);
-        String fileName = baseName + FILE_EXTENSION;
+        String baseName =
+            createFileBaseName(
+                scenarioName
+            );
+
+        String fileName =
+            baseName + FILE_EXTENSION;
+
         int suffix = 2;
 
-        while (!usedFileNames.add(fileName)) {
-            fileName = baseName
-                + "-"
-                + suffix
-                + FILE_EXTENSION;
+        while (
+            !usedFileNames.add(fileName)
+        ) {
+            fileName =
+                baseName
+                    + "-"
+                    + suffix
+                    + FILE_EXTENSION;
+
             suffix++;
         }
 
         return fileName;
     }
 
-    private static String createFileBaseName(
+    private static String
+    createFileBaseName(
         String scenarioName
     ) {
-        String normalizedName = Normalizer.normalize(
-            scenarioName,
-            Normalizer.Form.NFKC
-        );
+        String normalizedName =
+            Normalizer.normalize(
+                scenarioName,
+                Normalizer.Form.NFKC
+            );
 
-        String fileName = normalizedName
-            .toLowerCase(Locale.ROOT)
-            .replaceAll("[^\\p{L}\\p{N}]+", "-")
-            .replaceAll("^-+|-+$", "");
+        String fileName =
+            normalizedName
+                .toLowerCase(Locale.ROOT)
+                .replaceAll(
+                    "[^\\p{L}\\p{N}]+",
+                    "-"
+                )
+                .replaceAll(
+                    "^-+|-+$",
+                    ""
+                );
 
         if (fileName.isBlank()) {
             return "scenario";
@@ -475,15 +663,19 @@ public final class ScenarioRepository {
         JsonObject object,
         String key
     ) {
-        JsonElement element = object.get(key);
+        JsonElement element =
+            object.get(key);
 
         if (
             element == null
                 || !element.isJsonPrimitive()
-                || !element.getAsJsonPrimitive().isString()
+                || !element
+                    .getAsJsonPrimitive()
+                    .isString()
         ) {
             throw new JsonParseException(
-                "Missing string property: " + key
+                "Missing string property: "
+                    + key
             );
         }
 
@@ -494,15 +686,19 @@ public final class ScenarioRepository {
         JsonObject object,
         String key
     ) {
-        JsonElement element = object.get(key);
+        JsonElement element =
+            object.get(key);
 
         if (
             element == null
                 || !element.isJsonPrimitive()
-                || !element.getAsJsonPrimitive().isNumber()
+                || !element
+                    .getAsJsonPrimitive()
+                    .isNumber()
         ) {
             throw new JsonParseException(
-                "Missing integer property: " + key
+                "Missing integer property: "
+                    + key
             );
         }
 
@@ -513,34 +709,20 @@ public final class ScenarioRepository {
         JsonObject object,
         String key
     ) {
-        JsonElement element = object.get(key);
+        JsonElement element =
+            object.get(key);
 
-        if (element == null || !element.isJsonArray()) {
+        if (
+            element == null
+                || !element.isJsonArray()
+        ) {
             throw new JsonParseException(
-                "Missing array property: " + key
+                "Missing array property: "
+                    + key
             );
         }
 
         return element.getAsJsonArray();
-    }
-
-    private static List<Scenario> createDefaultScenarios() {
-        return List.of(
-            new Scenario(
-                "Basic Movement",
-                List.of(
-                    new Scenario.MoveStep(
-                        Scenario.MoveDirection.FORWARD,
-                        40
-                    ),
-                    new Scenario.WaitStep(20),
-                    new Scenario.MoveStep(
-                        Scenario.MoveDirection.FORWARD,
-                        40
-                    )
-                )
-            )
-        );
     }
 
     private static void moveTemporaryFile(
@@ -554,7 +736,10 @@ public final class ScenarioRepository {
                 StandardCopyOption.REPLACE_EXISTING,
                 StandardCopyOption.ATOMIC_MOVE
             );
-        } catch (AtomicMoveNotSupportedException exception) {
+        } catch (
+            AtomicMoveNotSupportedException
+                exception
+        ) {
             Files.move(
                 temporaryPath,
                 destinationPath,

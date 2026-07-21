@@ -24,19 +24,15 @@ public final class ScenarioLibrary {
         return scenarios;
     }
 
-    public static Scenario getFirst() {
-        return getScenarios().getFirst();
-    }
-
     public static void reload() {
         scenarios = ScenarioRepository.load();
         initialized = true;
     }
 
     public static void save(List<Scenario> updatedScenarios) {
-        if (updatedScenarios == null || updatedScenarios.isEmpty()) {
+        if (updatedScenarios == null) {
             throw new IllegalArgumentException(
-                "Scenario library must not be empty"
+                "Scenario library must not be null"
             );
         }
 
@@ -54,18 +50,26 @@ public final class ScenarioLibrary {
         save(updatedScenarios);
     }
 
-    public static void replace(int index, Scenario scenario) {
+    public static void replace(
+        int index,
+        Scenario scenario
+    ) {
         List<Scenario> updatedScenarios = new ArrayList<>(
             getScenarios()
         );
 
-        if (index < 0 || index >= updatedScenarios.size()) {
-            throw new IndexOutOfBoundsException(
-                "Scenario index is out of bounds: " + index
-            );
-        }
-
+        validateIndex(index, updatedScenarios.size());
         updatedScenarios.set(index, scenario);
+        save(updatedScenarios);
+    }
+
+    public static void delete(int index) {
+        List<Scenario> updatedScenarios = new ArrayList<>(
+            getScenarios()
+        );
+
+        validateIndex(index, updatedScenarios.size());
+        updatedScenarios.remove(index);
         save(updatedScenarios);
     }
 
@@ -75,7 +79,11 @@ public final class ScenarioLibrary {
     ) {
         String normalizedName = name.trim();
 
-        for (int index = 0; index < getScenarios().size(); index++) {
+        for (
+            int index = 0;
+            index < getScenarios().size();
+            index++
+        ) {
             if (index == excludedIndex) {
                 continue;
             }
@@ -91,5 +99,16 @@ public final class ScenarioLibrary {
         }
 
         return false;
+    }
+
+    private static void validateIndex(
+        int index,
+        int size
+    ) {
+        if (index < 0 || index >= size) {
+            throw new IndexOutOfBoundsException(
+                "Scenario index is out of bounds: " + index
+            );
+        }
     }
 }
