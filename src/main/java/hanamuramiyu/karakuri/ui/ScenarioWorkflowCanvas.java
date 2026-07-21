@@ -612,6 +612,12 @@ public final class ScenarioWorkflowCanvas {
                         )
                     );
 
+                case Scenario.JumpStep jumpStep ->
+                    adjustJumpStep(
+                        jumpStep,
+                        direction
+                    );
+
                 case Scenario.MoveStep moveStep ->
                     moveStep.withDurationTicks(
                         Math.clamp(
@@ -623,6 +629,12 @@ public final class ScenarioWorkflowCanvas {
                         )
                     );
 
+                case Scenario.MouseStep mouseStep ->
+                    adjustMouseStep(
+                        mouseStep,
+                        direction
+                    );
+
                 case Scenario.WaitStep waitStep ->
                     new Scenario.WaitStep(
                         Math.clamp(
@@ -632,12 +644,6 @@ public final class ScenarioWorkflowCanvas {
                             MIN_DURATION_TICKS,
                             MAX_DURATION_TICKS
                         )
-                    );
-
-                case Scenario.MouseStep mouseStep ->
-                    adjustMouseStep(
-                        mouseStep,
-                        direction
                     );
             };
 
@@ -651,6 +657,47 @@ public final class ScenarioWorkflowCanvas {
         );
 
         contentListener.run();
+    }
+
+    private Scenario.JumpStep adjustJumpStep(
+        Scenario.JumpStep step,
+        int direction
+    ) {
+        if (
+            step.mode()
+                == Scenario.JumpMode.SINGLE
+                || step.stopMode()
+                    == Scenario.JumpStopMode.MANUAL
+        ) {
+            return step;
+        }
+
+        if (
+            step.mode()
+                == Scenario.JumpMode.REPEAT
+                && step.stopMode()
+                    == Scenario.JumpStopMode.JUMP_COUNT
+        ) {
+            return step.withJumpCount(
+                Math.clamp(
+                    step.jumpCount() + direction,
+                    Scenario.JumpStep
+                        .MIN_JUMP_COUNT,
+                    Scenario.JumpStep
+                        .MAX_JUMP_COUNT
+                )
+            );
+        }
+
+        return step.withDurationTicks(
+            Math.clamp(
+                step.durationTicks()
+                    + direction
+                    * DURATION_STEP_TICKS,
+                MIN_DURATION_TICKS,
+                MAX_DURATION_TICKS
+            )
+        );
     }
 
     private Scenario.MouseStep adjustMouseStep(
@@ -901,6 +948,9 @@ public final class ScenarioWorkflowCanvas {
             case Scenario.HotbarStep hotbarStep ->
                 0xFFE8D26A;
 
+            case Scenario.JumpStep jumpStep ->
+                0xFF78D6C6;
+
             case Scenario.MoveStep moveStep ->
                 switch (moveStep.direction()) {
                     case FORWARD ->
@@ -943,6 +993,9 @@ public final class ScenarioWorkflowCanvas {
                     hotbarStep.slot() + 1
                 );
 
+            case Scenario.JumpStep jumpStep ->
+                "J";
+
             case Scenario.MoveStep moveStep ->
                 switch (moveStep.direction()) {
                     case FORWARD -> "F";
@@ -973,6 +1026,13 @@ public final class ScenarioWorkflowCanvas {
 
             case Scenario.HotbarStep hotbarStep ->
                 "Select Slot";
+
+            case Scenario.JumpStep jumpStep ->
+                switch (jumpStep.mode()) {
+                    case SINGLE -> "Jump";
+                    case HOLD -> "Hold Jump";
+                    case REPEAT -> "Repeat Jump";
+                };
 
             case Scenario.MoveStep moveStep ->
                 moveStep.mode().label()
@@ -1011,6 +1071,9 @@ public final class ScenarioWorkflowCanvas {
                             + 1
                     );
 
+            case Scenario.JumpStep jumpStep ->
+                getJumpSubtitle(jumpStep);
+
             case Scenario.MoveStep moveStep ->
                 (
                     moveStep.jumping()
@@ -1021,13 +1084,51 @@ public final class ScenarioWorkflowCanvas {
                         moveStep.durationTicks()
                     );
 
+            case Scenario.MouseStep mouseStep ->
+                getMouseSubtitle(mouseStep);
+
             case Scenario.WaitStep waitStep ->
                 Scenario.formatDuration(
                     waitStep.durationTicks()
                 );
+        };
+    }
 
-            case Scenario.MouseStep mouseStep ->
-                getMouseSubtitle(mouseStep);
+    private String getJumpSubtitle(
+        Scenario.JumpStep step
+    ) {
+        return switch (step.mode()) {
+            case SINGLE ->
+                "Single";
+
+            case HOLD ->
+                step.stopMode()
+                    == Scenario.JumpStopMode.MANUAL
+                        ? "Hold · Manual"
+                        : "Hold · "
+                            + Scenario.formatDuration(
+                                step.durationTicks()
+                            );
+
+            case REPEAT ->
+                switch (step.stopMode()) {
+                    case DURATION ->
+                        "Repeat · "
+                            + Scenario.formatDuration(
+                                step.durationTicks()
+                            );
+
+                    case JUMP_COUNT ->
+                        step.jumpCount()
+                            + (
+                                step.jumpCount() == 1
+                                    ? " jump"
+                                    : " jumps"
+                            );
+
+                    case MANUAL ->
+                        "Repeat · Manual";
+                };
         };
     }
 

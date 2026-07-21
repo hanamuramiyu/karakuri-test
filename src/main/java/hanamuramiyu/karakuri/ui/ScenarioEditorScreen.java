@@ -47,10 +47,10 @@ public final class ScenarioEditorScreen extends Screen {
     private int selectedStepIndex;
 
     private boolean syncingDurationField;
-    private boolean syncingClickCountField;
+    private boolean syncingCountField;
     private boolean syncingAngleField;
     private boolean durationFieldValid = true;
-    private boolean clickCountFieldValid = true;
+    private boolean countFieldValid = true;
     private boolean angleFieldValid = true;
 
     private int panelX;
@@ -82,7 +82,7 @@ public final class ScenarioEditorScreen extends Screen {
 
     private EditBox nameField;
     private EditBox durationField;
-    private EditBox clickCountField;
+    private EditBox countField;
     private EditBox angleField;
 
     private KarakuriButton workflowTabButton;
@@ -98,6 +98,13 @@ public final class ScenarioEditorScreen extends Screen {
     private KarakuriButton sprintModeButton;
     private KarakuriButton sneakModeButton;
     private KarakuriButton jumpToggleButton;
+
+    private KarakuriButton singleJumpModeButton;
+    private KarakuriButton holdJumpModeButton;
+    private KarakuriButton repeatJumpModeButton;
+    private KarakuriButton jumpDurationStopButton;
+    private KarakuriButton jumpCountStopButton;
+    private KarakuriButton jumpManualStopButton;
 
     private KarakuriButton cameraLeftButton;
     private KarakuriButton cameraRightButton;
@@ -208,6 +215,7 @@ public final class ScenarioEditorScreen extends Screen {
                         : ScenarioActionLibrary
                             .Layout.HORIZONTAL,
                 this::insertMoveStep,
+                this::insertJumpStep,
                 this::insertWaitStep,
                 this::insertMouseStep,
                 this::insertCameraStep,
@@ -700,6 +708,25 @@ public final class ScenarioEditorScreen extends Screen {
         );
 
         addRenderableWidget(
+            singleJumpModeButton
+        );
+        addRenderableWidget(
+            holdJumpModeButton
+        );
+        addRenderableWidget(
+            repeatJumpModeButton
+        );
+        addRenderableWidget(
+            jumpDurationStopButton
+        );
+        addRenderableWidget(
+            jumpCountStopButton
+        );
+        addRenderableWidget(
+            jumpManualStopButton
+        );
+
+        addRenderableWidget(
             cameraLeftButton
         );
         addRenderableWidget(
@@ -763,7 +790,7 @@ public final class ScenarioEditorScreen extends Screen {
             durationField
         );
         addRenderableWidget(
-            clickCountField
+            countField
         );
         addRenderableWidget(
             primaryIncreaseButton
@@ -792,6 +819,12 @@ public final class ScenarioEditorScreen extends Screen {
                 contentWidth
                     - BUTTON_GAP
             ) / 2;
+
+        int thirdWidth =
+            (
+                contentWidth
+                    - BUTTON_GAP * 2
+            ) / 3;
 
         int selectorY =
             inspectorY + 58;
@@ -859,6 +892,51 @@ public final class ScenarioEditorScreen extends Screen {
                 () -> setDirection(
                     Scenario.MoveDirection
                         .RIGHT
+                ),
+                KarakuriButton
+                    .Style.GHOST
+            );
+
+        singleJumpModeButton =
+            createButton(
+                contentX,
+                selectorY,
+                thirdWidth,
+                Component.literal("Single"),
+                () -> setJumpMode(
+                    Scenario.JumpMode.SINGLE
+                ),
+                KarakuriButton
+                    .Style.GHOST
+            );
+
+        holdJumpModeButton =
+            createButton(
+                contentX
+                    + thirdWidth
+                    + BUTTON_GAP,
+                selectorY,
+                thirdWidth,
+                Component.literal("Hold"),
+                () -> setJumpMode(
+                    Scenario.JumpMode.HOLD
+                ),
+                KarakuriButton
+                    .Style.GHOST
+            );
+
+        repeatJumpModeButton =
+            createButton(
+                contentX
+                    + (
+                        thirdWidth
+                            + BUTTON_GAP
+                    ) * 2,
+                selectorY,
+                thirdWidth,
+                Component.literal("Repeat"),
+                () -> setJumpMode(
+                    Scenario.JumpMode.REPEAT
                 ),
                 KarakuriButton
                     .Style.GHOST
@@ -1006,12 +1084,6 @@ public final class ScenarioEditorScreen extends Screen {
         int modeY =
             inspectorY + 110;
 
-        int thirdWidth =
-            (
-                contentWidth
-                    - BUTTON_GAP * 2
-            ) / 3;
-
         walkModeButton =
             createButton(
                 contentX,
@@ -1058,6 +1130,51 @@ public final class ScenarioEditorScreen extends Screen {
                 ),
                 () -> setMoveMode(
                     Scenario.MoveMode.SNEAK
+                ),
+                KarakuriButton
+                    .Style.GHOST
+            );
+
+        jumpDurationStopButton =
+            createButton(
+                contentX,
+                modeY,
+                thirdWidth,
+                Component.literal("Time"),
+                () -> setJumpStopMode(
+                    Scenario.JumpStopMode.DURATION
+                ),
+                KarakuriButton
+                    .Style.GHOST
+            );
+
+        jumpCountStopButton =
+            createButton(
+                contentX
+                    + thirdWidth
+                    + BUTTON_GAP,
+                modeY,
+                thirdWidth,
+                Component.literal("Jumps"),
+                () -> setJumpStopMode(
+                    Scenario.JumpStopMode.JUMP_COUNT
+                ),
+                KarakuriButton
+                    .Style.GHOST
+            );
+
+        jumpManualStopButton =
+            createButton(
+                contentX
+                    + (
+                        thirdWidth
+                            + BUTTON_GAP
+                    ) * 2,
+                modeY,
+                thirdWidth,
+                Component.literal("Manual"),
+                () -> setJumpStopMode(
+                    Scenario.JumpStopMode.MANUAL
                 ),
                 KarakuriButton
                     .Style.GHOST
@@ -1331,6 +1448,12 @@ public final class ScenarioEditorScreen extends Screen {
                     - BUTTON_GAP * 3
             ) / 4;
 
+        int thirdWidth =
+            (
+                contentWidth
+                    - BUTTON_GAP * 2
+            ) / 3;
+
         int firstRowY =
             inspectorY + 42;
 
@@ -1403,6 +1526,51 @@ public final class ScenarioEditorScreen extends Screen {
                 () -> setDirection(
                     Scenario.MoveDirection
                         .RIGHT
+                ),
+                KarakuriButton
+                    .Style.GHOST
+            );
+
+        singleJumpModeButton =
+            createButton(
+                contentX,
+                firstRowY,
+                thirdWidth,
+                Component.literal("Single"),
+                () -> setJumpMode(
+                    Scenario.JumpMode.SINGLE
+                ),
+                KarakuriButton
+                    .Style.GHOST
+            );
+
+        holdJumpModeButton =
+            createButton(
+                contentX
+                    + thirdWidth
+                    + BUTTON_GAP,
+                firstRowY,
+                thirdWidth,
+                Component.literal("Hold"),
+                () -> setJumpMode(
+                    Scenario.JumpMode.HOLD
+                ),
+                KarakuriButton
+                    .Style.GHOST
+            );
+
+        repeatJumpModeButton =
+            createButton(
+                contentX
+                    + (
+                        thirdWidth
+                            + BUTTON_GAP
+                    ) * 2,
+                firstRowY,
+                thirdWidth,
+                Component.literal("Repeat"),
+                () -> setJumpMode(
+                    Scenario.JumpMode.REPEAT
                 ),
                 KarakuriButton
                     .Style.GHOST
@@ -1565,12 +1733,6 @@ public final class ScenarioEditorScreen extends Screen {
                     - BUTTON_GAP
             ) / 2;
 
-        int thirdWidth =
-            (
-                contentWidth
-                    - BUTTON_GAP * 2
-            ) / 3;
-
         walkModeButton =
             createButton(
                 contentX,
@@ -1635,6 +1797,51 @@ public final class ScenarioEditorScreen extends Screen {
                     "Jump"
                 ),
                 this::toggleMoveJumping,
+                KarakuriButton
+                    .Style.GHOST
+            );
+
+        jumpDurationStopButton =
+            createButton(
+                contentX,
+                secondRowY,
+                thirdWidth,
+                Component.literal("Time"),
+                () -> setJumpStopMode(
+                    Scenario.JumpStopMode.DURATION
+                ),
+                KarakuriButton
+                    .Style.GHOST
+            );
+
+        jumpCountStopButton =
+            createButton(
+                contentX
+                    + thirdWidth
+                    + BUTTON_GAP,
+                secondRowY,
+                thirdWidth,
+                Component.literal("Jumps"),
+                () -> setJumpStopMode(
+                    Scenario.JumpStopMode.JUMP_COUNT
+                ),
+                KarakuriButton
+                    .Style.GHOST
+            );
+
+        jumpManualStopButton =
+            createButton(
+                contentX
+                    + (
+                        thirdWidth
+                            + BUTTON_GAP
+                    ) * 2,
+                secondRowY,
+                thirdWidth,
+                Component.literal("Manual"),
+                () -> setJumpStopMode(
+                    Scenario.JumpStopMode.MANUAL
+                ),
                 KarakuriButton
                     .Style.GHOST
             );
@@ -1929,35 +2136,35 @@ public final class ScenarioEditorScreen extends Screen {
             this::onDurationFieldChanged
         );
 
-        clickCountField = new EditBox(
+        countField = new EditBox(
             font,
             primaryFrameX + 6,
             primaryFrameY + 3,
             primaryFrameWidth - 12,
             16,
             Component.literal(
-                "Click count"
+                "Count"
             )
         );
 
-        clickCountField.setBordered(false);
-        clickCountField.setTextColor(
+        countField.setBordered(false);
+        countField.setTextColor(
             0xFFF4F0F7
         );
-        clickCountField.setTextColorUneditable(
+        countField.setTextColorUneditable(
             0xFF81798E
         );
-        clickCountField.setTextShadow(false);
-        clickCountField.setMaxLength(6);
+        countField.setTextShadow(false);
+        countField.setMaxLength(6);
 
-        clickCountField.setFilter(
+        countField.setFilter(
             value -> value.matches(
                 "[0-9]{0,6}"
             )
         );
 
-        clickCountField.setResponder(
-            this::onClickCountFieldChanged
+        countField.setResponder(
+            this::onCountFieldChanged
         );
 
         angleField = new EditBox(
@@ -2207,6 +2414,61 @@ public final class ScenarioEditorScreen extends Screen {
         if (
             step
                 instanceof
+                Scenario.JumpStep jumpStep
+        ) {
+            drawInspectorLabel(
+                graphics,
+                "Jump mode",
+                46
+            );
+
+            if (
+                jumpStep.mode()
+                    != Scenario.JumpMode.SINGLE
+            ) {
+                drawInspectorLabel(
+                    graphics,
+                    "Stop after",
+                    98
+                );
+            }
+
+            String primaryLabel =
+                getJumpPrimaryValueLabel(
+                    jumpStep
+                );
+
+            if (primaryLabel != null) {
+                drawInspectorLabel(
+                    graphics,
+                    primaryLabel,
+                    150
+                );
+            }
+
+            graphics.drawString(
+                font,
+                Component.literal(
+                    getJumpDescription(
+                        jumpStep
+                    )
+                ),
+                inspectorX + 10,
+                inspectorY + 216,
+                jumpStep.isInfinite()
+                    && selectedStepIndex
+                        < steps.size() - 1
+                        ? 0xFFE66777
+                        : 0xFF81798E,
+                false
+            );
+
+            return;
+        }
+
+        if (
+            step
+                instanceof
                 Scenario.HotbarStep
         ) {
             drawInspectorLabel(
@@ -2417,6 +2679,9 @@ public final class ScenarioEditorScreen extends Screen {
                 case Scenario.HotbarStep hotbarStep ->
                     "Select active hotbar slot";
 
+                case Scenario.JumpStep jumpStep ->
+                    "Mode / stop condition";
+
                 case Scenario.MoveStep moveStep ->
                     "Direction / style / jumping";
 
@@ -2595,23 +2860,18 @@ public final class ScenarioEditorScreen extends Screen {
         }
 
         if (
-            clickCountField.visible
-                && !clickCountField
-                    .isFocused()
+            countField.visible
+                && !countField.isFocused()
         ) {
-            Scenario.MouseStep mouseStep =
-                (Scenario.MouseStep) step;
-
             coverFrameAndRenderValue(
                 graphics,
                 primaryFrameX,
                 primaryFrameY,
                 primaryFrameWidth,
-                clickCountFieldValid
-                    ? mouseStep.clickCount()
-                        + " clicks"
+                countFieldValid
+                    ? getCountDisplayValue(step)
                     : "Invalid",
-                clickCountFieldValid
+                countFieldValid
                     ? 0xFFF4F0F7
                     : 0xFFE66777
             );
@@ -2766,6 +3026,28 @@ public final class ScenarioEditorScreen extends Screen {
             new Scenario.MoveStep(
                 direction,
                 DEFAULT_MOVE_DURATION_TICKS
+            )
+        );
+
+        selectStep(insertIndex);
+        returnToWorkflow();
+    }
+
+    private void insertJumpStep() {
+        stopRunningTest();
+
+        int insertIndex =
+            selectedStepIndex + 1;
+
+        steps.add(
+            insertIndex,
+            new Scenario.JumpStep(
+                Scenario.JumpMode.SINGLE,
+                Scenario.JumpStopMode.DURATION,
+                Scenario.JumpStep
+                    .DEFAULT_DURATION_TICKS,
+                Scenario.JumpStep
+                    .DEFAULT_JUMP_COUNT
             )
         );
 
@@ -2988,6 +3270,56 @@ public final class ScenarioEditorScreen extends Screen {
             )
         );
 
+        updateButtons();
+    }
+
+    private void setJumpMode(
+        Scenario.JumpMode mode
+    ) {
+        stopRunningTest();
+
+        if (
+            !(
+                getSelectedStep()
+                    instanceof
+                    Scenario.JumpStep jumpStep
+            )
+        ) {
+            return;
+        }
+
+        steps.set(
+            selectedStepIndex,
+            jumpStep.withMode(mode)
+        );
+
+        syncValueFields();
+        updateButtons();
+    }
+
+    private void setJumpStopMode(
+        Scenario.JumpStopMode stopMode
+    ) {
+        stopRunningTest();
+
+        if (
+            !(
+                getSelectedStep()
+                    instanceof
+                    Scenario.JumpStep jumpStep
+            )
+        ) {
+            return;
+        }
+
+        steps.set(
+            selectedStepIndex,
+            jumpStep.withStopMode(
+                stopMode
+            )
+        );
+
+        syncValueFields();
         updateButtons();
     }
 
@@ -3227,13 +3559,33 @@ public final class ScenarioEditorScreen extends Screen {
         if (
             step
                 instanceof
+                Scenario.JumpStep jumpStep
+                && usesCount(step)
+        ) {
+            steps.set(
+                selectedStepIndex,
+                jumpStep.withJumpCount(
+                    Math.clamp(
+                        jumpStep.jumpCount()
+                            + direction,
+                        Scenario.JumpStep
+                            .MIN_JUMP_COUNT,
+                        Scenario.JumpStep
+                            .MAX_JUMP_COUNT
+                    )
+                )
+            );
+
+            syncValueFields();
+            updateButtons();
+            return;
+        }
+
+        if (
+            step
+                instanceof
                 Scenario.MouseStep mouseStep
-                && mouseStep.inputMode()
-                    == Scenario.MouseInputMode
-                        .CLICK
-                && mouseStep.stopMode()
-                    == Scenario.MouseStopMode
-                        .CLICK_COUNT
+                && usesCount(step)
         ) {
             steps.set(
                 selectedStepIndex,
@@ -3251,7 +3603,6 @@ public final class ScenarioEditorScreen extends Screen {
 
             syncValueFields();
             updateButtons();
-
             return;
         }
 
@@ -3303,7 +3654,6 @@ public final class ScenarioEditorScreen extends Screen {
             ) {
                 durationFieldValid = false;
                 updateButtons();
-
                 return;
             }
 
@@ -3321,51 +3671,60 @@ public final class ScenarioEditorScreen extends Screen {
         updateButtons();
     }
 
-    private void onClickCountFieldChanged(
+    private void onCountFieldChanged(
         String value
     ) {
-        if (syncingClickCountField) {
+        if (syncingCountField) {
             return;
         }
 
         stopRunningTest();
 
         try {
-            int clickCount =
+            int count =
                 Integer.parseInt(value);
 
             if (
-                clickCount
-                    < Scenario.MouseStep
-                        .MIN_CLICK_COUNT
-                    || clickCount
-                        > Scenario.MouseStep
-                            .MAX_CLICK_COUNT
+                count < 1
+                    || count > 100000
             ) {
-                clickCountFieldValid = false;
+                countFieldValid = false;
                 updateButtons();
-
                 return;
             }
 
+            Scenario.Step step =
+                getSelectedStep();
+
             if (
-                getSelectedStep()
+                step
+                    instanceof
+                    Scenario.JumpStep jumpStep
+            ) {
+                steps.set(
+                    selectedStepIndex,
+                    jumpStep.withJumpCount(
+                        count
+                    )
+                );
+            } else if (
+                step
                     instanceof
                     Scenario.MouseStep mouseStep
             ) {
                 steps.set(
                     selectedStepIndex,
                     mouseStep.withClickCount(
-                        clickCount
+                        count
                     )
                 );
             }
 
-            clickCountFieldValid = true;
+            countFieldValid = true;
         } catch (
             NumberFormatException exception
         ) {
-            clickCountFieldValid = false;
+            countFieldValid = false;
         }
 
         updateButtons();
@@ -3394,7 +3753,6 @@ public final class ScenarioEditorScreen extends Screen {
             ) {
                 angleFieldValid = false;
                 updateButtons();
-
                 return;
             }
 
@@ -3438,6 +3796,11 @@ public final class ScenarioEditorScreen extends Screen {
                 case Scenario.HotbarStep hotbarStep ->
                     hotbarStep;
 
+                case Scenario.JumpStep jumpStep ->
+                    jumpStep.withDurationTicks(
+                        durationTicks
+                    );
+
                 case Scenario.MoveStep moveStep ->
                     moveStep.withDurationTicks(
                         durationTicks
@@ -3458,7 +3821,7 @@ public final class ScenarioEditorScreen extends Screen {
 
     private void syncValueFields() {
         syncDurationField();
-        syncClickCountField();
+        syncCountField();
         syncAngleField();
     }
 
@@ -3480,28 +3843,40 @@ public final class ScenarioEditorScreen extends Screen {
         durationFieldValid = true;
     }
 
-    private void syncClickCountField() {
-        if (clickCountField == null) {
+    private void syncCountField() {
+        if (countField == null) {
             return;
         }
 
+        Scenario.Step step =
+            getSelectedStep();
+
+        syncingCountField = true;
+
         if (
-            getSelectedStep()
+            step
+                instanceof
+                Scenario.JumpStep jumpStep
+        ) {
+            countField.setValue(
+                Integer.toString(
+                    jumpStep.jumpCount()
+                )
+            );
+        } else if (
+            step
                 instanceof
                 Scenario.MouseStep mouseStep
         ) {
-            syncingClickCountField = true;
-
-            clickCountField.setValue(
+            countField.setValue(
                 Integer.toString(
                     mouseStep.clickCount()
                 )
             );
-
-            syncingClickCountField = false;
         }
 
-        clickCountFieldValid = true;
+        syncingCountField = false;
+        countFieldValid = true;
     }
 
     private void syncAngleField() {
@@ -3535,7 +3910,6 @@ public final class ScenarioEditorScreen extends Screen {
         ) {
             TaskManager.stop(minecraft);
             updateButtons();
-
             return;
         }
 
@@ -3607,6 +3981,12 @@ public final class ScenarioEditorScreen extends Screen {
                 || sprintModeButton == null
                 || sneakModeButton == null
                 || jumpToggleButton == null
+                || singleJumpModeButton == null
+                || holdJumpModeButton == null
+                || repeatJumpModeButton == null
+                || jumpDurationStopButton == null
+                || jumpCountStopButton == null
+                || jumpManualStopButton == null
                 || cameraLeftButton == null
                 || cameraRightButton == null
                 || cameraUpButton == null
@@ -3655,6 +4035,11 @@ public final class ScenarioEditorScreen extends Screen {
                 instanceof
                 Scenario.MoveStep;
 
+        boolean jump =
+            step
+                instanceof
+                Scenario.JumpStep;
+
         boolean camera =
             step
                 instanceof
@@ -3670,7 +4055,7 @@ public final class ScenarioEditorScreen extends Screen {
                 instanceof
                 Scenario.HotbarStep;
 
-        boolean clickMode =
+        boolean mouseClickMode =
             mouse
                 && (
                     (Scenario.MouseStep)
@@ -3678,6 +4063,24 @@ public final class ScenarioEditorScreen extends Screen {
                 ).inputMode()
                     == Scenario.MouseInputMode
                         .CLICK;
+
+        boolean jumpSingleMode =
+            jump
+                && (
+                    (Scenario.JumpStep)
+                        step
+                ).mode()
+                    == Scenario.JumpMode
+                        .SINGLE;
+
+        boolean jumpRepeatMode =
+            jump
+                && (
+                    (Scenario.JumpStep)
+                        step
+                ).mode()
+                    == Scenario.JumpMode
+                        .REPEAT;
 
         boolean cpsUsed =
             usesCps(step);
@@ -3688,12 +4091,12 @@ public final class ScenarioEditorScreen extends Screen {
         boolean durationUsed =
             usesDuration(step);
 
-        boolean clickCountUsed =
-            usesClickCount(step);
+        boolean countUsed =
+            usesCount(step);
 
         boolean primaryValueUsed =
             durationUsed
-                || clickCountUsed
+                || countUsed
                 || hotbar;
 
         forwardDirectionButton.visible =
@@ -3719,6 +4122,29 @@ public final class ScenarioEditorScreen extends Screen {
 
         jumpToggleButton.visible =
             inspectorVisible && movement;
+
+        singleJumpModeButton.visible =
+            inspectorVisible && jump;
+
+        holdJumpModeButton.visible =
+            inspectorVisible && jump;
+
+        repeatJumpModeButton.visible =
+            inspectorVisible && jump;
+
+        jumpDurationStopButton.visible =
+            inspectorVisible
+                && jump
+                && !jumpSingleMode;
+
+        jumpCountStopButton.visible =
+            inspectorVisible
+                && jumpRepeatMode;
+
+        jumpManualStopButton.visible =
+            inspectorVisible
+                && jump
+                && !jumpSingleMode;
 
         cameraLeftButton.visible =
             inspectorVisible && camera;
@@ -3755,8 +4181,7 @@ public final class ScenarioEditorScreen extends Screen {
 
         clickCountStopButton.visible =
             inspectorVisible
-                && mouse
-                && clickMode;
+                && mouseClickMode;
 
         manualStopButton.visible =
             inspectorVisible && mouse;
@@ -3788,9 +4213,9 @@ public final class ScenarioEditorScreen extends Screen {
             inspectorVisible
                 && durationUsed;
 
-        clickCountField.visible =
+        countField.visible =
             inspectorVisible
-                && clickCountUsed;
+                && countUsed;
 
         testButton.visible =
             inspectorVisible;
@@ -3869,6 +4294,48 @@ public final class ScenarioEditorScreen extends Screen {
             updateSelectorButton(
                 jumpToggleButton,
                 moveStep.jumping()
+            );
+        }
+
+        if (
+            step
+                instanceof
+                Scenario.JumpStep jumpStep
+        ) {
+            updateSelectorButton(
+                singleJumpModeButton,
+                jumpStep.mode()
+                    == Scenario.JumpMode.SINGLE
+            );
+
+            updateSelectorButton(
+                holdJumpModeButton,
+                jumpStep.mode()
+                    == Scenario.JumpMode.HOLD
+            );
+
+            updateSelectorButton(
+                repeatJumpModeButton,
+                jumpStep.mode()
+                    == Scenario.JumpMode.REPEAT
+            );
+
+            updateSelectorButton(
+                jumpDurationStopButton,
+                jumpStep.stopMode()
+                    == Scenario.JumpStopMode.DURATION
+            );
+
+            updateSelectorButton(
+                jumpCountStopButton,
+                jumpStep.stopMode()
+                    == Scenario.JumpStopMode.JUMP_COUNT
+            );
+
+            updateSelectorButton(
+                jumpManualStopButton,
+                jumpStep.stopMode()
+                    == Scenario.JumpStopMode.MANUAL
             );
         }
 
@@ -4005,10 +4472,27 @@ public final class ScenarioEditorScreen extends Screen {
             primaryIncreaseButton.active =
                 step.durationTicks()
                     < MAX_DURATION_TICKS;
-        } else if (clickCountUsed) {
-            Scenario.MouseStep mouseStep =
-                (Scenario.MouseStep) step;
+        } else if (
+            step
+                instanceof
+                Scenario.JumpStep jumpStep
+                && countUsed
+        ) {
+            primaryDecreaseButton.active =
+                jumpStep.jumpCount()
+                    > Scenario.JumpStep
+                        .MIN_JUMP_COUNT;
 
+            primaryIncreaseButton.active =
+                jumpStep.jumpCount()
+                    < Scenario.JumpStep
+                        .MAX_JUMP_COUNT;
+        } else if (
+            step
+                instanceof
+                Scenario.MouseStep mouseStep
+                && countUsed
+        ) {
             primaryDecreaseButton.active =
                 mouseStep.clickCount()
                     > Scenario.MouseStep
@@ -4154,6 +4638,17 @@ public final class ScenarioEditorScreen extends Screen {
         if (
             step
                 instanceof
+                Scenario.JumpStep jumpStep
+        ) {
+            return jumpStep.mode()
+                != Scenario.JumpMode.SINGLE
+                && jumpStep.stopMode()
+                    == Scenario.JumpStopMode.DURATION;
+        }
+
+        if (
+            step
+                instanceof
                 Scenario.MouseStep mouseStep
         ) {
             return mouseStep.stopMode()
@@ -4174,9 +4669,20 @@ public final class ScenarioEditorScreen extends Screen {
         return true;
     }
 
-    private boolean usesClickCount(
+    private boolean usesCount(
         Scenario.Step step
     ) {
+        if (
+            step
+                instanceof
+                Scenario.JumpStep jumpStep
+        ) {
+            return jumpStep.mode()
+                == Scenario.JumpMode.REPEAT
+                && jumpStep.stopMode()
+                    == Scenario.JumpStopMode.JUMP_COUNT;
+        }
+
         return step
             instanceof
             Scenario.MouseStep mouseStep
@@ -4192,7 +4698,7 @@ public final class ScenarioEditorScreen extends Screen {
         Scenario.Step step
     ) {
         return usesDuration(step)
-            || usesClickCount(step)
+            || usesCount(step)
             || usesHotbarSlot(step);
     }
 
@@ -4203,11 +4709,54 @@ public final class ScenarioEditorScreen extends Screen {
             return durationFieldValid;
         }
 
-        if (usesClickCount(step)) {
-            return clickCountFieldValid;
+        if (usesCount(step)) {
+            return countFieldValid;
         }
 
         return true;
+    }
+
+    private String getJumpPrimaryValueLabel(
+        Scenario.JumpStep step
+    ) {
+        if (
+            step.mode()
+                == Scenario.JumpMode.SINGLE
+        ) {
+            return null;
+        }
+
+        return switch (step.stopMode()) {
+            case DURATION ->
+                "Duration in seconds";
+
+            case JUMP_COUNT ->
+                "Jump count";
+
+            case MANUAL ->
+                null;
+        };
+    }
+
+    private String getJumpDescription(
+        Scenario.JumpStep step
+    ) {
+        return switch (step.mode()) {
+            case SINGLE ->
+                "Presses Jump once";
+
+            case HOLD ->
+                step.stopMode()
+                    == Scenario.JumpStopMode.MANUAL
+                        ? "Keeps Jump held until Stop"
+                        : "Keeps Jump held for the selected time";
+
+            case REPEAT ->
+                step.stopMode()
+                    == Scenario.JumpStopMode.MANUAL
+                        ? "Jumps after every landing until Stop"
+                        : "Jumps again after every landing";
+        };
     }
 
     private String getMousePrimaryValueLabel(
@@ -4257,6 +4806,33 @@ public final class ScenarioEditorScreen extends Screen {
             case MANUAL ->
                 "Clicks until Stop";
         };
+    }
+
+    private String getCountDisplayValue(
+        Scenario.Step step
+    ) {
+        if (
+            step
+                instanceof
+                Scenario.JumpStep jumpStep
+        ) {
+            return jumpStep.jumpCount()
+                + (
+                    jumpStep.jumpCount() == 1
+                        ? " jump"
+                        : " jumps"
+                );
+        }
+
+        Scenario.MouseStep mouseStep =
+            (Scenario.MouseStep) step;
+
+        return mouseStep.clickCount()
+            + (
+                mouseStep.clickCount() == 1
+                    ? " click"
+                    : " clicks"
+            );
     }
 
     private boolean isWorkflowVisible() {
@@ -4318,10 +4894,14 @@ public final class ScenarioEditorScreen extends Screen {
         }
 
         if (
-            usesClickCount(step)
-                && !clickCountFieldValid
+            usesCount(step)
+                && !countFieldValid
         ) {
-            return "Click count must be between 1 and 100000";
+            return step
+                instanceof
+                Scenario.JumpStep
+                    ? "Jump count must be between 1 and 100000"
+                    : "Click count must be between 1 and 100000";
         }
 
         for (
@@ -4389,6 +4969,18 @@ public final class ScenarioEditorScreen extends Screen {
                             + 1
                     );
 
+            case Scenario.JumpStep jumpStep ->
+                switch (jumpStep.mode()) {
+                    case SINGLE ->
+                        "Single Jump";
+
+                    case HOLD ->
+                        "Hold Jump";
+
+                    case REPEAT ->
+                        "Repeat Jumps";
+                };
+
             case Scenario.MoveStep moveStep -> {
                 String movement =
                     moveStep.mode().label()
@@ -4437,6 +5029,9 @@ public final class ScenarioEditorScreen extends Screen {
 
             case Scenario.HotbarStep hotbarStep ->
                 0xFFE8D26A;
+
+            case Scenario.JumpStep jumpStep ->
+                0xFF78D6C6;
 
             case Scenario.MoveStep moveStep ->
                 switch (moveStep.direction()) {

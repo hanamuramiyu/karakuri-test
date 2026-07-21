@@ -1,5 +1,6 @@
 package hanamuramiyu.karakuri.scenario;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -7,11 +8,15 @@ import java.util.Objects;
 public record Scenario(String name, List<Step> steps) {
     public Scenario {
         if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Scenario name must not be blank");
+            throw new IllegalArgumentException(
+                "Scenario name must not be blank"
+            );
         }
 
         if (steps == null || steps.isEmpty()) {
-            throw new IllegalArgumentException("Scenario must contain at least one step");
+            throw new IllegalArgumentException(
+                "Scenario must contain at least one step"
+            );
         }
 
         name = name.trim();
@@ -29,6 +34,7 @@ public record Scenario(String name, List<Step> steps) {
     public sealed interface Step permits
         CameraStep,
         HotbarStep,
+        JumpStep,
         MoveStep,
         MouseStep,
         WaitStep {
@@ -65,7 +71,10 @@ public record Scenario(String name, List<Step> steps) {
 
         public MoveDirection next() {
             MoveDirection[] directions = values();
-            return directions[(ordinal() + 1) % directions.length];
+
+            return directions[
+                (ordinal() + 1) % directions.length
+            ];
         }
 
         public static MoveDirection fromId(String id) {
@@ -179,6 +188,74 @@ public record Scenario(String name, List<Step> steps) {
 
             throw new IllegalArgumentException(
                 "Unknown camera motion: " + id
+            );
+        }
+    }
+
+    public enum JumpMode {
+        SINGLE("single", "Single"),
+        HOLD("hold", "Hold"),
+        REPEAT("repeat", "Repeat");
+
+        private final String id;
+        private final String label;
+
+        JumpMode(String id, String label) {
+            this.id = id;
+            this.label = label;
+        }
+
+        public String id() {
+            return id;
+        }
+
+        public String label() {
+            return label;
+        }
+
+        public static JumpMode fromId(String id) {
+            for (JumpMode mode : values()) {
+                if (mode.id.equals(id)) {
+                    return mode;
+                }
+            }
+
+            throw new IllegalArgumentException(
+                "Unknown jump mode: " + id
+            );
+        }
+    }
+
+    public enum JumpStopMode {
+        DURATION("duration", "Time"),
+        JUMP_COUNT("jump_count", "Jumps"),
+        MANUAL("manual", "Manual");
+
+        private final String id;
+        private final String label;
+
+        JumpStopMode(String id, String label) {
+            this.id = id;
+            this.label = label;
+        }
+
+        public String id() {
+            return id;
+        }
+
+        public String label() {
+            return label;
+        }
+
+        public static JumpStopMode fromId(String id) {
+            for (JumpStopMode mode : values()) {
+                if (mode.id.equals(id)) {
+                    return mode;
+                }
+            }
+
+            throw new IllegalArgumentException(
+                "Unknown jump stop mode: " + id
             );
         }
     }
@@ -322,7 +399,10 @@ public record Scenario(String name, List<Step> steps) {
             String angle = angleDegrees + "°";
 
             if (motion == CameraMotion.INSTANT) {
-                return direction.label() + " " + angle + " instantly";
+                return direction.label()
+                    + " "
+                    + angle
+                    + " instantly";
             }
 
             return direction.label()
@@ -405,6 +485,159 @@ public record Scenario(String name, List<Step> steps) {
         }
     }
 
+    public record JumpStep(
+        JumpMode mode,
+        JumpStopMode stopMode,
+        int durationTicks,
+        int jumpCount
+    ) implements Step {
+        public static final int MIN_JUMP_COUNT = 1;
+        public static final int MAX_JUMP_COUNT = 100000;
+        public static final int DEFAULT_JUMP_COUNT = 10;
+        public static final int DEFAULT_DURATION_TICKS = 20;
+
+        public JumpStep {
+            mode = Objects.requireNonNull(
+                mode,
+                "Jump mode must not be null"
+            );
+
+            stopMode = Objects.requireNonNull(
+                stopMode,
+                "Jump stop mode must not be null"
+            );
+
+            if (mode == JumpMode.SINGLE) {
+                stopMode = JumpStopMode.DURATION;
+            }
+
+            if (
+                mode == JumpMode.HOLD
+                    && stopMode == JumpStopMode.JUMP_COUNT
+            ) {
+                stopMode = JumpStopMode.DURATION;
+            }
+
+            validateDuration(durationTicks);
+
+            if (
+                jumpCount < MIN_JUMP_COUNT
+                    || jumpCount > MAX_JUMP_COUNT
+            ) {
+                throw new IllegalArgumentException(
+                    "Jump count must be between 1 and 100000"
+                );
+            }
+        }
+
+        @Override
+        public boolean isInfinite() {
+            return mode != JumpMode.SINGLE
+                && stopMode == JumpStopMode.MANUAL;
+        }
+
+        @Override
+        public String label() {
+            return switch (mode) {
+                case SINGLE ->
+                    "Jump once";
+
+                case HOLD ->
+                    stopMode == JumpStopMode.MANUAL
+                        ? "Hold jump until stopped"
+                        : "Hold jump for "
+                            + formatDuration(durationTicks);
+
+                case REPEAT ->
+                    switch (stopMode) {
+                        case DURATION ->
+                            "Repeat jumps for "
+                                + formatDuration(durationTicks);
+
+                        case JUMP_COUNT ->
+                            "Repeat "
+                                + jumpCount
+                                + (
+                                    jumpCount == 1
+                                        ? " jump"
+                                        : " jumps"
+                                );
+
+                        case MANUAL ->
+                            "Repeat jumps until stopped";
+                    };
+            };
+        }
+
+        public JumpStep withMode(JumpMode updatedMode) {
+            JumpStopMode updatedStopMode = stopMode;
+
+            if (updatedMode == JumpMode.SINGLE) {
+                updatedStopMode = JumpStopMode.DURATION;
+            }
+
+            if (
+                updatedMode == JumpMode.HOLD
+                    && updatedStopMode
+                        == JumpStopMode.JUMP_COUNT
+            ) {
+                updatedStopMode = JumpStopMode.DURATION;
+            }
+
+            return new JumpStep(
+                updatedMode,
+                updatedStopMode,
+                durationTicks,
+                jumpCount
+            );
+        }
+
+        public JumpStep withStopMode(
+            JumpStopMode updatedStopMode
+        ) {
+            if (mode == JumpMode.SINGLE) {
+                updatedStopMode = JumpStopMode.DURATION;
+            }
+
+            if (
+                mode == JumpMode.HOLD
+                    && updatedStopMode
+                        == JumpStopMode.JUMP_COUNT
+            ) {
+                updatedStopMode = JumpStopMode.DURATION;
+            }
+
+            return new JumpStep(
+                mode,
+                updatedStopMode,
+                durationTicks,
+                jumpCount
+            );
+        }
+
+        public JumpStep withDurationTicks(
+            int updatedDurationTicks
+        ) {
+            return new JumpStep(
+                mode,
+                stopMode,
+                updatedDurationTicks,
+                jumpCount
+            );
+        }
+
+        public JumpStep withJumpCount(
+            int updatedJumpCount
+        ) {
+            return new JumpStep(
+                mode,
+                stopMode,
+                durationTicks,
+                updatedJumpCount
+            );
+        }
+    }
+
     public record MoveStep(
         MoveDirection direction,
         MoveMode mode,
@@ -441,7 +674,8 @@ public record Scenario(String name, List<Step> steps) {
         public String label() {
             String movement = mode.label()
                 + " "
-                + direction.label().toLowerCase(Locale.ROOT);
+                + direction.label()
+                    .toLowerCase(Locale.ROOT);
 
             if (jumping) {
                 movement = "Jump while "
@@ -542,7 +776,8 @@ public record Scenario(String name, List<Step> steps) {
 
             if (
                 clicksPerSecondHalfSteps < MIN_CPS_HALF_STEPS
-                    || clicksPerSecondHalfSteps > MAX_CPS_HALF_STEPS
+                    || clicksPerSecondHalfSteps
+                        > MAX_CPS_HALF_STEPS
             ) {
                 throw new IllegalArgumentException(
                     "Mouse CPS must be between 0.5 and 10"
@@ -566,8 +801,8 @@ public record Scenario(String name, List<Step> steps) {
 
         @Override
         public String label() {
-            String actionName = action.label()
-                .toLowerCase(Locale.ROOT);
+            String actionName =
+                action.label().toLowerCase(Locale.ROOT);
 
             if (inputMode == MouseInputMode.HOLD) {
                 if (stopMode == MouseStopMode.MANUAL) {
@@ -593,12 +828,14 @@ public record Scenario(String name, List<Step> steps) {
                         + rate
                         + " for "
                         + formatDuration(durationTicks);
+
                 case CLICK_COUNT ->
                     action.label()
                         + " "
                         + clickCount
                         + " times at "
                         + rate;
+
                 case MANUAL ->
                     action.label()
                         + " at "
@@ -620,10 +857,12 @@ public record Scenario(String name, List<Step> steps) {
                 case DURATION -> Math.max(
                     1,
                     Math.ceilDiv(
-                        durationTicks * clicksPerSecondHalfSteps,
+                        durationTicks
+                            * clicksPerSecondHalfSteps,
                         40
                     )
                 );
+
                 case CLICK_COUNT -> clickCount;
                 case MANUAL -> -1;
             };
@@ -666,7 +905,8 @@ public record Scenario(String name, List<Step> steps) {
 
             if (
                 updatedInputMode == MouseInputMode.HOLD
-                    && updatedStopMode == MouseStopMode.CLICK_COUNT
+                    && updatedStopMode
+                        == MouseStopMode.CLICK_COUNT
             ) {
                 updatedStopMode = MouseStopMode.DURATION;
             }
@@ -686,7 +926,8 @@ public record Scenario(String name, List<Step> steps) {
         ) {
             if (
                 inputMode == MouseInputMode.HOLD
-                    && updatedStopMode == MouseStopMode.CLICK_COUNT
+                    && updatedStopMode
+                        == MouseStopMode.CLICK_COUNT
             ) {
                 updatedStopMode = MouseStopMode.DURATION;
             }
@@ -741,33 +982,29 @@ public record Scenario(String name, List<Step> steps) {
         }
     }
 
-    public record WaitStep(int durationTicks) implements Step {
+    public record WaitStep(
+        int durationTicks
+    ) implements Step {
         public WaitStep {
             validateDuration(durationTicks);
         }
 
         @Override
         public String label() {
-            return "Wait for " + formatDuration(durationTicks);
+            return "Wait for "
+                + formatDuration(durationTicks);
         }
     }
 
     public static String formatDuration(
         int durationTicks
     ) {
-        if (durationTicks % 20 == 0) {
-            return durationTicks / 20 + "s";
-        }
-
-        if (durationTicks % 10 == 0) {
-            return String.format(
-                Locale.ROOT,
-                "%.1fs",
-                durationTicks / 20.0
-            );
-        }
-
-        return durationTicks + " ticks";
+        return BigDecimal
+            .valueOf(durationTicks)
+            .divide(BigDecimal.valueOf(20))
+            .stripTrailingZeros()
+            .toPlainString()
+            + " s";
     }
 
     public static String formatClicksPerSecond(

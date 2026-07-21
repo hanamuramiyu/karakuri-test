@@ -51,21 +51,28 @@ public final class ScenarioRepository {
 
     public static List<Scenario> load() {
         try {
-            Files.createDirectories(SCENARIO_DIRECTORY);
+            Files.createDirectories(
+                SCENARIO_DIRECTORY
+            );
+
             migrateLegacyFile();
 
-            List<Path> scenarioFiles = listScenarioFiles();
+            List<Path> scenarioFiles =
+                listScenarioFiles();
 
             if (scenarioFiles.isEmpty()) {
                 return List.of();
             }
 
-            List<Scenario> scenarios = new ArrayList<>();
+            List<Scenario> scenarios =
+                new ArrayList<>();
 
             for (Path scenarioFile : scenarioFiles) {
                 try {
                     scenarios.add(
-                        readScenarioFile(scenarioFile)
+                        readScenarioFile(
+                            scenarioFile
+                        )
                     );
                 } catch (
                     IOException
@@ -526,6 +533,31 @@ public final class ScenarioRepository {
                     )
                 );
 
+            case "jump" ->
+                new Scenario.JumpStep(
+                    Scenario.JumpMode.fromId(
+                        getOptionalString(
+                            object,
+                            "mode",
+                            "single"
+                        )
+                    ),
+                    Scenario.JumpStopMode.fromId(
+                        getOptionalString(
+                            object,
+                            "stopMode",
+                            "duration"
+                        )
+                    ),
+                    durationTicks,
+                    getOptionalInt(
+                        object,
+                        "jumpCount",
+                        Scenario.JumpStep
+                            .DEFAULT_JUMP_COUNT
+                    )
+                );
+
             case "move" ->
                 new Scenario.MoveStep(
                     Scenario.MoveDirection.fromId(
@@ -689,6 +721,33 @@ public final class ScenarioRepository {
                 object.addProperty(
                     "durationTicks",
                     hotbarStep.durationTicks()
+                );
+            }
+
+            case Scenario.JumpStep jumpStep -> {
+                object.addProperty(
+                    "type",
+                    "jump"
+                );
+
+                object.addProperty(
+                    "mode",
+                    jumpStep.mode().id()
+                );
+
+                object.addProperty(
+                    "stopMode",
+                    jumpStep.stopMode().id()
+                );
+
+                object.addProperty(
+                    "durationTicks",
+                    jumpStep.durationTicks()
+                );
+
+                object.addProperty(
+                    "jumpCount",
+                    jumpStep.jumpCount()
                 );
             }
 

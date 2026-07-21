@@ -32,6 +32,7 @@ public final class ScenarioActionLibrary {
     private final KarakuriButton backwardButton;
     private final KarakuriButton leftButton;
     private final KarakuriButton rightButton;
+    private final KarakuriButton jumpButton;
 
     private final KarakuriButton waitButton;
 
@@ -60,6 +61,7 @@ public final class ScenarioActionLibrary {
         int height,
         Layout layout,
         Consumer<Scenario.MoveDirection> moveAction,
+        Runnable jumpAction,
         Runnable waitAction,
         Consumer<Scenario.MouseAction> mouseAction,
         Consumer<Scenario.CameraDirection> cameraAction,
@@ -162,16 +164,22 @@ public final class ScenarioActionLibrary {
                 y + height - 74
             );
 
-            int actionWidth =
+            int halfWidth =
                 (
                     categoryWidth
                         - BUTTON_GAP
                 ) / 2;
 
+            int thirdWidth =
+                (
+                    categoryWidth
+                        - BUTTON_GAP * 2
+                ) / 3;
+
             forwardButton = createButton(
                 categoryX,
                 actionY,
-                actionWidth,
+                thirdWidth,
                 Component.literal("Forward"),
                 () -> moveAction.accept(
                     Scenario.MoveDirection.FORWARD
@@ -182,11 +190,11 @@ public final class ScenarioActionLibrary {
 
             backwardButton = createButton(
                 categoryX
-                    + actionWidth
+                    + thirdWidth
                     + BUTTON_GAP,
                 actionY,
-                actionWidth,
-                Component.literal("Backward"),
+                thirdWidth,
+                Component.literal("Back"),
                 () -> moveAction.accept(
                     Scenario.MoveDirection.BACKWARD
                 ),
@@ -194,10 +202,24 @@ public final class ScenarioActionLibrary {
                     .TextAlignment.CENTER
             );
 
+            jumpButton = createButton(
+                categoryX
+                    + (
+                        thirdWidth
+                            + BUTTON_GAP
+                    ) * 2,
+                actionY,
+                thirdWidth,
+                Component.literal("Jump"),
+                jumpAction,
+                KarakuriButton
+                    .TextAlignment.CENTER
+            );
+
             leftButton = createButton(
                 categoryX,
                 actionY + 26,
-                actionWidth,
+                halfWidth,
                 Component.literal("Left"),
                 () -> moveAction.accept(
                     Scenario.MoveDirection.LEFT
@@ -208,10 +230,10 @@ public final class ScenarioActionLibrary {
 
             rightButton = createButton(
                 categoryX
-                    + actionWidth
+                    + halfWidth
                     + BUTTON_GAP,
                 actionY + 26,
-                actionWidth,
+                halfWidth,
                 Component.literal("Right"),
                 () -> moveAction.accept(
                     Scenario.MoveDirection.RIGHT
@@ -233,7 +255,7 @@ public final class ScenarioActionLibrary {
             leftClickButton = createButton(
                 categoryX,
                 actionY,
-                actionWidth,
+                halfWidth,
                 Component.literal("Left Click"),
                 () -> mouseAction.accept(
                     Scenario.MouseAction.LEFT_CLICK
@@ -244,10 +266,10 @@ public final class ScenarioActionLibrary {
 
             rightClickButton = createButton(
                 categoryX
-                    + actionWidth
+                    + halfWidth
                     + BUTTON_GAP,
                 actionY,
-                actionWidth,
+                halfWidth,
                 Component.literal("Right Click"),
                 () -> mouseAction.accept(
                     Scenario.MouseAction.RIGHT_CLICK
@@ -259,7 +281,7 @@ public final class ScenarioActionLibrary {
             cameraLeftButton = createButton(
                 categoryX,
                 actionY,
-                actionWidth,
+                halfWidth,
                 Component.literal("Turn Left"),
                 () -> cameraAction.accept(
                     Scenario.CameraDirection.LEFT
@@ -270,10 +292,10 @@ public final class ScenarioActionLibrary {
 
             cameraRightButton = createButton(
                 categoryX
-                    + actionWidth
+                    + halfWidth
                     + BUTTON_GAP,
                 actionY,
-                actionWidth,
+                halfWidth,
                 Component.literal("Turn Right"),
                 () -> cameraAction.accept(
                     Scenario.CameraDirection.RIGHT
@@ -285,7 +307,7 @@ public final class ScenarioActionLibrary {
             cameraUpButton = createButton(
                 categoryX,
                 actionY + 26,
-                actionWidth,
+                halfWidth,
                 Component.literal("Look Up"),
                 () -> cameraAction.accept(
                     Scenario.CameraDirection.UP
@@ -296,10 +318,10 @@ public final class ScenarioActionLibrary {
 
             cameraDownButton = createButton(
                 categoryX
-                    + actionWidth
+                    + halfWidth
                     + BUTTON_GAP,
                 actionY + 26,
-                actionWidth,
+                halfWidth,
                 Component.literal("Look Down"),
                 () -> cameraAction.accept(
                     Scenario.CameraDirection.DOWN
@@ -425,16 +447,16 @@ public final class ScenarioActionLibrary {
 
             int actionY = y + 84;
 
-            int actionWidth =
+            int movementWidth =
                 (
                     availableWidth
-                        - BUTTON_GAP * 3
-                ) / 4;
+                        - BUTTON_GAP * 4
+                ) / 5;
 
             forwardButton = createButton(
                 categoryX,
                 actionY,
-                actionWidth,
+                movementWidth,
                 Component.literal("Forward"),
                 () -> moveAction.accept(
                     Scenario.MoveDirection.FORWARD
@@ -445,11 +467,11 @@ public final class ScenarioActionLibrary {
 
             backwardButton = createButton(
                 categoryX
-                    + actionWidth
+                    + movementWidth
                     + BUTTON_GAP,
                 actionY,
-                actionWidth,
-                Component.literal("Backward"),
+                movementWidth,
+                Component.literal("Back"),
                 () -> moveAction.accept(
                     Scenario.MoveDirection.BACKWARD
                 ),
@@ -460,11 +482,11 @@ public final class ScenarioActionLibrary {
             leftButton = createButton(
                 categoryX
                     + (
-                        actionWidth
+                        movementWidth
                             + BUTTON_GAP
                     ) * 2,
                 actionY,
-                actionWidth,
+                movementWidth,
                 Component.literal("Left"),
                 () -> moveAction.accept(
                     Scenario.MoveDirection.LEFT
@@ -476,15 +498,29 @@ public final class ScenarioActionLibrary {
             rightButton = createButton(
                 categoryX
                     + (
-                        actionWidth
+                        movementWidth
                             + BUTTON_GAP
                     ) * 3,
                 actionY,
-                actionWidth,
+                movementWidth,
                 Component.literal("Right"),
                 () -> moveAction.accept(
                     Scenario.MoveDirection.RIGHT
                 ),
+                KarakuriButton
+                    .TextAlignment.CENTER
+            );
+
+            jumpButton = createButton(
+                categoryX
+                    + (
+                        movementWidth
+                            + BUTTON_GAP
+                    ) * 4,
+                actionY,
+                movementWidth,
+                Component.literal("Jump"),
+                jumpAction,
                 KarakuriButton
                     .TextAlignment.CENTER
             );
@@ -530,6 +566,12 @@ public final class ScenarioActionLibrary {
                 KarakuriButton
                     .TextAlignment.CENTER
             );
+
+            int actionWidth =
+                (
+                    availableWidth
+                        - BUTTON_GAP * 3
+                ) / 4;
 
             cameraLeftButton = createButton(
                 categoryX,
@@ -616,6 +658,7 @@ public final class ScenarioActionLibrary {
             backwardButton,
             leftButton,
             rightButton,
+            jumpButton,
             waitButton,
             leftClickButton,
             rightClickButton,
@@ -835,6 +878,7 @@ public final class ScenarioActionLibrary {
         backwardButton.visible = movement;
         leftButton.visible = movement;
         rightButton.visible = movement;
+        jumpButton.visible = movement;
 
         waitButton.visible = timing;
 
@@ -862,6 +906,10 @@ public final class ScenarioActionLibrary {
         );
 
         rightButton.setStyle(
+            KarakuriButton.Style.SECONDARY
+        );
+
+        jumpButton.setStyle(
             KarakuriButton.Style.SECONDARY
         );
 
