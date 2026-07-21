@@ -30,7 +30,11 @@ public record Scenario(String name, List<Step> steps) {
         }
     }
 
-    public sealed interface Step permits MoveStep, MouseStep, WaitStep {
+    public sealed interface Step permits
+        CameraStep,
+        MoveStep,
+        MouseStep,
+        WaitStep {
         int durationTicks();
 
         String label();
@@ -79,6 +83,74 @@ public record Scenario(String name, List<Step> steps) {
 
             throw new IllegalArgumentException(
                 "Unknown movement direction: " + id
+            );
+        }
+    }
+
+    public enum CameraDirection {
+        LEFT("left", "Turn Left"),
+        RIGHT("right", "Turn Right"),
+        UP("up", "Look Up"),
+        DOWN("down", "Look Down");
+
+        private final String id;
+        private final String label;
+
+        CameraDirection(String id, String label) {
+            this.id = id;
+            this.label = label;
+        }
+
+        public String id() {
+            return id;
+        }
+
+        public String label() {
+            return label;
+        }
+
+        public static CameraDirection fromId(String id) {
+            for (CameraDirection direction : values()) {
+                if (direction.id.equals(id)) {
+                    return direction;
+                }
+            }
+
+            throw new IllegalArgumentException(
+                "Unknown camera direction: " + id
+            );
+        }
+    }
+
+    public enum CameraMotion {
+        INSTANT("instant", "Instant"),
+        SMOOTH("smooth", "Smooth");
+
+        private final String id;
+        private final String label;
+
+        CameraMotion(String id, String label) {
+            this.id = id;
+            this.label = label;
+        }
+
+        public String id() {
+            return id;
+        }
+
+        public String label() {
+            return label;
+        }
+
+        public static CameraMotion fromId(String id) {
+            for (CameraMotion motion : values()) {
+                if (motion.id.equals(id)) {
+                    return motion;
+                }
+            }
+
+            throw new IllegalArgumentException(
+                "Unknown camera motion: " + id
             );
         }
     }
@@ -179,6 +251,103 @@ public record Scenario(String name, List<Step> steps) {
 
             throw new IllegalArgumentException(
                 "Unknown mouse stop mode: " + id
+            );
+        }
+    }
+
+    public record CameraStep(
+        CameraDirection direction,
+        CameraMotion motion,
+        int angleDegrees,
+        int durationTicks
+    ) implements Step {
+        public static final int MIN_ANGLE_DEGREES = 1;
+        public static final int MAX_ANGLE_DEGREES = 180;
+        public static final int DEFAULT_ANGLE_DEGREES = 90;
+        public static final int DEFAULT_DURATION_TICKS = 20;
+
+        public CameraStep {
+            direction = Objects.requireNonNull(
+                direction,
+                "Camera direction must not be null"
+            );
+
+            motion = Objects.requireNonNull(
+                motion,
+                "Camera motion must not be null"
+            );
+
+            if (
+                angleDegrees < MIN_ANGLE_DEGREES
+                    || angleDegrees > MAX_ANGLE_DEGREES
+            ) {
+                throw new IllegalArgumentException(
+                    "Camera angle must be between 1 and 180 degrees"
+                );
+            }
+
+            validateDuration(durationTicks);
+        }
+
+        @Override
+        public String label() {
+            String angle = angleDegrees + "°";
+
+            if (motion == CameraMotion.INSTANT) {
+                return direction.label()
+                    + " "
+                    + angle
+                    + " instantly";
+            }
+
+            return direction.label()
+                + " "
+                + angle
+                + " over "
+                + formatDuration(durationTicks);
+        }
+
+        public CameraStep withDirection(
+            CameraDirection updatedDirection
+        ) {
+            return new CameraStep(
+                updatedDirection,
+                motion,
+                angleDegrees,
+                durationTicks
+            );
+        }
+
+        public CameraStep withMotion(
+            CameraMotion updatedMotion
+        ) {
+            return new CameraStep(
+                direction,
+                updatedMotion,
+                angleDegrees,
+                durationTicks
+            );
+        }
+
+        public CameraStep withAngleDegrees(
+            int updatedAngleDegrees
+        ) {
+            return new CameraStep(
+                direction,
+                motion,
+                updatedAngleDegrees,
+                durationTicks
+            );
+        }
+
+        public CameraStep withDurationTicks(
+            int updatedDurationTicks
+        ) {
+            return new CameraStep(
+                direction,
+                motion,
+                angleDegrees,
+                updatedDurationTicks
             );
         }
     }
@@ -291,10 +460,9 @@ public record Scenario(String name, List<Step> steps) {
                     + formatDuration(durationTicks);
             }
 
-            String rate =
-                formatClicksPerSecondLabel(
-                    clicksPerSecondHalfSteps
-                );
+            String rate = formatClicksPerSecondLabel(
+                clicksPerSecondHalfSteps
+            );
 
             return switch (stopMode) {
                 case DURATION ->

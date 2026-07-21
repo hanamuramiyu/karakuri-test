@@ -24,6 +24,7 @@ public final class ScenarioActionLibrary {
     private final KarakuriButton movementCategoryButton;
     private final KarakuriButton timingCategoryButton;
     private final KarakuriButton mouseCategoryButton;
+    private final KarakuriButton cameraCategoryButton;
     private final KarakuriButton blocksCategoryButton;
     private final KarakuriButton inventoryCategoryButton;
 
@@ -31,13 +32,22 @@ public final class ScenarioActionLibrary {
     private final KarakuriButton backwardButton;
     private final KarakuriButton leftButton;
     private final KarakuriButton rightButton;
+
     private final KarakuriButton waitButton;
+
     private final KarakuriButton leftClickButton;
     private final KarakuriButton rightClickButton;
 
+    private final KarakuriButton cameraLeftButton;
+    private final KarakuriButton cameraRightButton;
+    private final KarakuriButton cameraUpButton;
+    private final KarakuriButton cameraDownButton;
+
     private final List<KarakuriButton> widgets;
 
-    private Category selectedCategory = Category.MOVEMENT;
+    private Category selectedCategory =
+        Category.MOVEMENT;
+
     private boolean visible = true;
 
     public ScenarioActionLibrary(
@@ -49,7 +59,8 @@ public final class ScenarioActionLibrary {
         Layout layout,
         Consumer<Scenario.MoveDirection> moveAction,
         Runnable waitAction,
-        Consumer<Scenario.MouseAction> mouseAction
+        Consumer<Scenario.MouseAction> mouseAction,
+        Consumer<Scenario.CameraDirection> cameraAction
     ) {
         this.font = font;
         this.x = x;
@@ -60,63 +71,100 @@ public final class ScenarioActionLibrary {
 
         if (layout == Layout.SIDEBAR) {
             int categoryX = x + PADDING;
-            int categoryWidth = width - PADDING * 2;
+            int categoryWidth =
+                width - PADDING * 2;
             int categoryY = y + 30;
 
-            movementCategoryButton = createButton(
-                categoryX,
-                categoryY,
-                categoryWidth,
-                Component.literal("Movement"),
-                () -> selectCategory(Category.MOVEMENT),
-                KarakuriButton.TextAlignment.LEFT
-            );
+            movementCategoryButton =
+                createButton(
+                    categoryX,
+                    categoryY,
+                    categoryWidth,
+                    Component.literal("Movement"),
+                    () -> selectCategory(
+                        Category.MOVEMENT
+                    ),
+                    KarakuriButton
+                        .TextAlignment.LEFT
+                );
 
-            timingCategoryButton = createButton(
-                categoryX,
-                categoryY + 26,
-                categoryWidth,
-                Component.literal("Timing"),
-                () -> selectCategory(Category.TIMING),
-                KarakuriButton.TextAlignment.LEFT
-            );
+            timingCategoryButton =
+                createButton(
+                    categoryX,
+                    categoryY + 26,
+                    categoryWidth,
+                    Component.literal("Timing"),
+                    () -> selectCategory(
+                        Category.TIMING
+                    ),
+                    KarakuriButton
+                        .TextAlignment.LEFT
+                );
 
-            mouseCategoryButton = createButton(
-                categoryX,
-                categoryY + 52,
-                categoryWidth,
-                Component.literal("Mouse"),
-                () -> selectCategory(Category.MOUSE),
-                KarakuriButton.TextAlignment.LEFT
-            );
+            mouseCategoryButton =
+                createButton(
+                    categoryX,
+                    categoryY + 52,
+                    categoryWidth,
+                    Component.literal("Mouse"),
+                    () -> selectCategory(
+                        Category.MOUSE
+                    ),
+                    KarakuriButton
+                        .TextAlignment.LEFT
+                );
 
-            blocksCategoryButton = createButton(
-                categoryX,
-                categoryY + 78,
-                categoryWidth,
-                Component.literal("Blocks  ·  Soon"),
-                () -> {
-                },
-                KarakuriButton.TextAlignment.LEFT
-            );
+            cameraCategoryButton =
+                createButton(
+                    categoryX,
+                    categoryY + 78,
+                    categoryWidth,
+                    Component.literal("Camera"),
+                    () -> selectCategory(
+                        Category.CAMERA
+                    ),
+                    KarakuriButton
+                        .TextAlignment.LEFT
+                );
 
-            inventoryCategoryButton = createButton(
-                categoryX,
-                categoryY + 104,
-                categoryWidth,
-                Component.literal("Inventory  ·  Soon"),
-                () -> {
-                },
-                KarakuriButton.TextAlignment.LEFT
-            );
+            blocksCategoryButton =
+                createButton(
+                    categoryX,
+                    categoryY + 104,
+                    categoryWidth,
+                    Component.literal(
+                        "Blocks  ·  Soon"
+                    ),
+                    () -> {
+                    },
+                    KarakuriButton
+                        .TextAlignment.LEFT
+                );
+
+            inventoryCategoryButton =
+                createButton(
+                    categoryX,
+                    categoryY + 130,
+                    categoryWidth,
+                    Component.literal(
+                        "Inventory  ·  Soon"
+                    ),
+                    () -> {
+                    },
+                    KarakuriButton
+                        .TextAlignment.LEFT
+                );
 
             int actionY = Math.min(
-                y + 188,
+                y + 214,
                 y + height - 74
             );
 
             int actionWidth =
-                (categoryWidth - BUTTON_GAP) / 2;
+                (
+                    categoryWidth
+                        - BUTTON_GAP
+                ) / 2;
 
             forwardButton = createButton(
                 categoryX,
@@ -126,18 +174,22 @@ public final class ScenarioActionLibrary {
                 () -> moveAction.accept(
                     Scenario.MoveDirection.FORWARD
                 ),
-                KarakuriButton.TextAlignment.CENTER
+                KarakuriButton
+                    .TextAlignment.CENTER
             );
 
             backwardButton = createButton(
-                categoryX + actionWidth + BUTTON_GAP,
+                categoryX
+                    + actionWidth
+                    + BUTTON_GAP,
                 actionY,
                 actionWidth,
                 Component.literal("Backward"),
                 () -> moveAction.accept(
                     Scenario.MoveDirection.BACKWARD
                 ),
-                KarakuriButton.TextAlignment.CENTER
+                KarakuriButton
+                    .TextAlignment.CENTER
             );
 
             leftButton = createButton(
@@ -148,18 +200,22 @@ public final class ScenarioActionLibrary {
                 () -> moveAction.accept(
                     Scenario.MoveDirection.LEFT
                 ),
-                KarakuriButton.TextAlignment.CENTER
+                KarakuriButton
+                    .TextAlignment.CENTER
             );
 
             rightButton = createButton(
-                categoryX + actionWidth + BUTTON_GAP,
+                categoryX
+                    + actionWidth
+                    + BUTTON_GAP,
                 actionY + 26,
                 actionWidth,
                 Component.literal("Right"),
                 () -> moveAction.accept(
                     Scenario.MoveDirection.RIGHT
                 ),
-                KarakuriButton.TextAlignment.CENTER
+                KarakuriButton
+                    .TextAlignment.CENTER
             );
 
             waitButton = createButton(
@@ -168,7 +224,8 @@ public final class ScenarioActionLibrary {
                 categoryWidth,
                 Component.literal("Wait"),
                 waitAction,
-                KarakuriButton.TextAlignment.CENTER
+                KarakuriButton
+                    .TextAlignment.CENTER
             );
 
             leftClickButton = createButton(
@@ -179,82 +236,184 @@ public final class ScenarioActionLibrary {
                 () -> mouseAction.accept(
                     Scenario.MouseAction.LEFT_CLICK
                 ),
-                KarakuriButton.TextAlignment.CENTER
+                KarakuriButton
+                    .TextAlignment.CENTER
             );
 
             rightClickButton = createButton(
-                categoryX + actionWidth + BUTTON_GAP,
+                categoryX
+                    + actionWidth
+                    + BUTTON_GAP,
                 actionY,
                 actionWidth,
                 Component.literal("Right Click"),
                 () -> mouseAction.accept(
                     Scenario.MouseAction.RIGHT_CLICK
                 ),
-                KarakuriButton.TextAlignment.CENTER
+                KarakuriButton
+                    .TextAlignment.CENTER
+            );
+
+            cameraLeftButton = createButton(
+                categoryX,
+                actionY,
+                actionWidth,
+                Component.literal("Turn Left"),
+                () -> cameraAction.accept(
+                    Scenario.CameraDirection.LEFT
+                ),
+                KarakuriButton
+                    .TextAlignment.CENTER
+            );
+
+            cameraRightButton = createButton(
+                categoryX
+                    + actionWidth
+                    + BUTTON_GAP,
+                actionY,
+                actionWidth,
+                Component.literal("Turn Right"),
+                () -> cameraAction.accept(
+                    Scenario.CameraDirection.RIGHT
+                ),
+                KarakuriButton
+                    .TextAlignment.CENTER
+            );
+
+            cameraUpButton = createButton(
+                categoryX,
+                actionY + 26,
+                actionWidth,
+                Component.literal("Look Up"),
+                () -> cameraAction.accept(
+                    Scenario.CameraDirection.UP
+                ),
+                KarakuriButton
+                    .TextAlignment.CENTER
+            );
+
+            cameraDownButton = createButton(
+                categoryX
+                    + actionWidth
+                    + BUTTON_GAP,
+                actionY + 26,
+                actionWidth,
+                Component.literal("Look Down"),
+                () -> cameraAction.accept(
+                    Scenario.CameraDirection.DOWN
+                ),
+                KarakuriButton
+                    .TextAlignment.CENTER
             );
         } else {
-            int availableWidth = width - PADDING * 2;
+            int availableWidth =
+                width - PADDING * 2;
 
             int categoryWidth =
-                (availableWidth - BUTTON_GAP * 4) / 5;
+                (
+                    availableWidth
+                        - BUTTON_GAP * 2
+                ) / 3;
 
             int categoryX = x + PADDING;
-            int categoryY = y + 28;
+            int firstCategoryY = y + 28;
+            int secondCategoryY = y + 54;
 
-            movementCategoryButton = createButton(
-                categoryX,
-                categoryY,
-                categoryWidth,
-                Component.literal("Move"),
-                () -> selectCategory(Category.MOVEMENT),
-                KarakuriButton.TextAlignment.CENTER
-            );
+            movementCategoryButton =
+                createButton(
+                    categoryX,
+                    firstCategoryY,
+                    categoryWidth,
+                    Component.literal("Move"),
+                    () -> selectCategory(
+                        Category.MOVEMENT
+                    ),
+                    KarakuriButton
+                        .TextAlignment.CENTER
+                );
 
-            timingCategoryButton = createButton(
-                categoryX + categoryWidth + BUTTON_GAP,
-                categoryY,
-                categoryWidth,
-                Component.literal("Time"),
-                () -> selectCategory(Category.TIMING),
-                KarakuriButton.TextAlignment.CENTER
-            );
+            timingCategoryButton =
+                createButton(
+                    categoryX
+                        + categoryWidth
+                        + BUTTON_GAP,
+                    firstCategoryY,
+                    categoryWidth,
+                    Component.literal("Time"),
+                    () -> selectCategory(
+                        Category.TIMING
+                    ),
+                    KarakuriButton
+                        .TextAlignment.CENTER
+                );
 
-            mouseCategoryButton = createButton(
-                categoryX
-                    + (categoryWidth + BUTTON_GAP) * 2,
-                categoryY,
-                categoryWidth,
-                Component.literal("Mouse"),
-                () -> selectCategory(Category.MOUSE),
-                KarakuriButton.TextAlignment.CENTER
-            );
+            mouseCategoryButton =
+                createButton(
+                    categoryX
+                        + (
+                            categoryWidth
+                                + BUTTON_GAP
+                        ) * 2,
+                    firstCategoryY,
+                    categoryWidth,
+                    Component.literal("Mouse"),
+                    () -> selectCategory(
+                        Category.MOUSE
+                    ),
+                    KarakuriButton
+                        .TextAlignment.CENTER
+                );
 
-            blocksCategoryButton = createButton(
-                categoryX
-                    + (categoryWidth + BUTTON_GAP) * 3,
-                categoryY,
-                categoryWidth,
-                Component.literal("Blocks"),
-                () -> {
-                },
-                KarakuriButton.TextAlignment.CENTER
-            );
+            cameraCategoryButton =
+                createButton(
+                    categoryX,
+                    secondCategoryY,
+                    categoryWidth,
+                    Component.literal("Camera"),
+                    () -> selectCategory(
+                        Category.CAMERA
+                    ),
+                    KarakuriButton
+                        .TextAlignment.CENTER
+                );
 
-            inventoryCategoryButton = createButton(
-                categoryX
-                    + (categoryWidth + BUTTON_GAP) * 4,
-                categoryY,
-                categoryWidth,
-                Component.literal("Items"),
-                () -> {
-                },
-                KarakuriButton.TextAlignment.CENTER
-            );
+            blocksCategoryButton =
+                createButton(
+                    categoryX
+                        + categoryWidth
+                        + BUTTON_GAP,
+                    secondCategoryY,
+                    categoryWidth,
+                    Component.literal("Blocks"),
+                    () -> {
+                    },
+                    KarakuriButton
+                        .TextAlignment.CENTER
+                );
 
-            int actionY = y + 60;
+            inventoryCategoryButton =
+                createButton(
+                    categoryX
+                        + (
+                            categoryWidth
+                                + BUTTON_GAP
+                        ) * 2,
+                    secondCategoryY,
+                    categoryWidth,
+                    Component.literal("Items"),
+                    () -> {
+                    },
+                    KarakuriButton
+                        .TextAlignment.CENTER
+                );
+
+            int actionY = y + 84;
 
             int actionWidth =
-                (availableWidth - BUTTON_GAP * 3) / 4;
+                (
+                    availableWidth
+                        - BUTTON_GAP * 3
+                ) / 4;
 
             forwardButton = createButton(
                 categoryX,
@@ -264,42 +423,54 @@ public final class ScenarioActionLibrary {
                 () -> moveAction.accept(
                     Scenario.MoveDirection.FORWARD
                 ),
-                KarakuriButton.TextAlignment.CENTER
+                KarakuriButton
+                    .TextAlignment.CENTER
             );
 
             backwardButton = createButton(
-                categoryX + actionWidth + BUTTON_GAP,
+                categoryX
+                    + actionWidth
+                    + BUTTON_GAP,
                 actionY,
                 actionWidth,
                 Component.literal("Backward"),
                 () -> moveAction.accept(
                     Scenario.MoveDirection.BACKWARD
                 ),
-                KarakuriButton.TextAlignment.CENTER
+                KarakuriButton
+                    .TextAlignment.CENTER
             );
 
             leftButton = createButton(
                 categoryX
-                    + (actionWidth + BUTTON_GAP) * 2,
+                    + (
+                        actionWidth
+                            + BUTTON_GAP
+                    ) * 2,
                 actionY,
                 actionWidth,
                 Component.literal("Left"),
                 () -> moveAction.accept(
                     Scenario.MoveDirection.LEFT
                 ),
-                KarakuriButton.TextAlignment.CENTER
+                KarakuriButton
+                    .TextAlignment.CENTER
             );
 
             rightButton = createButton(
                 categoryX
-                    + (actionWidth + BUTTON_GAP) * 3,
+                    + (
+                        actionWidth
+                            + BUTTON_GAP
+                    ) * 3,
                 actionY,
                 actionWidth,
                 Component.literal("Right"),
                 () -> moveAction.accept(
                     Scenario.MoveDirection.RIGHT
                 ),
-                KarakuriButton.TextAlignment.CENTER
+                KarakuriButton
+                    .TextAlignment.CENTER
             );
 
             waitButton = createButton(
@@ -308,34 +479,98 @@ public final class ScenarioActionLibrary {
                 availableWidth,
                 Component.literal("Wait"),
                 waitAction,
-                KarakuriButton.TextAlignment.CENTER
+                KarakuriButton
+                    .TextAlignment.CENTER
             );
 
-            int mouseButtonWidth =
-                (availableWidth - BUTTON_GAP) / 2;
+            int halfWidth =
+                (
+                    availableWidth
+                        - BUTTON_GAP
+                ) / 2;
 
             leftClickButton = createButton(
                 categoryX,
                 actionY,
-                mouseButtonWidth,
+                halfWidth,
                 Component.literal("Left Click"),
                 () -> mouseAction.accept(
                     Scenario.MouseAction.LEFT_CLICK
                 ),
-                KarakuriButton.TextAlignment.CENTER
+                KarakuriButton
+                    .TextAlignment.CENTER
             );
 
             rightClickButton = createButton(
                 categoryX
-                    + mouseButtonWidth
+                    + halfWidth
                     + BUTTON_GAP,
                 actionY,
-                mouseButtonWidth,
+                halfWidth,
                 Component.literal("Right Click"),
                 () -> mouseAction.accept(
                     Scenario.MouseAction.RIGHT_CLICK
                 ),
-                KarakuriButton.TextAlignment.CENTER
+                KarakuriButton
+                    .TextAlignment.CENTER
+            );
+
+            cameraLeftButton = createButton(
+                categoryX,
+                actionY,
+                actionWidth,
+                Component.literal("Left"),
+                () -> cameraAction.accept(
+                    Scenario.CameraDirection.LEFT
+                ),
+                KarakuriButton
+                    .TextAlignment.CENTER
+            );
+
+            cameraRightButton = createButton(
+                categoryX
+                    + actionWidth
+                    + BUTTON_GAP,
+                actionY,
+                actionWidth,
+                Component.literal("Right"),
+                () -> cameraAction.accept(
+                    Scenario.CameraDirection.RIGHT
+                ),
+                KarakuriButton
+                    .TextAlignment.CENTER
+            );
+
+            cameraUpButton = createButton(
+                categoryX
+                    + (
+                        actionWidth
+                            + BUTTON_GAP
+                    ) * 2,
+                actionY,
+                actionWidth,
+                Component.literal("Up"),
+                () -> cameraAction.accept(
+                    Scenario.CameraDirection.UP
+                ),
+                KarakuriButton
+                    .TextAlignment.CENTER
+            );
+
+            cameraDownButton = createButton(
+                categoryX
+                    + (
+                        actionWidth
+                            + BUTTON_GAP
+                    ) * 3,
+                actionY,
+                actionWidth,
+                Component.literal("Down"),
+                () -> cameraAction.accept(
+                    Scenario.CameraDirection.DOWN
+                ),
+                KarakuriButton
+                    .TextAlignment.CENTER
             );
         }
 
@@ -346,6 +581,7 @@ public final class ScenarioActionLibrary {
             movementCategoryButton,
             timingCategoryButton,
             mouseCategoryButton,
+            cameraCategoryButton,
             blocksCategoryButton,
             inventoryCategoryButton,
             forwardButton,
@@ -354,7 +590,11 @@ public final class ScenarioActionLibrary {
             rightButton,
             waitButton,
             leftClickButton,
-            rightClickButton
+            rightClickButton,
+            cameraLeftButton,
+            cameraRightButton,
+            cameraUpButton,
+            cameraDownButton
         );
 
         updateWidgets();
@@ -418,7 +658,7 @@ public final class ScenarioActionLibrary {
             );
 
             int dividerY = Math.min(
-                y + 166,
+                y + 192,
                 y + height - 94
             );
 
@@ -433,7 +673,8 @@ public final class ScenarioActionLibrary {
             graphics.drawString(
                 font,
                 Component.literal(
-                    "Add " + selectedCategory.label()
+                    "Add "
+                        + selectedCategory.label()
                 ),
                 x + PADDING,
                 dividerY + 8,
@@ -448,7 +689,7 @@ public final class ScenarioActionLibrary {
                 Component.literal(
                     layout == Layout.SIDEBAR
                         ? "Inserted after selected block"
-                        : "Actions are inserted after the selected block"
+                        : "Inserted after the selected block"
                 ),
                 x + PADDING,
                 y + height - 14,
@@ -466,22 +707,25 @@ public final class ScenarioActionLibrary {
         Runnable action,
         KarakuriButton.TextAlignment alignment
     ) {
-        KarakuriButton button = new KarakuriButton(
-            font,
-            buttonX,
-            buttonY,
-            buttonWidth,
-            BUTTON_HEIGHT,
-            message,
-            action,
-            KarakuriButton.Style.GHOST
-        );
+        KarakuriButton button =
+            new KarakuriButton(
+                font,
+                buttonX,
+                buttonY,
+                buttonWidth,
+                BUTTON_HEIGHT,
+                message,
+                action,
+                KarakuriButton.Style.GHOST
+            );
 
         button.setTextAlignment(alignment);
         return button;
     }
 
-    private void selectCategory(Category category) {
+    private void selectCategory(
+        Category category
+    ) {
         selectedCategory = category;
         updateWidgets();
     }
@@ -513,6 +757,12 @@ public final class ScenarioActionLibrary {
                 : KarakuriButton.Style.GHOST
         );
 
+        cameraCategoryButton.setStyle(
+            selectedCategory == Category.CAMERA
+                ? KarakuriButton.Style.PRIMARY
+                : KarakuriButton.Style.GHOST
+        );
+
         boolean movement =
             selectedCategory == Category.MOVEMENT;
 
@@ -521,6 +771,9 @@ public final class ScenarioActionLibrary {
 
         boolean mouse =
             selectedCategory == Category.MOUSE;
+
+        boolean camera =
+            selectedCategory == Category.CAMERA;
 
         forwardButton.visible = movement;
         backwardButton.visible = movement;
@@ -531,6 +784,11 @@ public final class ScenarioActionLibrary {
 
         leftClickButton.visible = mouse;
         rightClickButton.visible = mouse;
+
+        cameraLeftButton.visible = camera;
+        cameraRightButton.visible = camera;
+        cameraUpButton.visible = camera;
+        cameraDownButton.visible = camera;
 
         forwardButton.setStyle(
             KarakuriButton.Style.SECONDARY
@@ -559,6 +817,22 @@ public final class ScenarioActionLibrary {
         rightClickButton.setStyle(
             KarakuriButton.Style.SECONDARY
         );
+
+        cameraLeftButton.setStyle(
+            KarakuriButton.Style.SECONDARY
+        );
+
+        cameraRightButton.setStyle(
+            KarakuriButton.Style.SECONDARY
+        );
+
+        cameraUpButton.setStyle(
+            KarakuriButton.Style.SECONDARY
+        );
+
+        cameraDownButton.setStyle(
+            KarakuriButton.Style.SECONDARY
+        );
     }
 
     public enum Layout {
@@ -569,7 +843,8 @@ public final class ScenarioActionLibrary {
     private enum Category {
         MOVEMENT("Movement"),
         TIMING("Timing"),
-        MOUSE("Mouse");
+        MOUSE("Mouse"),
+        CAMERA("Camera");
 
         private final String label;
 

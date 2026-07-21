@@ -1,5 +1,6 @@
 package hanamuramiyu.karakuri.scenario;
 
+import hanamuramiyu.karakuri.task.CameraTask;
 import hanamuramiyu.karakuri.task.ClientTask;
 import hanamuramiyu.karakuri.task.MouseButtonTask;
 import hanamuramiyu.karakuri.task.MoveTask;
@@ -25,6 +26,8 @@ public final class ScenarioTaskFactory {
         Scenario.Step step
     ) {
         return switch (step) {
+            case Scenario.CameraStep cameraStep ->
+                new CameraTask(cameraStep);
             case Scenario.MoveStep moveStep ->
                 new MoveTask(
                     moveStep.direction(),

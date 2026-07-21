@@ -224,10 +224,7 @@ public final class ScenarioRepository {
                     "schemaVersion"
                 );
 
-            if (
-                schemaVersion
-                    != SCHEMA_VERSION
-            ) {
+            if (schemaVersion != SCHEMA_VERSION) {
                 throw new JsonParseException(
                     "Unsupported scenario schema version: "
                         + schemaVersion
@@ -299,10 +296,7 @@ public final class ScenarioRepository {
                     "schemaVersion"
                 );
 
-            if (
-                schemaVersion
-                    != SCHEMA_VERSION
-            ) {
+            if (schemaVersion != SCHEMA_VERSION) {
                 throw new JsonParseException(
                     "Unsupported legacy scenario schema version: "
                         + schemaVersion
@@ -368,8 +362,7 @@ public final class ScenarioRepository {
         }
     }
 
-    private static Path
-    findAvailableBackupPath() {
+    private static Path findAvailableBackupPath() {
         Path backupPath =
             CONFIG_DIRECTORY.resolve(
                 "scenarios.json.bak"
@@ -380,8 +373,7 @@ public final class ScenarioRepository {
         while (Files.exists(backupPath)) {
             backupPath =
                 CONFIG_DIRECTORY.resolve(
-                    "scenarios.json.bak."
-                        + suffix
+                    "scenarios.json.bak." + suffix
                 );
 
             suffix++;
@@ -392,19 +384,13 @@ public final class ScenarioRepository {
 
     private static List<Path>
     listScenarioFiles() throws IOException {
-        if (
-            Files.notExists(
-                SCENARIO_DIRECTORY
-            )
-        ) {
+        if (Files.notExists(SCENARIO_DIRECTORY)) {
             return List.of();
         }
 
         try (
             Stream<Path> paths =
-                Files.list(
-                    SCENARIO_DIRECTORY
-                )
+                Files.list(SCENARIO_DIRECTORY)
         ) {
             return paths
                 .filter(Files::isRegularFile)
@@ -412,9 +398,7 @@ public final class ScenarioRepository {
                     path -> path
                         .getFileName()
                         .toString()
-                        .endsWith(
-                            FILE_EXTENSION
-                        )
+                        .endsWith(FILE_EXTENSION)
                 )
                 .sorted(
                     Comparator.comparing(
@@ -491,6 +475,30 @@ public final class ScenarioRepository {
             );
 
         return switch (type) {
+            case "camera" ->
+                new Scenario.CameraStep(
+                    Scenario.CameraDirection.fromId(
+                        getRequiredString(
+                            object,
+                            "direction"
+                        )
+                    ),
+                    Scenario.CameraMotion.fromId(
+                        getOptionalString(
+                            object,
+                            "motion",
+                            "smooth"
+                        )
+                    ),
+                    getOptionalInt(
+                        object,
+                        "angleDegrees",
+                        Scenario.CameraStep
+                            .DEFAULT_ANGLE_DEGREES
+                    ),
+                    durationTicks
+                );
+
             case "move" ->
                 new Scenario.MoveStep(
                     Scenario.MoveDirection.fromId(
@@ -601,6 +609,33 @@ public final class ScenarioRepository {
             new JsonObject();
 
         switch (step) {
+            case Scenario.CameraStep cameraStep -> {
+                object.addProperty(
+                    "type",
+                    "camera"
+                );
+
+                object.addProperty(
+                    "direction",
+                    cameraStep.direction().id()
+                );
+
+                object.addProperty(
+                    "motion",
+                    cameraStep.motion().id()
+                );
+
+                object.addProperty(
+                    "angleDegrees",
+                    cameraStep.angleDegrees()
+                );
+
+                object.addProperty(
+                    "durationTicks",
+                    cameraStep.durationTicks()
+                );
+            }
+
             case Scenario.MoveStep moveStep -> {
                 object.addProperty(
                     "type",
@@ -672,8 +707,7 @@ public final class ScenarioRepository {
         return object;
     }
 
-    private static String
-    createUniqueFileName(
+    private static String createUniqueFileName(
         String scenarioName,
         Set<String> usedFileNames
     ) {
@@ -687,9 +721,7 @@ public final class ScenarioRepository {
 
         int suffix = 2;
 
-        while (
-            !usedFileNames.add(fileName)
-        ) {
+        while (!usedFileNames.add(fileName)) {
             fileName =
                 baseName
                     + "-"
@@ -702,8 +734,7 @@ public final class ScenarioRepository {
         return fileName;
     }
 
-    private static String
-    createFileBaseName(
+    private static String createFileBaseName(
         String scenarioName
     ) {
         String normalizedName =

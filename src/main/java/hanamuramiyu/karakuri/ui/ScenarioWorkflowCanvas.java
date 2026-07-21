@@ -17,6 +17,7 @@ public final class ScenarioWorkflowCanvas {
     private static final int DRAG_THRESHOLD = 4;
     private static final int SCROLL_STEP = 36;
     private static final int DURATION_STEP_TICKS = 10;
+    private static final int CAMERA_ANGLE_STEP = 5;
     private static final int MIN_DURATION_TICKS = 1;
     private static final int MAX_DURATION_TICKS = 72000;
 
@@ -574,6 +575,19 @@ public final class ScenarioWorkflowCanvas {
 
         Scenario.Step updatedStep =
             switch (step) {
+                case Scenario.CameraStep cameraStep ->
+                    cameraStep.withAngleDegrees(
+                        Math.clamp(
+                            cameraStep.angleDegrees()
+                                + direction
+                                * CAMERA_ANGLE_STEP,
+                            Scenario.CameraStep
+                                .MIN_ANGLE_DEGREES,
+                            Scenario.CameraStep
+                                .MAX_ANGLE_DEGREES
+                        )
+                    );
+
                 case Scenario.MoveStep moveStep ->
                     new Scenario.MoveStep(
                         moveStep.direction(),
@@ -837,28 +851,26 @@ public final class ScenarioWorkflowCanvas {
         Scenario.Step step
     ) {
         return switch (step) {
+            case Scenario.CameraStep cameraStep ->
+                switch (cameraStep.direction()) {
+                    case LEFT -> 0xFF67B6E8;
+                    case RIGHT -> 0xFFB38AE8;
+                    case UP -> 0xFF61D394;
+                    case DOWN -> 0xFFF0A765;
+                };
+
             case Scenario.MoveStep moveStep ->
-                switch (
-                    moveStep.direction()
-                ) {
-                    case FORWARD ->
-                        0xFF64D69B;
-                    case BACKWARD ->
-                        0xFFF0A765;
-                    case LEFT ->
-                        0xFF67B6E8;
-                    case RIGHT ->
-                        0xFFB38AE8;
+                switch (moveStep.direction()) {
+                    case FORWARD -> 0xFF64D69B;
+                    case BACKWARD -> 0xFFF0A765;
+                    case LEFT -> 0xFF67B6E8;
+                    case RIGHT -> 0xFFB38AE8;
                 };
 
             case Scenario.MouseStep mouseStep ->
-                switch (
-                    mouseStep.action()
-                ) {
-                    case LEFT_CLICK ->
-                        0xFFE66777;
-                    case RIGHT_CLICK ->
-                        0xFF67C7E8;
+                switch (mouseStep.action()) {
+                    case LEFT_CLICK -> 0xFFE66777;
+                    case RIGHT_CLICK -> 0xFF67C7E8;
                 };
 
             case Scenario.WaitStep waitStep ->
@@ -870,10 +882,16 @@ public final class ScenarioWorkflowCanvas {
         Scenario.Step step
     ) {
         return switch (step) {
+            case Scenario.CameraStep cameraStep ->
+                switch (cameraStep.direction()) {
+                    case LEFT -> "<";
+                    case RIGHT -> ">";
+                    case UP -> "^";
+                    case DOWN -> "v";
+                };
+
             case Scenario.MoveStep moveStep ->
-                switch (
-                    moveStep.direction()
-                ) {
+                switch (moveStep.direction()) {
                     case FORWARD -> "F";
                     case BACKWARD -> "B";
                     case LEFT -> "L";
@@ -881,9 +899,7 @@ public final class ScenarioWorkflowCanvas {
                 };
 
             case Scenario.MouseStep mouseStep ->
-                switch (
-                    mouseStep.action()
-                ) {
+                switch (mouseStep.action()) {
                     case LEFT_CLICK -> "1";
                     case RIGHT_CLICK -> "2";
                 };
@@ -897,6 +913,9 @@ public final class ScenarioWorkflowCanvas {
         Scenario.Step step
     ) {
         return switch (step) {
+            case Scenario.CameraStep cameraStep ->
+                cameraStep.direction().label();
+
             case Scenario.MoveStep moveStep ->
                 "Move "
                     + moveStep
@@ -917,6 +936,17 @@ public final class ScenarioWorkflowCanvas {
         Scenario.Step step
     ) {
         return switch (step) {
+            case Scenario.CameraStep cameraStep ->
+                cameraStep.motion()
+                    == Scenario.CameraMotion.INSTANT
+                        ? cameraStep.angleDegrees()
+                            + "° · Instant"
+                        : cameraStep.angleDegrees()
+                            + "° · "
+                            + Scenario.formatDuration(
+                                cameraStep.durationTicks()
+                            );
+
             case Scenario.MoveStep moveStep ->
                 Scenario.formatDuration(
                     moveStep.durationTicks()
