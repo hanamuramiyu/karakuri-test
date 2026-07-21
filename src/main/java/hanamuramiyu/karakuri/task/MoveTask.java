@@ -5,67 +5,77 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 
 public final class MoveTask implements ClientTask {
-    private final Scenario.MoveDirection direction;
+    private final Scenario.MoveStep step;
 
     private int remainingTicks;
     private boolean finished;
 
     public MoveTask(
-        Scenario.MoveDirection direction,
-        int durationTicks
+        Scenario.MoveStep step
     ) {
-        if (direction == null) {
+        if (step == null) {
             throw new IllegalArgumentException(
-                "Movement direction must not be null"
+                "Movement step must not be null"
             );
         }
 
-        if (durationTicks <= 0) {
-            throw new IllegalArgumentException(
-                "Duration must be greater than zero"
-            );
-        }
-
-        this.direction = direction;
-        this.remainingTicks = durationTicks;
+        this.step = step;
+        remainingTicks = step.durationTicks();
     }
 
     @Override
-    public void start(Minecraft client) {
-        setMoving(client, true);
+    public void start(
+        Minecraft client
+    ) {
+        applyKeys(client, true);
     }
 
     @Override
-    public void tick(Minecraft client) {
+    public void tick(
+        Minecraft client
+    ) {
         if (finished) {
             return;
         }
 
-        setMoving(client, true);
+        if (
+            client.player == null
+                || client.level == null
+        ) {
+            stop(client);
+            return;
+        }
+
+        applyKeys(client, true);
         remainingTicks--;
 
         if (remainingTicks <= 0) {
-            finished = true;
-            setMoving(client, false);
+            stop(client);
         }
     }
 
     @Override
-    public void pause(Minecraft client) {
-        setMoving(client, false);
+    public void pause(
+        Minecraft client
+    ) {
+        applyKeys(client, false);
     }
 
     @Override
-    public void resume(Minecraft client) {
+    public void resume(
+        Minecraft client
+    ) {
         if (!finished) {
-            setMoving(client, true);
+            applyKeys(client, true);
         }
     }
 
     @Override
-    public void stop(Minecraft client) {
+    public void stop(
+        Minecraft client
+    ) {
+        applyKeys(client, false);
         finished = true;
-        setMoving(client, false);
     }
 
     @Override
@@ -73,16 +83,53 @@ public final class MoveTask implements ClientTask {
         return finished;
     }
 
-    private void setMoving(Minecraft client, boolean moving) {
-        getMovementKey(client).setDown(moving);
+    private void applyKeys(
+        Minecraft client,
+        boolean pressed
+    ) {
+        getDirectionKey(client)
+            .setDown(pressed);
+
+        if (
+            step.mode()
+                == Scenario.MoveMode.SPRINT
+        ) {
+            client.options
+                .keySprint
+                .setDown(pressed);
+        }
+
+        if (
+            step.mode()
+                == Scenario.MoveMode.SNEAK
+        ) {
+            client.options
+                .keyShift
+                .setDown(pressed);
+        }
+
+        if (step.jumping()) {
+            client.options
+                .keyJump
+                .setDown(pressed);
+        }
     }
 
-    private KeyMapping getMovementKey(Minecraft client) {
-        return switch (direction) {
-            case FORWARD -> client.options.keyUp;
-            case BACKWARD -> client.options.keyDown;
-            case LEFT -> client.options.keyLeft;
-            case RIGHT -> client.options.keyRight;
+    private KeyMapping getDirectionKey(
+        Minecraft client
+    ) {
+        return switch (step.direction()) {
+            case FORWARD ->
+                client.options.keyUp;
+
+            case BACKWARD ->
+                client.options.keyDown;
+
+            case LEFT ->
+                client.options.keyLeft;
+
+            case RIGHT ->
+                client.options.keyRight;
         };
     }
 }

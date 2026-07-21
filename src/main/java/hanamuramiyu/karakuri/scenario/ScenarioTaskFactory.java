@@ -13,11 +13,16 @@ public final class ScenarioTaskFactory {
     private ScenarioTaskFactory() {
     }
 
-    public static ClientTask create(Scenario scenario) {
-        List<ClientTask> tasks = scenario.steps()
-            .stream()
-            .map(ScenarioTaskFactory::createStep)
-            .toList();
+    public static ClientTask create(
+        Scenario scenario
+    ) {
+        List<ClientTask> tasks =
+            scenario.steps()
+                .stream()
+                .map(
+                    ScenarioTaskFactory::createStep
+                )
+                .toList();
 
         return new SequenceTask(tasks);
     }
@@ -28,15 +33,17 @@ public final class ScenarioTaskFactory {
         return switch (step) {
             case Scenario.CameraStep cameraStep ->
                 new CameraTask(cameraStep);
+
             case Scenario.MoveStep moveStep ->
-                new MoveTask(
-                    moveStep.direction(),
-                    moveStep.durationTicks()
-                );
+                new MoveTask(moveStep);
+
             case Scenario.MouseStep mouseStep ->
                 new MouseButtonTask(mouseStep);
+
             case Scenario.WaitStep waitStep ->
-                new WaitTask(waitStep.durationTicks());
+                new WaitTask(
+                    waitStep.durationTicks()
+                );
         };
     }
 }

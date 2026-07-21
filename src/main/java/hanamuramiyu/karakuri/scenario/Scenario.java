@@ -7,15 +7,10 @@ import java.util.Objects;
 public record Scenario(String name, List<Step> steps) {
     public Scenario {
         if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException(
-                "Scenario name must not be blank"
-            );
+            throw new IllegalArgumentException("Scenario name must not be blank");
         }
-
         if (steps == null || steps.isEmpty()) {
-            throw new IllegalArgumentException(
-                "Scenario must contain at least one step"
-            );
+            throw new IllegalArgumentException("Scenario must contain at least one step");
         }
 
         name = name.trim();
@@ -30,11 +25,7 @@ public record Scenario(String name, List<Step> steps) {
         }
     }
 
-    public sealed interface Step permits
-        CameraStep,
-        MoveStep,
-        MouseStep,
-        WaitStep {
+    public sealed interface Step permits CameraStep, MoveStep, MouseStep, WaitStep {
         int durationTicks();
 
         String label();
@@ -68,10 +59,7 @@ public record Scenario(String name, List<Step> steps) {
 
         public MoveDirection next() {
             MoveDirection[] directions = values();
-
-            return directions[
-                (ordinal() + 1) % directions.length
-            ];
+            return directions[(ordinal() + 1) % directions.length];
         }
 
         public static MoveDirection fromId(String id) {
@@ -80,9 +68,41 @@ public record Scenario(String name, List<Step> steps) {
                     return direction;
                 }
             }
-
             throw new IllegalArgumentException(
                 "Unknown movement direction: " + id
+            );
+        }
+    }
+
+    public enum MoveMode {
+        WALK("walk", "Walk"),
+        SPRINT("sprint", "Sprint"),
+        SNEAK("sneak", "Sneak");
+
+        private final String id;
+        private final String label;
+
+        MoveMode(String id, String label) {
+            this.id = id;
+            this.label = label;
+        }
+
+        public String id() {
+            return id;
+        }
+
+        public String label() {
+            return label;
+        }
+
+        public static MoveMode fromId(String id) {
+            for (MoveMode mode : values()) {
+                if (mode.id.equals(id)) {
+                    return mode;
+                }
+            }
+            throw new IllegalArgumentException(
+                "Unknown movement mode: " + id
             );
         }
     }
@@ -115,7 +135,6 @@ public record Scenario(String name, List<Step> steps) {
                     return direction;
                 }
             }
-
             throw new IllegalArgumentException(
                 "Unknown camera direction: " + id
             );
@@ -148,7 +167,6 @@ public record Scenario(String name, List<Step> steps) {
                     return motion;
                 }
             }
-
             throw new IllegalArgumentException(
                 "Unknown camera motion: " + id
             );
@@ -181,7 +199,6 @@ public record Scenario(String name, List<Step> steps) {
                     return action;
                 }
             }
-
             throw new IllegalArgumentException(
                 "Unknown mouse action: " + id
             );
@@ -214,7 +231,6 @@ public record Scenario(String name, List<Step> steps) {
                     return mode;
                 }
             }
-
             throw new IllegalArgumentException(
                 "Unknown mouse input mode: " + id
             );
@@ -248,7 +264,6 @@ public record Scenario(String name, List<Step> steps) {
                     return mode;
                 }
             }
-
             throw new IllegalArgumentException(
                 "Unknown mouse stop mode: " + id
             );
@@ -271,7 +286,6 @@ public record Scenario(String name, List<Step> steps) {
                 direction,
                 "Camera direction must not be null"
             );
-
             motion = Objects.requireNonNull(
                 motion,
                 "Camera motion must not be null"
@@ -354,12 +368,30 @@ public record Scenario(String name, List<Step> steps) {
 
     public record MoveStep(
         MoveDirection direction,
+        MoveMode mode,
+        boolean jumping,
         int durationTicks
     ) implements Step {
+        public MoveStep(
+            MoveDirection direction,
+            int durationTicks
+        ) {
+            this(
+                direction,
+                MoveMode.WALK,
+                false,
+                durationTicks
+            );
+        }
+
         public MoveStep {
             direction = Objects.requireNonNull(
                 direction,
                 "Movement direction must not be null"
+            );
+            mode = Objects.requireNonNull(
+                mode,
+                "Movement mode must not be null"
             );
 
             validateDuration(durationTicks);
@@ -367,10 +399,63 @@ public record Scenario(String name, List<Step> steps) {
 
         @Override
         public String label() {
-            return "Move "
-                + direction.label().toLowerCase(Locale.ROOT)
+            String movement = mode.label()
+                + " "
+                + direction.label()
+                    .toLowerCase(Locale.ROOT);
+
+            if (jumping) {
+                movement = "Jump while "
+                    + movement.toLowerCase(Locale.ROOT);
+            }
+
+            return movement
                 + " for "
                 + formatDuration(durationTicks);
+        }
+
+        public MoveStep withDirection(
+            MoveDirection updatedDirection
+        ) {
+            return new MoveStep(
+                updatedDirection,
+                mode,
+                jumping,
+                durationTicks
+            );
+        }
+
+        public MoveStep withMode(
+            MoveMode updatedMode
+        ) {
+            return new MoveStep(
+                direction,
+                updatedMode,
+                jumping,
+                durationTicks
+            );
+        }
+
+        public MoveStep withJumping(
+            boolean updatedJumping
+        ) {
+            return new MoveStep(
+                direction,
+                mode,
+                updatedJumping,
+                durationTicks
+            );
+        }
+
+        public MoveStep withDurationTicks(
+            int updatedDurationTicks
+        ) {
+            return new MoveStep(
+                direction,
+                mode,
+                jumping,
+                updatedDurationTicks
+            );
         }
     }
 
@@ -385,7 +470,6 @@ public record Scenario(String name, List<Step> steps) {
         public static final int MIN_CPS_HALF_STEPS = 1;
         public static final int MAX_CPS_HALF_STEPS = 20;
         public static final int DEFAULT_CPS_HALF_STEPS = 10;
-
         public static final int MIN_CLICK_COUNT = 1;
         public static final int MAX_CLICK_COUNT = 100000;
         public static final int DEFAULT_CLICK_COUNT = 20;
@@ -395,12 +479,10 @@ public record Scenario(String name, List<Step> steps) {
                 action,
                 "Mouse action must not be null"
             );
-
             inputMode = Objects.requireNonNull(
                 inputMode,
                 "Mouse input mode must not be null"
             );
-
             stopMode = Objects.requireNonNull(
                 stopMode,
                 "Mouse stop mode must not be null"
@@ -419,8 +501,7 @@ public record Scenario(String name, List<Step> steps) {
 
             if (
                 clicksPerSecondHalfSteps < MIN_CPS_HALF_STEPS
-                    || clicksPerSecondHalfSteps
-                        > MAX_CPS_HALF_STEPS
+                    || clicksPerSecondHalfSteps > MAX_CPS_HALF_STEPS
             ) {
                 throw new IllegalArgumentException(
                     "Mouse CPS must be between 0.5 and 10"
@@ -444,8 +525,8 @@ public record Scenario(String name, List<Step> steps) {
 
         @Override
         public String label() {
-            String actionName =
-                action.label().toLowerCase(Locale.ROOT);
+            String actionName = action.label()
+                .toLowerCase(Locale.ROOT);
 
             if (inputMode == MouseInputMode.HOLD) {
                 if (stopMode == MouseStopMode.MANUAL) {
@@ -525,7 +606,9 @@ public record Scenario(String name, List<Step> steps) {
             );
         }
 
-        public MouseStep withAction(MouseAction updatedAction) {
+        public MouseStep withAction(
+            MouseAction updatedAction
+        ) {
             return new MouseStep(
                 updatedAction,
                 inputMode,
@@ -543,8 +626,7 @@ public record Scenario(String name, List<Step> steps) {
 
             if (
                 updatedInputMode == MouseInputMode.HOLD
-                    && updatedStopMode
-                        == MouseStopMode.CLICK_COUNT
+                    && updatedStopMode == MouseStopMode.CLICK_COUNT
             ) {
                 updatedStopMode = MouseStopMode.DURATION;
             }
@@ -564,8 +646,7 @@ public record Scenario(String name, List<Step> steps) {
         ) {
             if (
                 inputMode == MouseInputMode.HOLD
-                    && updatedStopMode
-                        == MouseStopMode.CLICK_COUNT
+                    && updatedStopMode == MouseStopMode.CLICK_COUNT
             ) {
                 updatedStopMode = MouseStopMode.DURATION;
             }
@@ -620,18 +701,23 @@ public record Scenario(String name, List<Step> steps) {
         }
     }
 
-    public record WaitStep(int durationTicks) implements Step {
+    public record WaitStep(
+        int durationTicks
+    ) implements Step {
         public WaitStep {
             validateDuration(durationTicks);
         }
 
         @Override
         public String label() {
-            return "Wait for " + formatDuration(durationTicks);
+            return "Wait for "
+                + formatDuration(durationTicks);
         }
     }
 
-    public static String formatDuration(int durationTicks) {
+    public static String formatDuration(
+        int durationTicks
+    ) {
         if (durationTicks % 20 == 0) {
             return durationTicks / 20 + "s";
         }
@@ -651,7 +737,9 @@ public record Scenario(String name, List<Step> steps) {
         int halfSteps
     ) {
         if (halfSteps % 2 == 0) {
-            return Integer.toString(halfSteps / 2);
+            return Integer.toString(
+                halfSteps / 2
+            );
         }
 
         return String.format(
@@ -664,10 +752,13 @@ public record Scenario(String name, List<Step> steps) {
     public static String formatClicksPerSecondLabel(
         int halfSteps
     ) {
-        return formatClicksPerSecond(halfSteps) + " CPS";
+        return formatClicksPerSecond(halfSteps)
+            + " CPS";
     }
 
-    private static void validateDuration(int durationTicks) {
+    private static void validateDuration(
+        int durationTicks
+    ) {
         if (durationTicks <= 0) {
             throw new IllegalArgumentException(
                 "Duration must be greater than zero"

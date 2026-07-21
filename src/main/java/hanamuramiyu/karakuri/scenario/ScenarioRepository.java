@@ -51,7 +51,10 @@ public final class ScenarioRepository {
 
     public static List<Scenario> load() {
         try {
-            Files.createDirectories(SCENARIO_DIRECTORY);
+            Files.createDirectories(
+                SCENARIO_DIRECTORY
+            );
+
             migrateLegacyFile();
 
             List<Path> scenarioFiles =
@@ -67,7 +70,9 @@ public final class ScenarioRepository {
             for (Path scenarioFile : scenarioFiles) {
                 try {
                     scenarios.add(
-                        readScenarioFile(scenarioFile)
+                        readScenarioFile(
+                            scenarioFile
+                        )
                     );
                 } catch (
                     IOException
@@ -178,7 +183,9 @@ public final class ScenarioRepository {
                         normalizedFile
                     )
                 ) {
-                    Files.deleteIfExists(existingFile);
+                    Files.deleteIfExists(
+                        existingFile
+                    );
                 }
             }
 
@@ -201,10 +208,11 @@ public final class ScenarioRepository {
         Path path
     ) throws IOException {
         try (
-            Reader reader = Files.newBufferedReader(
-                path,
-                StandardCharsets.UTF_8
-            )
+            Reader reader =
+                Files.newBufferedReader(
+                    path,
+                    StandardCharsets.UTF_8
+                )
         ) {
             JsonElement rootElement =
                 JsonParser.parseReader(reader);
@@ -224,7 +232,10 @@ public final class ScenarioRepository {
                     "schemaVersion"
                 );
 
-            if (schemaVersion != SCHEMA_VERSION) {
+            if (
+                schemaVersion
+                    != SCHEMA_VERSION
+            ) {
                 throw new JsonParseException(
                     "Unsupported scenario schema version: "
                         + schemaVersion
@@ -296,7 +307,10 @@ public final class ScenarioRepository {
                     "schemaVersion"
                 );
 
-            if (schemaVersion != SCHEMA_VERSION) {
+            if (
+                schemaVersion
+                    != SCHEMA_VERSION
+            ) {
                 throw new JsonParseException(
                     "Unsupported legacy scenario schema version: "
                         + schemaVersion
@@ -362,7 +376,8 @@ public final class ScenarioRepository {
         }
     }
 
-    private static Path findAvailableBackupPath() {
+    private static Path
+    findAvailableBackupPath() {
         Path backupPath =
             CONFIG_DIRECTORY.resolve(
                 "scenarios.json.bak"
@@ -373,7 +388,8 @@ public final class ScenarioRepository {
         while (Files.exists(backupPath)) {
             backupPath =
                 CONFIG_DIRECTORY.resolve(
-                    "scenarios.json.bak." + suffix
+                    "scenarios.json.bak."
+                        + suffix
                 );
 
             suffix++;
@@ -384,13 +400,19 @@ public final class ScenarioRepository {
 
     private static List<Path>
     listScenarioFiles() throws IOException {
-        if (Files.notExists(SCENARIO_DIRECTORY)) {
+        if (
+            Files.notExists(
+                SCENARIO_DIRECTORY
+            )
+        ) {
             return List.of();
         }
 
         try (
             Stream<Path> paths =
-                Files.list(SCENARIO_DIRECTORY)
+                Files.list(
+                    SCENARIO_DIRECTORY
+                )
         ) {
             return paths
                 .filter(Files::isRegularFile)
@@ -398,7 +420,9 @@ public final class ScenarioRepository {
                     path -> path
                         .getFileName()
                         .toString()
-                        .endsWith(FILE_EXTENSION)
+                        .endsWith(
+                            FILE_EXTENSION
+                        )
                 )
                 .sorted(
                     Comparator.comparing(
@@ -506,6 +530,18 @@ public final class ScenarioRepository {
                             object,
                             "direction"
                         )
+                    ),
+                    Scenario.MoveMode.fromId(
+                        getOptionalString(
+                            object,
+                            "mode",
+                            "walk"
+                        )
+                    ),
+                    getOptionalBoolean(
+                        object,
+                        "jumping",
+                        false
                     ),
                     durationTicks
                 );
@@ -648,6 +684,16 @@ public final class ScenarioRepository {
                 );
 
                 object.addProperty(
+                    "mode",
+                    moveStep.mode().id()
+                );
+
+                object.addProperty(
+                    "jumping",
+                    moveStep.jumping()
+                );
+
+                object.addProperty(
                     "durationTicks",
                     moveStep.durationTicks()
                 );
@@ -707,7 +753,8 @@ public final class ScenarioRepository {
         return object;
     }
 
-    private static String createUniqueFileName(
+    private static String
+    createUniqueFileName(
         String scenarioName,
         Set<String> usedFileNames
     ) {
@@ -721,7 +768,9 @@ public final class ScenarioRepository {
 
         int suffix = 2;
 
-        while (!usedFileNames.add(fileName)) {
+        while (
+            !usedFileNames.add(fileName)
+        ) {
             fileName =
                 baseName
                     + "-"
@@ -734,7 +783,8 @@ public final class ScenarioRepository {
         return fileName;
     }
 
-    private static String createFileBaseName(
+    private static String
+    createFileBaseName(
         String scenarioName
     ) {
         String normalizedName =
@@ -755,11 +805,9 @@ public final class ScenarioRepository {
                     ""
                 );
 
-        if (fileName.isBlank()) {
-            return "scenario";
-        }
-
-        return fileName;
+        return fileName.isBlank()
+            ? "scenario"
+            : fileName;
     }
 
     private static String getRequiredString(
@@ -860,6 +908,33 @@ public final class ScenarioRepository {
         }
 
         return element.getAsInt();
+    }
+
+    private static boolean getOptionalBoolean(
+        JsonObject object,
+        String key,
+        boolean defaultValue
+    ) {
+        JsonElement element =
+            object.get(key);
+
+        if (element == null) {
+            return defaultValue;
+        }
+
+        if (
+            !element.isJsonPrimitive()
+                || !element
+                    .getAsJsonPrimitive()
+                    .isBoolean()
+        ) {
+            throw new JsonParseException(
+                "Invalid boolean property: "
+                    + key
+            );
+        }
+
+        return element.getAsBoolean();
     }
 
     private static JsonArray getRequiredArray(

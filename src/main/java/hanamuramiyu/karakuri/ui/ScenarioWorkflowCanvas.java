@@ -101,7 +101,11 @@ public final class ScenarioWorkflowCanvas {
         );
 
         renderConnections(graphics);
-        renderCards(graphics, mouseX, mouseY);
+        renderCards(
+            graphics,
+            mouseX,
+            mouseY
+        );
 
         graphics.disableScissor();
 
@@ -144,8 +148,8 @@ public final class ScenarioWorkflowCanvas {
         dragMouseX = event.x();
         dragOffsetX =
             event.x() - getCardX(index);
-
         dragging = false;
+
         return true;
     }
 
@@ -250,7 +254,9 @@ public final class ScenarioWorkflowCanvas {
         return true;
     }
 
-    public void setSelectedIndex(int index) {
+    public void setSelectedIndex(
+        int index
+    ) {
         selectedIndex = Math.clamp(
             index,
             0,
@@ -319,7 +325,8 @@ public final class ScenarioWorkflowCanvas {
             index < steps.size();
             index++
         ) {
-            int cardX = getCardX(index);
+            int cardX =
+                getCardX(index);
 
             if (
                 dragging
@@ -383,17 +390,19 @@ public final class ScenarioWorkflowCanvas {
         int cardWidth =
             getCardWidth();
 
-        int background = selected
-            ? 0xFF392D4E
-            : hovered
-                ? 0xFF292333
-                : 0xFF211D29;
+        int background =
+            selected
+                ? 0xFF392D4E
+                : hovered
+                    ? 0xFF292333
+                    : 0xFF211D29;
 
-        int outline = selected
-            ? 0xFF9B79D1
-            : hovered
-                ? 0xFF6F607F
-                : 0xFF484052;
+        int outline =
+            selected
+                ? 0xFF9B79D1
+                : hovered
+                    ? 0xFF6F607F
+                    : 0xFF484052;
 
         if (ghost) {
             background = 0xEE45365E;
@@ -551,7 +560,9 @@ public final class ScenarioWorkflowCanvas {
         );
     }
 
-    private void select(int index) {
+    private void select(
+        int index
+    ) {
         selectedIndex = Math.clamp(
             index,
             0,
@@ -589,8 +600,7 @@ public final class ScenarioWorkflowCanvas {
                     );
 
                 case Scenario.MoveStep moveStep ->
-                    new Scenario.MoveStep(
-                        moveStep.direction(),
+                    moveStep.withDurationTicks(
                         Math.clamp(
                             moveStep.durationTicks()
                                 + direction
@@ -677,15 +687,17 @@ public final class ScenarioWorkflowCanvas {
             return;
         }
 
-        int localLeft = 12
-            + selectedIndex
-            * (
-                getCardWidth()
-                    + CARD_GAP
-            );
+        int localLeft =
+            12
+                + selectedIndex
+                * (
+                    getCardWidth()
+                        + CARD_GAP
+                );
 
         int localRight =
-            localLeft + getCardWidth();
+            localLeft
+                + getCardWidth();
 
         if (
             localLeft - scrollOffset < 8
@@ -697,7 +709,9 @@ public final class ScenarioWorkflowCanvas {
                 > width - 8
         ) {
             scrollOffset =
-                localRight - width + 8;
+                localRight
+                    - width
+                    + 8;
         }
 
         scrollOffset = Math.clamp(
@@ -732,11 +746,12 @@ public final class ScenarioWorkflowCanvas {
             getCardWidth()
                 + CARD_GAP;
 
-        double localX = mouseX
-            - x
-            - 12
-            + scrollOffset
-            + stride / 2.0;
+        double localX =
+            mouseX
+                - x
+                - 12
+                + scrollOffset
+                + stride / 2.0;
 
         return Math.clamp(
             (int) Math.floor(
@@ -784,10 +799,12 @@ public final class ScenarioWorkflowCanvas {
     ) {
         return mouseX >= cardX
             && mouseX
-                < cardX + getCardWidth()
+                < cardX
+                    + getCardWidth()
             && mouseY >= cardY
             && mouseY
-                < cardY + CARD_HEIGHT;
+                < cardY
+                    + CARD_HEIGHT;
     }
 
     private boolean contains(
@@ -812,16 +829,19 @@ public final class ScenarioWorkflowCanvas {
         int usableHeight =
             height - 16;
 
-        return y + Math.max(
-            5,
-            (
-                usableHeight
-                    - CARD_HEIGHT
-            ) / 2
-        );
+        return y
+            + Math.max(
+                5,
+                (
+                    usableHeight
+                        - CARD_HEIGHT
+                ) / 2
+            );
     }
 
-    private int getCardX(int index) {
+    private int getCardX(
+        int index
+    ) {
         return x
             + 12
             - scrollOffset
@@ -833,13 +853,15 @@ public final class ScenarioWorkflowCanvas {
     }
 
     private int getMaxScrollOffset() {
-        int totalWidth = 24
-            + steps.size()
+        int totalWidth =
+            24
+                + steps.size()
                 * getCardWidth()
-            + Math.max(
-                0,
-                steps.size() - 1
-            ) * CARD_GAP;
+                + Math.max(
+                    0,
+                    steps.size() - 1
+                )
+                * CARD_GAP;
 
         return Math.max(
             0,
@@ -853,24 +875,34 @@ public final class ScenarioWorkflowCanvas {
         return switch (step) {
             case Scenario.CameraStep cameraStep ->
                 switch (cameraStep.direction()) {
-                    case LEFT -> 0xFF67B6E8;
-                    case RIGHT -> 0xFFB38AE8;
-                    case UP -> 0xFF61D394;
-                    case DOWN -> 0xFFF0A765;
+                    case LEFT ->
+                        0xFF67B6E8;
+                    case RIGHT ->
+                        0xFFB38AE8;
+                    case UP ->
+                        0xFF61D394;
+                    case DOWN ->
+                        0xFFF0A765;
                 };
 
             case Scenario.MoveStep moveStep ->
                 switch (moveStep.direction()) {
-                    case FORWARD -> 0xFF64D69B;
-                    case BACKWARD -> 0xFFF0A765;
-                    case LEFT -> 0xFF67B6E8;
-                    case RIGHT -> 0xFFB38AE8;
+                    case FORWARD ->
+                        0xFF64D69B;
+                    case BACKWARD ->
+                        0xFFF0A765;
+                    case LEFT ->
+                        0xFF67B6E8;
+                    case RIGHT ->
+                        0xFFB38AE8;
                 };
 
             case Scenario.MouseStep mouseStep ->
                 switch (mouseStep.action()) {
-                    case LEFT_CLICK -> 0xFFE66777;
-                    case RIGHT_CLICK -> 0xFF67C7E8;
+                    case LEFT_CLICK ->
+                        0xFFE66777;
+                    case RIGHT_CLICK ->
+                        0xFF67C7E8;
                 };
 
             case Scenario.WaitStep waitStep ->
@@ -914,13 +946,14 @@ public final class ScenarioWorkflowCanvas {
     ) {
         return switch (step) {
             case Scenario.CameraStep cameraStep ->
-                cameraStep.direction().label();
+                cameraStep
+                    .direction()
+                    .label();
 
             case Scenario.MoveStep moveStep ->
-                "Move "
-                    + moveStep
-                        .direction()
-                        .label();
+                moveStep.mode().label()
+                    + " "
+                    + moveStep.direction().label();
 
             case Scenario.MouseStep mouseStep ->
                 mouseStep
@@ -948,9 +981,14 @@ public final class ScenarioWorkflowCanvas {
                             );
 
             case Scenario.MoveStep moveStep ->
-                Scenario.formatDuration(
-                    moveStep.durationTicks()
-                );
+                (
+                    moveStep.jumping()
+                        ? "Jump · "
+                        : ""
+                )
+                    + Scenario.formatDuration(
+                        moveStep.durationTicks()
+                    );
 
             case Scenario.WaitStep waitStep ->
                 Scenario.formatDuration(
