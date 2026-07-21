@@ -1,9 +1,9 @@
 package hanamuramiyu.karakuri.scenario;
 
 import hanamuramiyu.karakuri.task.ClientTask;
+import hanamuramiyu.karakuri.task.MoveTask;
 import hanamuramiyu.karakuri.task.SequenceTask;
 import hanamuramiyu.karakuri.task.WaitTask;
-import hanamuramiyu.karakuri.task.WalkForwardTask;
 
 import java.util.List;
 
@@ -22,8 +22,11 @@ public final class ScenarioTaskFactory {
 
     private static ClientTask createStepTask(Scenario.Step step) {
         return switch (step) {
-            case Scenario.WalkForwardStep walkForwardStep ->
-                new WalkForwardTask(walkForwardStep.durationTicks());
+            case Scenario.MoveStep moveStep ->
+                new MoveTask(
+                    moveStep.direction(),
+                    moveStep.durationTicks()
+                );
             case Scenario.WaitStep waitStep ->
                 new WaitTask(waitStep.durationTicks());
         };

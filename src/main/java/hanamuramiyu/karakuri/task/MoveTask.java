@@ -1,17 +1,33 @@
 package hanamuramiyu.karakuri.task;
 
+import hanamuramiyu.karakuri.scenario.Scenario;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 
-public final class WalkForwardTask implements ClientTask {
+public final class MoveTask implements ClientTask {
+    private final Scenario.MoveDirection direction;
+
     private int remainingTicks;
     private boolean finished;
 
-    public WalkForwardTask(int durationTicks) {
-        if (durationTicks <= 0) {
-            throw new IllegalArgumentException("Duration must be greater than zero");
+    public MoveTask(
+        Scenario.MoveDirection direction,
+        int durationTicks
+    ) {
+        if (direction == null) {
+            throw new IllegalArgumentException(
+                "Movement direction must not be null"
+            );
         }
 
-        remainingTicks = durationTicks;
+        if (durationTicks <= 0) {
+            throw new IllegalArgumentException(
+                "Duration must be greater than zero"
+            );
+        }
+
+        this.direction = direction;
+        this.remainingTicks = durationTicks;
     }
 
     @Override
@@ -58,6 +74,15 @@ public final class WalkForwardTask implements ClientTask {
     }
 
     private void setMoving(Minecraft client, boolean moving) {
-        client.options.keyUp.setDown(moving);
+        getMovementKey(client).setDown(moving);
+    }
+
+    private KeyMapping getMovementKey(Minecraft client) {
+        return switch (direction) {
+            case FORWARD -> client.options.keyUp;
+            case BACKWARD -> client.options.keyDown;
+            case LEFT -> client.options.keyLeft;
+            case RIGHT -> client.options.keyRight;
+        };
     }
 }
