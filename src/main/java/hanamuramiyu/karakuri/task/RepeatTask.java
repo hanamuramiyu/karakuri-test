@@ -15,13 +15,23 @@ public final class RepeatTask implements ClientTask {
     private boolean started;
     private boolean finished;
 
-    public RepeatTask(Supplier<ClientTask> taskFactory, int repeatCount) {
+    public RepeatTask(
+        Supplier<ClientTask> taskFactory,
+        int repeatCount
+    ) {
         if (taskFactory == null) {
-            throw new IllegalArgumentException("Task factory must not be null");
+            throw new IllegalArgumentException(
+                "Task factory must not be null"
+            );
         }
 
-        if (repeatCount == 0 || repeatCount < INFINITE) {
-            throw new IllegalArgumentException("Repeat count must be positive or infinite");
+        if (
+            repeatCount == 0
+                || repeatCount < INFINITE
+        ) {
+            throw new IllegalArgumentException(
+                "Repeat count must be positive or infinite"
+            );
         }
 
         this.taskFactory = taskFactory;
@@ -40,7 +50,11 @@ public final class RepeatTask implements ClientTask {
 
     @Override
     public void tick(Minecraft client) {
-        if (!started || finished || currentTask == null) {
+        if (
+            !started
+                || finished
+                || currentTask == null
+        ) {
             return;
         }
 
@@ -53,19 +67,26 @@ public final class RepeatTask implements ClientTask {
         currentTask.stop(client);
         currentTask = null;
         completedRepeats++;
+
         startNextTask(client);
     }
 
     @Override
     public void pause(Minecraft client) {
-        if (currentTask != null && !finished) {
+        if (
+            currentTask != null
+                && !finished
+        ) {
             currentTask.pause(client);
         }
     }
 
     @Override
     public void resume(Minecraft client) {
-        if (currentTask != null && !finished) {
+        if (
+            currentTask != null
+                && !finished
+        ) {
             currentTask.resume(client);
         }
     }
@@ -85,12 +106,44 @@ public final class RepeatTask implements ClientTask {
         return finished;
     }
 
-    private void startNextTask(Minecraft client) {
+    @Override
+    public void beginRender(
+        Minecraft client,
+        float tickProgress
+    ) {
+        if (
+            currentTask != null
+                && !finished
+        ) {
+            currentTask.beginRender(
+                client,
+                tickProgress
+            );
+        }
+    }
+
+    @Override
+    public void endRender(
+        Minecraft client
+    ) {
+        if (
+            currentTask != null
+                && !finished
+        ) {
+            currentTask.endRender(client);
+        }
+    }
+
+    private void startNextTask(
+        Minecraft client
+    ) {
         while (hasNextRepeat()) {
             currentTask = taskFactory.get();
 
             if (currentTask == null) {
-                throw new IllegalStateException("Task factory returned null");
+                throw new IllegalStateException(
+                    "Task factory returned null"
+                );
             }
 
             currentTask.start(client);
@@ -108,6 +161,7 @@ public final class RepeatTask implements ClientTask {
     }
 
     private boolean hasNextRepeat() {
-        return repeatCount == INFINITE || completedRepeats < repeatCount;
+        return repeatCount == INFINITE
+            || completedRepeats < repeatCount;
     }
 }

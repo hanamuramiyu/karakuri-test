@@ -14,7 +14,9 @@ public final class SequenceTask implements ClientTask {
 
     public SequenceTask(List<ClientTask> tasks) {
         if (tasks.isEmpty()) {
-            throw new IllegalArgumentException("Task sequence must not be empty");
+            throw new IllegalArgumentException(
+                "Task sequence must not be empty"
+            );
         }
 
         this.tasks = List.copyOf(tasks);
@@ -32,7 +34,11 @@ public final class SequenceTask implements ClientTask {
 
     @Override
     public void tick(Minecraft client) {
-        if (!started || finished || currentTask == null) {
+        if (
+            !started
+                || finished
+                || currentTask == null
+        ) {
             return;
         }
 
@@ -49,14 +55,20 @@ public final class SequenceTask implements ClientTask {
 
     @Override
     public void pause(Minecraft client) {
-        if (currentTask != null && !finished) {
+        if (
+            currentTask != null
+                && !finished
+        ) {
             currentTask.pause(client);
         }
     }
 
     @Override
     public void resume(Minecraft client) {
-        if (currentTask != null && !finished) {
+        if (
+            currentTask != null
+                && !finished
+        ) {
             currentTask.resume(client);
         }
     }
@@ -76,9 +88,41 @@ public final class SequenceTask implements ClientTask {
         return finished;
     }
 
-    private void startCurrentTask(Minecraft client) {
+    @Override
+    public void beginRender(
+        Minecraft client,
+        float tickProgress
+    ) {
+        if (
+            currentTask != null
+                && !finished
+        ) {
+            currentTask.beginRender(
+                client,
+                tickProgress
+            );
+        }
+    }
+
+    @Override
+    public void endRender(
+        Minecraft client
+    ) {
+        if (
+            currentTask != null
+                && !finished
+        ) {
+            currentTask.endRender(client);
+        }
+    }
+
+    private void startCurrentTask(
+        Minecraft client
+    ) {
         while (currentIndex < tasks.size()) {
-            currentTask = tasks.get(currentIndex);
+            currentTask =
+                tasks.get(currentIndex);
+
             currentTask.start(client);
 
             if (!currentTask.isFinished()) {

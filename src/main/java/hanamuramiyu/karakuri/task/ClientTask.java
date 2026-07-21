@@ -14,4 +14,15 @@ public interface ClientTask {
     void stop(Minecraft client);
 
     boolean isFinished();
+
+    default void beginRender(
+        Minecraft client,
+        float tickProgress
+    ) {
+    }
+
+    default void endRender(
+        Minecraft client
+    ) {
+    }
 }
