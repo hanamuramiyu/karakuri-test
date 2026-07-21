@@ -1,12 +1,10 @@
 package hanamuramiyu.karakuri.ui;
 
-import hanamuramiyu.karakuri.task.ClientTask;
+import hanamuramiyu.karakuri.scenario.Scenario;
+import hanamuramiyu.karakuri.scenario.ScenarioTaskFactory;
 import hanamuramiyu.karakuri.task.RepeatTask;
-import hanamuramiyu.karakuri.task.SequenceTask;
 import hanamuramiyu.karakuri.task.TaskManager;
 import hanamuramiyu.karakuri.task.TaskStatus;
-import hanamuramiyu.karakuri.task.WaitTask;
-import hanamuramiyu.karakuri.task.WalkForwardTask;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -15,14 +13,21 @@ import net.minecraft.network.chat.Component;
 import java.util.List;
 
 public final class KarakuriScreen extends Screen {
-    private static final int PANEL_HEIGHT = 280;
+    private static final int PANEL_HEIGHT = 300;
     private static final int PANEL_MAX_WIDTH = 360;
     private static final int PANEL_MARGIN = 20;
     private static final int CONTENT_MARGIN = 16;
     private static final int BUTTON_GAP = 8;
     private static final int BUTTON_HEIGHT = 20;
-    private static final int WALK_DURATION_TICKS = 40;
-    private static final int WAIT_DURATION_TICKS = 20;
+
+    private static final Scenario TEST_SCENARIO = new Scenario(
+        "Basic Movement",
+        List.of(
+            new Scenario.WalkForwardStep(40),
+            new Scenario.WaitStep(20),
+            new Scenario.WalkForwardStep(40)
+        )
+    );
 
     private final Screen parent;
 
@@ -44,8 +49,8 @@ public final class KarakuriScreen extends Screen {
         int panelY = getPanelY();
         int contentWidth = getPanelWidth() - CONTENT_MARGIN * 2;
         int buttonWidth = (contentWidth - BUTTON_GAP * 2) / 3;
-        int modeButtonY = panelY + 214;
-        int controlButtonY = panelY + 244;
+        int modeButtonY = panelY + 234;
+        int controlButtonY = panelY + 264;
 
         modeButton = Button.builder(
             Component.empty(),
@@ -136,25 +141,39 @@ public final class KarakuriScreen extends Screen {
 
         graphics.drawString(
             font,
-            Component.literal("Test sequence"),
+            Component.literal("Scenario"),
             panelX + CONTENT_MARGIN,
-            panelY + 70,
+            panelY + 66,
             0xFF9999AA,
             false
         );
         graphics.drawString(
             font,
-            Component.literal("Walk 2s, wait 1s, walk 2s"),
+            Component.literal(TEST_SCENARIO.name()),
             panelX + CONTENT_MARGIN,
-            panelY + 88,
+            panelY + 84,
             0xFFF4F4F7,
             false
         );
+
+        for (int index = 0; index < TEST_SCENARIO.steps().size(); index++) {
+            Scenario.Step step = TEST_SCENARIO.steps().get(index);
+
+            graphics.drawString(
+                font,
+                Component.literal((index + 1) + ". " + step.label()),
+                panelX + CONTENT_MARGIN,
+                panelY + 106 + index * 16,
+                0xFFB7B7C5,
+                false
+            );
+        }
+
         graphics.drawString(
             font,
             Component.literal(executionMode.description()),
             panelX + CONTENT_MARGIN,
-            panelY + 106,
+            panelY + 160,
             0xFFF4F4F7,
             false
         );
@@ -163,7 +182,7 @@ public final class KarakuriScreen extends Screen {
             font,
             Component.literal("Current session"),
             panelX + CONTENT_MARGIN,
-            panelY + 136,
+            panelY + 184,
             0xFF9999AA,
             false
         );
@@ -171,24 +190,16 @@ public final class KarakuriScreen extends Screen {
             font,
             Component.literal("Controls only the active account"),
             panelX + CONTENT_MARGIN,
-            panelY + 154,
+            panelY + 202,
             0xFFF4F4F7,
             false
         );
 
         graphics.drawString(
             font,
-            Component.literal("Status"),
+            Component.literal("Status: " + status.label()),
             panelX + CONTENT_MARGIN,
-            panelY + 178,
-            0xFF9999AA,
-            false
-        );
-        graphics.drawString(
-            font,
-            Component.literal(status.label()),
-            panelX + CONTENT_MARGIN,
-            panelY + 196,
+            panelY + 218,
             getStatusColor(status),
             false
         );
@@ -214,20 +225,10 @@ public final class KarakuriScreen extends Screen {
 
         TaskManager.start(
             new RepeatTask(
-                KarakuriScreen::createTestSequence,
+                () -> ScenarioTaskFactory.create(TEST_SCENARIO),
                 executionMode.repeatCount()
             ),
             minecraft
-        );
-    }
-
-    private static ClientTask createTestSequence() {
-        return new SequenceTask(
-            List.of(
-                new WalkForwardTask(WALK_DURATION_TICKS),
-                new WaitTask(WAIT_DURATION_TICKS),
-                new WalkForwardTask(WALK_DURATION_TICKS)
-            )
         );
     }
 
@@ -287,7 +288,7 @@ public final class KarakuriScreen extends Screen {
     }
 
     private enum ExecutionMode {
-        ONCE("Once", "Run the sequence one time", 1),
+        ONCE("Once", "Run the scenario one time", 1),
         LOOP("Loop", "Repeat until stopped", RepeatTask.INFINITE);
 
         private final String label;
