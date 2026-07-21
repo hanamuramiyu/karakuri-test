@@ -1,6 +1,5 @@
 package hanamuramiyu.karakuri.ui;
 
-import hanamuramiyu.karakuri.scenario.model.CameraMotion;
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
 import hanamuramiyu.karakuri.scenario.model.HotbarStep;
 import hanamuramiyu.karakuri.scenario.model.JumpMode;
@@ -10,9 +9,9 @@ import hanamuramiyu.karakuri.scenario.model.MouseInputMode;
 import hanamuramiyu.karakuri.scenario.model.MouseStep;
 import hanamuramiyu.karakuri.scenario.model.MouseStopMode;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
-import hanamuramiyu.karakuri.scenario.model.ScenarioFormat;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
+import hanamuramiyu.karakuri.ui.editor.ScenarioStepPresentation;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -439,7 +438,7 @@ public final class ScenarioWorkflowCanvas {
         );
 
         int accent =
-            getAccentColor(step);
+            ScenarioStepPresentation.workflowAccentColor(step);
 
         graphics.fill(
             cardX,
@@ -467,7 +466,7 @@ public final class ScenarioWorkflowCanvas {
 
         Component icon =
             Component.literal(
-                getIcon(step)
+                ScenarioStepPresentation.workflowIcon(step)
             );
 
         graphics.drawString(
@@ -484,7 +483,7 @@ public final class ScenarioWorkflowCanvas {
         graphics.drawString(
             font,
             Component.literal(
-                getTitle(step)
+                ScenarioStepPresentation.workflowTitle(step)
             ),
             cardX + 38,
             cardY + 10,
@@ -495,7 +494,7 @@ public final class ScenarioWorkflowCanvas {
         graphics.drawString(
             font,
             Component.literal(
-                getSubtitle(step)
+                ScenarioStepPresentation.workflowSubtitle(step)
             ),
             cardX + 38,
             cardY + 26,
@@ -941,245 +940,4 @@ public final class ScenarioWorkflowCanvas {
         );
     }
 
-    private int getAccentColor(
-        ScenarioStep step
-    ) {
-        return switch (step) {
-            case CameraStep cameraStep ->
-                switch (cameraStep.direction()) {
-                    case LEFT ->
-                        0xFF67B6E8;
-                    case RIGHT ->
-                        0xFFB38AE8;
-                    case UP ->
-                        0xFF61D394;
-                    case DOWN ->
-                        0xFFF0A765;
-                };
-
-            case HotbarStep hotbarStep ->
-                0xFFE8D26A;
-
-            case JumpStep jumpStep ->
-                0xFF78D6C6;
-
-            case MoveStep moveStep ->
-                switch (moveStep.direction()) {
-                    case FORWARD ->
-                        0xFF64D69B;
-                    case BACKWARD ->
-                        0xFFF0A765;
-                    case LEFT ->
-                        0xFF67B6E8;
-                    case RIGHT ->
-                        0xFFB38AE8;
-                };
-
-            case MouseStep mouseStep ->
-                switch (mouseStep.action()) {
-                    case LEFT_CLICK ->
-                        0xFFE66777;
-                    case RIGHT_CLICK ->
-                        0xFF67C7E8;
-                };
-
-            case WaitStep waitStep ->
-                0xFFA49BAD;
-        };
-    }
-
-    private String getIcon(
-        ScenarioStep step
-    ) {
-        return switch (step) {
-            case CameraStep cameraStep ->
-                switch (cameraStep.direction()) {
-                    case LEFT -> "<";
-                    case RIGHT -> ">";
-                    case UP -> "^";
-                    case DOWN -> "v";
-                };
-
-            case HotbarStep hotbarStep ->
-                Integer.toString(
-                    hotbarStep.slot() + 1
-                );
-
-            case JumpStep jumpStep ->
-                "J";
-
-            case MoveStep moveStep ->
-                switch (moveStep.direction()) {
-                    case FORWARD -> "F";
-                    case BACKWARD -> "B";
-                    case LEFT -> "L";
-                    case RIGHT -> "R";
-                };
-
-            case MouseStep mouseStep ->
-                switch (mouseStep.action()) {
-                    case LEFT_CLICK -> "1";
-                    case RIGHT_CLICK -> "2";
-                };
-
-            case WaitStep waitStep ->
-                "W";
-        };
-    }
-
-    private String getTitle(
-        ScenarioStep step
-    ) {
-        return switch (step) {
-            case CameraStep cameraStep ->
-                cameraStep
-                    .direction()
-                    .label();
-
-            case HotbarStep hotbarStep ->
-                "Select Slot";
-
-            case JumpStep jumpStep ->
-                switch (jumpStep.mode()) {
-                    case SINGLE -> "Jump";
-                    case HOLD -> "Hold Jump";
-                    case REPEAT -> "Repeat Jump";
-                };
-
-            case MoveStep moveStep ->
-                moveStep.mode().label()
-                    + " "
-                    + moveStep.direction().label();
-
-            case MouseStep mouseStep ->
-                mouseStep
-                    .action()
-                    .label();
-
-            case WaitStep waitStep ->
-                "Wait";
-        };
-    }
-
-    private String getSubtitle(
-        ScenarioStep step
-    ) {
-        return switch (step) {
-            case CameraStep cameraStep ->
-                cameraStep.motion()
-                    == CameraMotion.INSTANT
-                        ? cameraStep.angleDegrees()
-                            + "° · Instant"
-                        : cameraStep.angleDegrees()
-                            + "° · "
-                            + ScenarioFormat.formatDuration(
-                                cameraStep.durationTicks()
-                            );
-
-            case HotbarStep hotbarStep ->
-                "Hotbar "
-                    + (
-                        hotbarStep.slot()
-                            + 1
-                    );
-
-            case JumpStep jumpStep ->
-                getJumpSubtitle(jumpStep);
-
-            case MoveStep moveStep ->
-                (
-                    moveStep.jumping()
-                        ? "Jump · "
-                        : ""
-                )
-                    + ScenarioFormat.formatDuration(
-                        moveStep.durationTicks()
-                    );
-
-            case MouseStep mouseStep ->
-                getMouseSubtitle(mouseStep);
-
-            case WaitStep waitStep ->
-                ScenarioFormat.formatDuration(
-                    waitStep.durationTicks()
-                );
-        };
-    }
-
-    private String getJumpSubtitle(
-        JumpStep step
-    ) {
-        return switch (step.mode()) {
-            case SINGLE ->
-                "Single";
-
-            case HOLD ->
-                step.stopMode()
-                    == JumpStopMode.MANUAL
-                        ? "Hold · Manual"
-                        : "Hold · "
-                            + ScenarioFormat.formatDuration(
-                                step.durationTicks()
-                            );
-
-            case REPEAT ->
-                switch (step.stopMode()) {
-                    case DURATION ->
-                        "Repeat · "
-                            + ScenarioFormat.formatDuration(
-                                step.durationTicks()
-                            );
-
-                    case JUMP_COUNT ->
-                        step.jumpCount()
-                            + (
-                                step.jumpCount() == 1
-                                    ? " jump"
-                                    : " jumps"
-                            );
-
-                    case MANUAL ->
-                        "Repeat · Manual";
-                };
-        };
-    }
-
-    private String getMouseSubtitle(
-        MouseStep step
-    ) {
-        if (
-            step.inputMode()
-                == MouseInputMode.HOLD
-        ) {
-            return step.stopMode()
-                == MouseStopMode.MANUAL
-                    ? "Hold · Manual"
-                    : "Hold · "
-                        + ScenarioFormat.formatDuration(
-                            step.durationTicks()
-                        );
-        }
-
-        String rate =
-            ScenarioFormat.formatClicksPerSecondLabel(
-                step.clicksPerSecondHalfSteps()
-            );
-
-        return switch (step.stopMode()) {
-            case DURATION ->
-                rate
-                    + " · "
-                    + ScenarioFormat.formatDuration(
-                        step.durationTicks()
-                    );
-
-            case CLICK_COUNT ->
-                step.clickCount()
-                    + "x · "
-                    + rate;
-
-            case MANUAL ->
-                rate + " · Manual";
-        };
-    }
 }

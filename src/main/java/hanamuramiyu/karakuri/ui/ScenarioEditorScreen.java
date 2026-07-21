@@ -22,6 +22,10 @@ import hanamuramiyu.karakuri.scenario.ScenarioLibrary;
 import hanamuramiyu.karakuri.scenario.ScenarioTaskFactory;
 import hanamuramiyu.karakuri.task.TaskManager;
 import hanamuramiyu.karakuri.task.TaskStatus;
+import hanamuramiyu.karakuri.ui.editor.ScenarioEditorState;
+import hanamuramiyu.karakuri.ui.editor.ScenarioStepPresentation;
+import hanamuramiyu.karakuri.ui.editor.ScenarioStepRules;
+import hanamuramiyu.karakuri.ui.editor.ScenarioValueFormatter;
 import hanamuramiyu.karakuri.ui.widget.KarakuriButton;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -29,9 +33,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
 
 public final class ScenarioEditorScreen extends Screen {
     private static final int WIDE_MIN_WIDTH = 760;
@@ -44,24 +45,13 @@ public final class ScenarioEditorScreen extends Screen {
     private static final int PANEL_GAP = 8;
     private static final int BUTTON_GAP = 6;
     private static final int BUTTON_HEIGHT = 22;
-    private static final int DURATION_STEP_TICKS = 10;
-    private static final int CAMERA_ANGLE_STEP = 5;
-    private static final int MIN_DURATION_TICKS = 1;
-    private static final int MAX_DURATION_TICKS = 72000;
-    private static final int DEFAULT_MOVE_DURATION_TICKS = 40;
-    private static final int DEFAULT_WAIT_DURATION_TICKS = 20;
-    private static final int DEFAULT_MOUSE_DURATION_TICKS = 20;
 
     private final KarakuriScreen parent;
-    private final int scenarioIndex;
-    private final List<ScenarioStep> steps;
-    private final String initialName;
+    private final ScenarioEditorState state;
 
     private LayoutMode layoutMode;
     private CompactTab compactTab =
         CompactTab.WORKFLOW;
-
-    private int selectedStepIndex;
 
     private boolean syncingDurationField;
     private boolean syncingCountField;
@@ -163,26 +153,10 @@ public final class ScenarioEditorScreen extends Screen {
         );
 
         this.parent = parent;
-        this.scenarioIndex = scenarioIndex;
-
-        if (scenario == null) {
-            initialName = "New Scenario";
-
-            steps = new ArrayList<>(
-                List.of(
-                    new MoveStep(
-                        MoveDirection.FORWARD,
-                        DEFAULT_MOVE_DURATION_TICKS
-                    )
-                )
-            );
-        } else {
-            initialName = scenario.name();
-
-            steps = new ArrayList<>(
-                scenario.steps()
-            );
-        }
+        this.state = ScenarioEditorState.create(
+            scenarioIndex,
+            scenario
+        );
     }
 
     @Override
@@ -274,7 +248,7 @@ public final class ScenarioEditorScreen extends Screen {
         workflowCanvas =
             new ScenarioWorkflowCanvas(
                 font,
-                steps,
+                state.steps(),
                 this::onCanvasSelectionChanged,
                 this::onCanvasContentChanged
             );
@@ -287,7 +261,7 @@ public final class ScenarioEditorScreen extends Screen {
         );
 
         workflowCanvas.setSelectedIndex(
-            selectedStepIndex
+            state.selectedIndex()
         );
 
         createInspectorWidgets();
@@ -612,7 +586,7 @@ public final class ScenarioEditorScreen extends Screen {
         );
 
         nameField.setValue(
-            initialName
+            state.initialName()
         );
 
         nameField.setResponder(
@@ -2355,7 +2329,7 @@ public final class ScenarioEditorScreen extends Screen {
             inspectorY,
             inspectorX + 3,
             inspectorY + inspectorHeight,
-            getStepAccentColor(step)
+            ScenarioStepPresentation.inspectorAccentColor(step)
         );
 
         graphics.drawString(
@@ -2373,11 +2347,11 @@ public final class ScenarioEditorScreen extends Screen {
             Component.literal(
                 "#"
                     + (
-                        selectedStepIndex
+                        state.selectedIndex()
                             + 1
                     )
                     + " of "
-                    + steps.size()
+                    + state.size()
             );
 
         graphics.drawString(
@@ -2395,7 +2369,7 @@ public final class ScenarioEditorScreen extends Screen {
         graphics.drawString(
             font,
             Component.literal(
-                getStepTitle(step)
+                ScenarioStepPresentation.inspectorTitle(step)
             ),
             inspectorX + 10,
             inspectorY + 24,
@@ -2451,7 +2425,7 @@ public final class ScenarioEditorScreen extends Screen {
             }
 
             String primaryLabel =
-                getJumpPrimaryValueLabel(
+                ScenarioStepPresentation.jumpPrimaryValueLabel(
                     jumpStep
                 );
 
@@ -2466,15 +2440,15 @@ public final class ScenarioEditorScreen extends Screen {
             graphics.drawString(
                 font,
                 Component.literal(
-                    getJumpDescription(
+                    ScenarioStepPresentation.jumpDescription(
                         jumpStep
                     )
                 ),
                 inspectorX + 10,
                 inspectorY + 216,
                 jumpStep.isInfinite()
-                    && selectedStepIndex
-                        < steps.size() - 1
+                    && state.selectedIndex()
+                        < state.size() - 1
                         ? 0xFFE66777
                         : 0xFF81798E,
                 false
@@ -2654,7 +2628,7 @@ public final class ScenarioEditorScreen extends Screen {
         }
 
         String primaryLabel =
-            getMousePrimaryValueLabel(
+            ScenarioStepPresentation.mousePrimaryValueLabel(
                 mouseStep
             );
 
@@ -2669,15 +2643,15 @@ public final class ScenarioEditorScreen extends Screen {
         graphics.drawString(
             font,
             Component.literal(
-                getMouseEstimate(
+                ScenarioStepPresentation.mouseEstimate(
                     mouseStep
                 )
             ),
             inspectorX + 10,
             inspectorY + 216,
             mouseStep.isInfinite()
-                && selectedStepIndex
-                    < steps.size() - 1
+                && state.selectedIndex()
+                    < state.size() - 1
                         ? 0xFFE66777
                         : 0xFF81798E,
             false
@@ -2688,30 +2662,13 @@ public final class ScenarioEditorScreen extends Screen {
         GuiGraphics graphics,
         ScenarioStep step
     ) {
-        String label =
-            switch (step) {
-                case CameraStep cameraStep ->
-                    "Direction / motion";
-
-                case HotbarStep hotbarStep ->
-                    "Select active hotbar slot";
-
-                case JumpStep jumpStep ->
-                    "Mode / stop condition";
-
-                case MoveStep moveStep ->
-                    "Direction / style / jumping";
-
-                case MouseStep mouseStep ->
-                    "Button / input / stop";
-
-                case WaitStep waitStep ->
-                    "Timing action";
-            };
-
         graphics.drawString(
             font,
-            Component.literal(label),
+            Component.literal(
+                ScenarioStepPresentation.compactInspectorLabel(
+                    step
+                )
+            ),
             inspectorX + 8,
             inspectorY + 32,
             0xFF918699,
@@ -2739,8 +2696,8 @@ public final class ScenarioEditorScreen extends Screen {
         ScenarioStep step
     ) {
         if (
-            usesCps(step)
-                || usesAngle(step)
+            ScenarioStepRules.usesCps(step)
+                || ScenarioStepRules.usesAngle(step)
         ) {
             graphics.fill(
                 secondaryFrameX,
@@ -2757,14 +2714,14 @@ public final class ScenarioEditorScreen extends Screen {
                 secondaryFrameY,
                 secondaryFrameWidth,
                 BUTTON_HEIGHT,
-                usesAngle(step)
+                ScenarioStepRules.usesAngle(step)
                     && !angleFieldValid
                         ? 0xFFC75B69
                         : 0xFF51475E
             );
         }
 
-        if (usesPrimaryValue(step)) {
+        if (ScenarioStepRules.usesPrimaryValue(step)) {
             graphics.fill(
                 primaryFrameX,
                 primaryFrameY,
@@ -2816,7 +2773,7 @@ public final class ScenarioEditorScreen extends Screen {
             );
         }
 
-        if (usesCps(step)) {
+        if (ScenarioStepRules.usesCps(step)) {
             renderCenteredFrameText(
                 graphics,
                 secondaryFrameX,
@@ -2866,7 +2823,7 @@ public final class ScenarioEditorScreen extends Screen {
                 primaryFrameY,
                 primaryFrameWidth,
                 durationFieldValid
-                    ? formatDurationValue(
+                    ? ScenarioValueFormatter.durationValue(
                         step.durationTicks()
                     )
                     : "Invalid",
@@ -2886,7 +2843,7 @@ public final class ScenarioEditorScreen extends Screen {
                 primaryFrameY,
                 primaryFrameWidth,
                 countFieldValid
-                    ? getCountDisplayValue(step)
+                    ? ScenarioStepPresentation.countDisplayValue(step)
                     : "Invalid",
                 countFieldValid
                     ? 0xFFF4F0F7
@@ -3012,20 +2969,16 @@ public final class ScenarioEditorScreen extends Screen {
         int index
     ) {
         stopRunningTest();
-
-        selectedStepIndex = index;
-
+        state.select(index);
         syncValueFields();
         updateButtons();
     }
 
     private void onCanvasContentChanged() {
         stopRunningTest();
-
-        selectedStepIndex =
-            workflowCanvas
-                .getSelectedIndex();
-
+        state.select(
+            workflowCanvas.getSelectedIndex()
+        );
         syncValueFields();
         updateButtons();
     }
@@ -3034,58 +2987,22 @@ public final class ScenarioEditorScreen extends Screen {
         MoveDirection direction
     ) {
         stopRunningTest();
-
-        int insertIndex =
-            selectedStepIndex + 1;
-
-        steps.add(
-            insertIndex,
-            new MoveStep(
-                direction,
-                DEFAULT_MOVE_DURATION_TICKS
-            )
-        );
-
-        selectStep(insertIndex);
+        state.insertMoveStep(direction);
+        syncSelectedStep();
         returnToWorkflow();
     }
 
     private void insertJumpStep() {
         stopRunningTest();
-
-        int insertIndex =
-            selectedStepIndex + 1;
-
-        steps.add(
-            insertIndex,
-            new JumpStep(
-                JumpMode.SINGLE,
-                JumpStopMode.DURATION,
-                JumpStep
-                    .DEFAULT_DURATION_TICKS,
-                JumpStep
-                    .DEFAULT_JUMP_COUNT
-            )
-        );
-
-        selectStep(insertIndex);
+        state.insertJumpStep();
+        syncSelectedStep();
         returnToWorkflow();
     }
 
     private void insertWaitStep() {
         stopRunningTest();
-
-        int insertIndex =
-            selectedStepIndex + 1;
-
-        steps.add(
-            insertIndex,
-            new WaitStep(
-                DEFAULT_WAIT_DURATION_TICKS
-            )
-        );
-
-        selectStep(insertIndex);
+        state.insertWaitStep();
+        syncSelectedStep();
         returnToWorkflow();
     }
 
@@ -3093,25 +3010,8 @@ public final class ScenarioEditorScreen extends Screen {
         MouseAction action
     ) {
         stopRunningTest();
-
-        int insertIndex =
-            selectedStepIndex + 1;
-
-        steps.add(
-            insertIndex,
-            new MouseStep(
-                action,
-                MouseInputMode.HOLD,
-                MouseStopMode.DURATION,
-                DEFAULT_MOUSE_DURATION_TICKS,
-                MouseStep
-                    .DEFAULT_CPS_HALF_STEPS,
-                MouseStep
-                    .DEFAULT_CLICK_COUNT
-            )
-        );
-
-        selectStep(insertIndex);
+        state.insertMouseStep(action);
+        syncSelectedStep();
         returnToWorkflow();
     }
 
@@ -3119,42 +3019,25 @@ public final class ScenarioEditorScreen extends Screen {
         CameraDirection direction
     ) {
         stopRunningTest();
-
-        int insertIndex =
-            selectedStepIndex + 1;
-
-        steps.add(
-            insertIndex,
-            new CameraStep(
-                direction,
-                CameraMotion.SMOOTH,
-                CameraStep
-                    .DEFAULT_ANGLE_DEGREES,
-                CameraStep
-                    .DEFAULT_DURATION_TICKS
-            )
-        );
-
-        selectStep(insertIndex);
+        state.insertCameraStep(direction);
+        syncSelectedStep();
         returnToWorkflow();
     }
 
     private void insertHotbarStep() {
         stopRunningTest();
+        state.insertHotbarStep();
+        syncSelectedStep();
+        returnToWorkflow();
+    }
 
-        int insertIndex =
-            selectedStepIndex + 1;
-
-        steps.add(
-            insertIndex,
-            new HotbarStep(
-                HotbarStep
-                    .DEFAULT_SLOT
-            )
+    private void syncSelectedStep() {
+        workflowCanvas.setSelectedIndex(
+            state.selectedIndex()
         );
 
-        selectStep(insertIndex);
-        returnToWorkflow();
+        syncValueFields();
+        updateButtons();
     }
 
     private void returnToWorkflow() {
@@ -3170,77 +3053,30 @@ public final class ScenarioEditorScreen extends Screen {
 
     private void duplicateSelectedStep() {
         stopRunningTest();
-
-        int insertIndex =
-            selectedStepIndex + 1;
-
-        steps.add(
-            insertIndex,
-            getSelectedStep()
-        );
-
-        selectStep(insertIndex);
+        state.duplicateSelectedStep();
+        syncSelectedStep();
     }
 
     private void deleteSelectedStep() {
         stopRunningTest();
 
-        if (steps.size() <= 1) {
-            return;
+        if (state.deleteSelectedStep()) {
+            syncSelectedStep();
         }
-
-        steps.remove(
-            selectedStepIndex
-        );
-
-        selectStep(
-            Math.min(
-                selectedStepIndex,
-                steps.size() - 1
-            )
-        );
     }
 
     private void selectStep(
         int index
     ) {
-        selectedStepIndex =
-            Math.clamp(
-                index,
-                0,
-                steps.size() - 1
-            );
-
-        workflowCanvas.setSelectedIndex(
-            selectedStepIndex
-        );
-
-        syncValueFields();
-        updateButtons();
+        state.select(index);
+        syncSelectedStep();
     }
 
     private void setDirection(
         MoveDirection direction
     ) {
         stopRunningTest();
-
-        if (
-            !(
-                getSelectedStep()
-                    instanceof
-                    MoveStep moveStep
-            )
-        ) {
-            return;
-        }
-
-        steps.set(
-            selectedStepIndex,
-            moveStep.withDirection(
-                direction
-            )
-        );
-
+        state.setMoveDirection(direction);
         updateButtons();
     }
 
@@ -3248,45 +3084,13 @@ public final class ScenarioEditorScreen extends Screen {
         MoveMode mode
     ) {
         stopRunningTest();
-
-        if (
-            !(
-                getSelectedStep()
-                    instanceof
-                    MoveStep moveStep
-            )
-        ) {
-            return;
-        }
-
-        steps.set(
-            selectedStepIndex,
-            moveStep.withMode(mode)
-        );
-
+        state.setMoveMode(mode);
         updateButtons();
     }
 
     private void toggleMoveJumping() {
         stopRunningTest();
-
-        if (
-            !(
-                getSelectedStep()
-                    instanceof
-                    MoveStep moveStep
-            )
-        ) {
-            return;
-        }
-
-        steps.set(
-            selectedStepIndex,
-            moveStep.withJumping(
-                !moveStep.jumping()
-            )
-        );
-
+        state.toggleMoveJumping();
         updateButtons();
     }
 
@@ -3294,22 +3098,7 @@ public final class ScenarioEditorScreen extends Screen {
         JumpMode mode
     ) {
         stopRunningTest();
-
-        if (
-            !(
-                getSelectedStep()
-                    instanceof
-                    JumpStep jumpStep
-            )
-        ) {
-            return;
-        }
-
-        steps.set(
-            selectedStepIndex,
-            jumpStep.withMode(mode)
-        );
-
+        state.setJumpMode(mode);
         syncValueFields();
         updateButtons();
     }
@@ -3318,24 +3107,7 @@ public final class ScenarioEditorScreen extends Screen {
         JumpStopMode stopMode
     ) {
         stopRunningTest();
-
-        if (
-            !(
-                getSelectedStep()
-                    instanceof
-                    JumpStep jumpStep
-            )
-        ) {
-            return;
-        }
-
-        steps.set(
-            selectedStepIndex,
-            jumpStep.withStopMode(
-                stopMode
-            )
-        );
-
+        state.setJumpStopMode(stopMode);
         syncValueFields();
         updateButtons();
     }
@@ -3344,24 +3116,7 @@ public final class ScenarioEditorScreen extends Screen {
         CameraDirection direction
     ) {
         stopRunningTest();
-
-        if (
-            !(
-                getSelectedStep()
-                    instanceof
-                    CameraStep cameraStep
-            )
-        ) {
-            return;
-        }
-
-        steps.set(
-            selectedStepIndex,
-            cameraStep.withDirection(
-                direction
-            )
-        );
-
+        state.setCameraDirection(direction);
         updateButtons();
     }
 
@@ -3369,24 +3124,7 @@ public final class ScenarioEditorScreen extends Screen {
         CameraMotion motion
     ) {
         stopRunningTest();
-
-        if (
-            !(
-                getSelectedStep()
-                    instanceof
-                    CameraStep cameraStep
-            )
-        ) {
-            return;
-        }
-
-        steps.set(
-            selectedStepIndex,
-            cameraStep.withMotion(
-                motion
-            )
-        );
-
+        state.setCameraMotion(motion);
         syncValueFields();
         updateButtons();
     }
@@ -3395,24 +3133,7 @@ public final class ScenarioEditorScreen extends Screen {
         MouseAction action
     ) {
         stopRunningTest();
-
-        if (
-            !(
-                getSelectedStep()
-                    instanceof
-                    MouseStep mouseStep
-            )
-        ) {
-            return;
-        }
-
-        steps.set(
-            selectedStepIndex,
-            mouseStep.withAction(
-                action
-            )
-        );
-
+        state.setMouseAction(action);
         updateButtons();
     }
 
@@ -3420,24 +3141,7 @@ public final class ScenarioEditorScreen extends Screen {
         MouseInputMode inputMode
     ) {
         stopRunningTest();
-
-        if (
-            !(
-                getSelectedStep()
-                    instanceof
-                    MouseStep mouseStep
-            )
-        ) {
-            return;
-        }
-
-        steps.set(
-            selectedStepIndex,
-            mouseStep.withInputMode(
-                inputMode
-            )
-        );
-
+        state.setMouseInputMode(inputMode);
         syncValueFields();
         updateButtons();
     }
@@ -3446,24 +3150,7 @@ public final class ScenarioEditorScreen extends Screen {
         MouseStopMode stopMode
     ) {
         stopRunningTest();
-
-        if (
-            !(
-                getSelectedStep()
-                    instanceof
-                    MouseStep mouseStep
-            )
-        ) {
-            return;
-        }
-
-        steps.set(
-            selectedStepIndex,
-            mouseStep.withStopMode(
-                stopMode
-            )
-        );
-
+        state.setMouseStopMode(stopMode);
         syncValueFields();
         updateButtons();
     }
@@ -3472,36 +3159,7 @@ public final class ScenarioEditorScreen extends Screen {
         int direction
     ) {
         stopRunningTest();
-
-        if (
-            !(
-                getSelectedStep()
-                    instanceof
-                    MouseStep mouseStep
-            )
-        ) {
-            return;
-        }
-
-        int updatedValue =
-            Math.clamp(
-                mouseStep
-                    .clicksPerSecondHalfSteps()
-                    + direction,
-                MouseStep
-                    .MIN_CPS_HALF_STEPS,
-                MouseStep
-                    .MAX_CPS_HALF_STEPS
-            );
-
-        steps.set(
-            selectedStepIndex,
-            mouseStep
-                .withClicksPerSecondHalfSteps(
-                    updatedValue
-                )
-        );
-
+        state.changeCps(direction);
         updateButtons();
     }
 
@@ -3509,35 +3167,7 @@ public final class ScenarioEditorScreen extends Screen {
         int direction
     ) {
         stopRunningTest();
-
-        if (
-            !(
-                getSelectedStep()
-                    instanceof
-                    CameraStep cameraStep
-            )
-        ) {
-            return;
-        }
-
-        int updatedAngle =
-            Math.clamp(
-                cameraStep.angleDegrees()
-                    + direction
-                    * CAMERA_ANGLE_STEP,
-                CameraStep
-                    .MIN_ANGLE_DEGREES,
-                CameraStep
-                    .MAX_ANGLE_DEGREES
-            );
-
-        steps.set(
-            selectedStepIndex,
-            cameraStep.withAngleDegrees(
-                updatedAngle
-            )
-        );
-
+        state.changeAngle(direction);
         syncAngleField();
         updateButtons();
     }
@@ -3546,100 +3176,7 @@ public final class ScenarioEditorScreen extends Screen {
         int direction
     ) {
         stopRunningTest();
-
-        ScenarioStep step =
-            getSelectedStep();
-
-        if (
-            step
-                instanceof
-                HotbarStep hotbarStep
-        ) {
-            steps.set(
-                selectedStepIndex,
-                hotbarStep.withSlot(
-                    Math.clamp(
-                        hotbarStep.slot()
-                            + direction,
-                        HotbarStep
-                            .MIN_SLOT,
-                        HotbarStep
-                            .MAX_SLOT
-                    )
-                )
-            );
-
-            updateButtons();
-            return;
-        }
-
-        if (
-            step
-                instanceof
-                JumpStep jumpStep
-                && usesCount(step)
-        ) {
-            steps.set(
-                selectedStepIndex,
-                jumpStep.withJumpCount(
-                    Math.clamp(
-                        jumpStep.jumpCount()
-                            + direction,
-                        JumpStep
-                            .MIN_JUMP_COUNT,
-                        JumpStep
-                            .MAX_JUMP_COUNT
-                    )
-                )
-            );
-
-            syncValueFields();
-            updateButtons();
-            return;
-        }
-
-        if (
-            step
-                instanceof
-                MouseStep mouseStep
-                && usesCount(step)
-        ) {
-            steps.set(
-                selectedStepIndex,
-                mouseStep.withClickCount(
-                    Math.clamp(
-                        mouseStep.clickCount()
-                            + direction,
-                        MouseStep
-                            .MIN_CLICK_COUNT,
-                        MouseStep
-                            .MAX_CLICK_COUNT
-                    )
-                )
-            );
-
-            syncValueFields();
-            updateButtons();
-            return;
-        }
-
-        if (!usesDuration(step)) {
-            return;
-        }
-
-        int updatedDuration =
-            Math.clamp(
-                step.durationTicks()
-                    + direction
-                    * DURATION_STEP_TICKS,
-                MIN_DURATION_TICKS,
-                MAX_DURATION_TICKS
-            );
-
-        replaceSelectedDuration(
-            updatedDuration
-        );
-
+        state.changePrimaryValue(direction);
         syncValueFields();
         updateButtons();
     }
@@ -3665,16 +3202,16 @@ public final class ScenarioEditorScreen extends Screen {
             if (
                 !Double.isFinite(seconds)
                     || durationTicks
-                        < MIN_DURATION_TICKS
+                        < ScenarioEditorState.MIN_DURATION_TICKS
                     || durationTicks
-                        > MAX_DURATION_TICKS
+                        > ScenarioEditorState.MAX_DURATION_TICKS
             ) {
                 durationFieldValid = false;
                 updateButtons();
                 return;
             }
 
-            replaceSelectedDuration(
+            state.setDurationTicks(
                 durationTicks
             );
 
@@ -3701,42 +3238,13 @@ public final class ScenarioEditorScreen extends Screen {
             int count =
                 Integer.parseInt(value);
 
-            if (
-                count < 1
-                    || count > 100000
-            ) {
+            if (count < 1 || count > 100000) {
                 countFieldValid = false;
                 updateButtons();
                 return;
             }
 
-            ScenarioStep step =
-                getSelectedStep();
-
-            if (
-                step
-                    instanceof
-                    JumpStep jumpStep
-            ) {
-                steps.set(
-                    selectedStepIndex,
-                    jumpStep.withJumpCount(
-                        count
-                    )
-                );
-            } else if (
-                step
-                    instanceof
-                    MouseStep mouseStep
-            ) {
-                steps.set(
-                    selectedStepIndex,
-                    mouseStep.withClickCount(
-                        count
-                    )
-                );
-            }
-
+            state.setCount(count);
             countFieldValid = true;
         } catch (
             NumberFormatException exception
@@ -3761,31 +3269,15 @@ public final class ScenarioEditorScreen extends Screen {
                 Integer.parseInt(value);
 
             if (
-                angle
-                    < CameraStep
-                        .MIN_ANGLE_DEGREES
-                    || angle
-                        > CameraStep
-                            .MAX_ANGLE_DEGREES
+                angle < CameraStep.MIN_ANGLE_DEGREES
+                    || angle > CameraStep.MAX_ANGLE_DEGREES
             ) {
                 angleFieldValid = false;
                 updateButtons();
                 return;
             }
 
-            if (
-                getSelectedStep()
-                    instanceof
-                    CameraStep cameraStep
-            ) {
-                steps.set(
-                    selectedStepIndex,
-                    cameraStep.withAngleDegrees(
-                        angle
-                    )
-                );
-            }
-
+            state.setAngle(angle);
             angleFieldValid = true;
         } catch (
             NumberFormatException exception
@@ -3794,46 +3286,6 @@ public final class ScenarioEditorScreen extends Screen {
         }
 
         updateButtons();
-    }
-
-    private void replaceSelectedDuration(
-        int durationTicks
-    ) {
-        ScenarioStep step =
-            getSelectedStep();
-
-        steps.set(
-            selectedStepIndex,
-            switch (step) {
-                case CameraStep cameraStep ->
-                    cameraStep.withDurationTicks(
-                        durationTicks
-                    );
-
-                case HotbarStep hotbarStep ->
-                    hotbarStep;
-
-                case JumpStep jumpStep ->
-                    jumpStep.withDurationTicks(
-                        durationTicks
-                    );
-
-                case MoveStep moveStep ->
-                    moveStep.withDurationTicks(
-                        durationTicks
-                    );
-
-                case MouseStep mouseStep ->
-                    mouseStep.withDurationTicks(
-                        durationTicks
-                    );
-
-                case WaitStep waitStep ->
-                    new WaitStep(
-                        durationTicks
-                    );
-            }
-        );
     }
 
     private void syncValueFields() {
@@ -3850,9 +3302,8 @@ public final class ScenarioEditorScreen extends Screen {
         syncingDurationField = true;
 
         durationField.setValue(
-            formatDurationForField(
-                getSelectedStep()
-                    .durationTicks()
+            ScenarioValueFormatter.durationForField(
+                getSelectedStep().durationTicks()
             )
         );
 
@@ -3865,26 +3316,16 @@ public final class ScenarioEditorScreen extends Screen {
             return;
         }
 
-        ScenarioStep step =
-            getSelectedStep();
-
+        ScenarioStep step = getSelectedStep();
         syncingCountField = true;
 
-        if (
-            step
-                instanceof
-                JumpStep jumpStep
-        ) {
+        if (step instanceof JumpStep jumpStep) {
             countField.setValue(
                 Integer.toString(
                     jumpStep.jumpCount()
                 )
             );
-        } else if (
-            step
-                instanceof
-                MouseStep mouseStep
-        ) {
+        } else if (step instanceof MouseStep mouseStep) {
             countField.setValue(
                 Integer.toString(
                     mouseStep.clickCount()
@@ -3901,11 +3342,7 @@ public final class ScenarioEditorScreen extends Screen {
             return;
         }
 
-        if (
-            getSelectedStep()
-                instanceof
-                CameraStep cameraStep
-        ) {
+        if (getSelectedStep() instanceof CameraStep cameraStep) {
             syncingAngleField = true;
 
             angleField.setValue(
@@ -3960,18 +3397,17 @@ public final class ScenarioEditorScreen extends Screen {
         stopRunningTest();
 
         Scenario scenario =
-            new Scenario(
-                nameField.getValue(),
-                steps
+            state.toScenario(
+                nameField.getValue()
             );
 
-        if (scenarioIndex < 0) {
+        if (state.scenarioIndex() < 0) {
             ScenarioLibrary.add(
                 scenario
             );
         } else {
             ScenarioLibrary.replace(
-                scenarioIndex,
+                state.scenarioIndex(),
                 scenario
             );
         }
@@ -4100,16 +3536,16 @@ public final class ScenarioEditorScreen extends Screen {
                         .REPEAT;
 
         boolean cpsUsed =
-            usesCps(step);
+            ScenarioStepRules.usesCps(step);
 
         boolean angleUsed =
-            usesAngle(step);
+            ScenarioStepRules.usesAngle(step);
 
         boolean durationUsed =
-            usesDuration(step);
+            ScenarioStepRules.usesDuration(step);
 
         boolean countUsed =
-            usesCount(step);
+            ScenarioStepRules.usesCount(step);
 
         boolean primaryValueUsed =
             durationUsed
@@ -4484,11 +3920,11 @@ public final class ScenarioEditorScreen extends Screen {
         if (durationUsed) {
             primaryDecreaseButton.active =
                 step.durationTicks()
-                    > MIN_DURATION_TICKS;
+                    > ScenarioEditorState.MIN_DURATION_TICKS;
 
             primaryIncreaseButton.active =
                 step.durationTicks()
-                    < MAX_DURATION_TICKS;
+                    < ScenarioEditorState.MAX_DURATION_TICKS;
         } else if (
             step
                 instanceof
@@ -4563,7 +3999,7 @@ public final class ScenarioEditorScreen extends Screen {
 
         deleteButton.active =
             status == TaskStatus.IDLE
-                && steps.size() > 1;
+                && state.size() > 1;
 
         saveButton.active =
             status == TaskStatus.IDLE
@@ -4614,242 +4050,18 @@ public final class ScenarioEditorScreen extends Screen {
         );
     }
 
-    private boolean usesCps(
-        ScenarioStep step
-    ) {
-        return step
-            instanceof
-            MouseStep mouseStep
-            && mouseStep.inputMode()
-                == MouseInputMode
-                    .CLICK;
-    }
-
-    private boolean usesAngle(
-        ScenarioStep step
-    ) {
-        return step
-            instanceof
-            CameraStep;
-    }
-
-    private boolean usesHotbarSlot(
-        ScenarioStep step
-    ) {
-        return step
-            instanceof
-            HotbarStep;
-    }
-
-    private boolean usesDuration(
-        ScenarioStep step
-    ) {
-        if (
-            step
-                instanceof
-                HotbarStep
-        ) {
-            return false;
-        }
-
-        if (
-            step
-                instanceof
-                JumpStep jumpStep
-        ) {
-            return jumpStep.mode()
-                != JumpMode.SINGLE
-                && jumpStep.stopMode()
-                    == JumpStopMode.DURATION;
-        }
-
-        if (
-            step
-                instanceof
-                MouseStep mouseStep
-        ) {
-            return mouseStep.stopMode()
-                == MouseStopMode
-                    .DURATION;
-        }
-
-        if (
-            step
-                instanceof
-                CameraStep cameraStep
-        ) {
-            return cameraStep.motion()
-                == CameraMotion
-                    .SMOOTH;
-        }
-
-        return true;
-    }
-
-    private boolean usesCount(
-        ScenarioStep step
-    ) {
-        if (
-            step
-                instanceof
-                JumpStep jumpStep
-        ) {
-            return jumpStep.mode()
-                == JumpMode.REPEAT
-                && jumpStep.stopMode()
-                    == JumpStopMode.JUMP_COUNT;
-        }
-
-        return step
-            instanceof
-            MouseStep mouseStep
-            && mouseStep.inputMode()
-                == MouseInputMode
-                    .CLICK
-            && mouseStep.stopMode()
-                == MouseStopMode
-                    .CLICK_COUNT;
-    }
-
-    private boolean usesPrimaryValue(
-        ScenarioStep step
-    ) {
-        return usesDuration(step)
-            || usesCount(step)
-            || usesHotbarSlot(step);
-    }
-
     private boolean isPrimaryValueValid(
         ScenarioStep step
     ) {
-        if (usesDuration(step)) {
+        if (ScenarioStepRules.usesDuration(step)) {
             return durationFieldValid;
         }
 
-        if (usesCount(step)) {
+        if (ScenarioStepRules.usesCount(step)) {
             return countFieldValid;
         }
 
         return true;
-    }
-
-    private String getJumpPrimaryValueLabel(
-        JumpStep step
-    ) {
-        if (
-            step.mode()
-                == JumpMode.SINGLE
-        ) {
-            return null;
-        }
-
-        return switch (step.stopMode()) {
-            case DURATION ->
-                "Duration in seconds";
-
-            case JUMP_COUNT ->
-                "Jump count";
-
-            case MANUAL ->
-                null;
-        };
-    }
-
-    private String getJumpDescription(
-        JumpStep step
-    ) {
-        return switch (step.mode()) {
-            case SINGLE ->
-                "Presses Jump once";
-
-            case HOLD ->
-                step.stopMode()
-                    == JumpStopMode.MANUAL
-                        ? "Keeps Jump held until Stop"
-                        : "Keeps Jump held for the selected time";
-
-            case REPEAT ->
-                step.stopMode()
-                    == JumpStopMode.MANUAL
-                        ? "Jumps after every landing until Stop"
-                        : "Jumps again after every landing";
-        };
-    }
-
-    private String getMousePrimaryValueLabel(
-        MouseStep step
-    ) {
-        return switch (step.stopMode()) {
-            case DURATION ->
-                "Duration in seconds";
-
-            case CLICK_COUNT ->
-                "Click count";
-
-            case MANUAL ->
-                null;
-        };
-    }
-
-    private String getMouseEstimate(
-        MouseStep step
-    ) {
-        if (
-            step.inputMode()
-                == MouseInputMode
-                    .HOLD
-        ) {
-            return step.stopMode()
-                == MouseStopMode
-                    .MANUAL
-                        ? "Runs until Stop"
-                        : "Held for "
-                            + formatDurationValue(
-                                step.durationTicks()
-                            );
-        }
-
-        return switch (step.stopMode()) {
-            case DURATION ->
-                "Estimated clicks: "
-                    + step.estimatedClickCount();
-
-            case CLICK_COUNT ->
-                "Estimated time: "
-                    + formatDurationValue(
-                        step.estimatedDurationTicks()
-                    );
-
-            case MANUAL ->
-                "Clicks until Stop";
-        };
-    }
-
-    private String getCountDisplayValue(
-        ScenarioStep step
-    ) {
-        if (
-            step
-                instanceof
-                JumpStep jumpStep
-        ) {
-            return jumpStep.jumpCount()
-                + (
-                    jumpStep.jumpCount() == 1
-                        ? " jump"
-                        : " jumps"
-                );
-        }
-
-        MouseStep mouseStep =
-            (MouseStep) step;
-
-        return mouseStep.clickCount()
-            + (
-                mouseStep.clickCount() == 1
-                    ? " click"
-                    : " clicks"
-            );
     }
 
     private boolean isWorkflowVisible() {
@@ -4867,23 +4079,14 @@ public final class ScenarioEditorScreen extends Screen {
     }
 
     private ScenarioStep getSelectedStep() {
-        selectedStepIndex =
-            Math.clamp(
-                selectedStepIndex,
-                0,
-                steps.size() - 1
-            );
-
-        return steps.get(
-            selectedStepIndex
-        );
+        return state.selectedStep();
     }
 
     private String getValidationMessage() {
         if (!isScenarioNameValid()) {
             String name =
                 nameField == null
-                    ? initialName
+                    ? state.initialName()
                     : nameField
                         .getValue()
                         .trim();
@@ -4897,21 +4100,21 @@ public final class ScenarioEditorScreen extends Screen {
             getSelectedStep();
 
         if (
-            usesAngle(step)
+            ScenarioStepRules.usesAngle(step)
                 && !angleFieldValid
         ) {
             return "Camera angle must be between 1 and 180 degrees";
         }
 
         if (
-            usesDuration(step)
+            ScenarioStepRules.usesDuration(step)
                 && !durationFieldValid
         ) {
             return "Duration must be between 0.05 and 3600 seconds";
         }
 
         if (
-            usesCount(step)
+            ScenarioStepRules.usesCount(step)
                 && !countFieldValid
         ) {
             return step
@@ -4921,14 +4124,8 @@ public final class ScenarioEditorScreen extends Screen {
                     : "Click count must be between 1 and 100000";
         }
 
-        for (
-            int index = 0;
-            index < steps.size() - 1;
-            index++
-        ) {
-            if (steps.get(index).isInfinite()) {
-                return "A manual step must be the final block";
-            }
+        if (state.hasInfiniteStepBeforeEnd()) {
+            return "A manual step must be the final block";
         }
 
         return null;
@@ -4937,7 +4134,7 @@ public final class ScenarioEditorScreen extends Screen {
     private boolean isScenarioNameValid() {
         String name =
             nameField == null
-                ? initialName
+                ? state.initialName()
                 : nameField
                     .getValue()
                     .trim();
@@ -4946,133 +4143,8 @@ public final class ScenarioEditorScreen extends Screen {
             && !ScenarioLibrary
                 .containsName(
                     name,
-                    scenarioIndex
+                    state.scenarioIndex()
                 );
-    }
-
-    private String formatDurationForField(
-        int durationTicks
-    ) {
-        return BigDecimal
-            .valueOf(durationTicks)
-            .divide(
-                BigDecimal.valueOf(20)
-            )
-            .stripTrailingZeros()
-            .toPlainString();
-    }
-
-    private String formatDurationValue(
-        int durationTicks
-    ) {
-        return formatDurationForField(
-            durationTicks
-        ) + " s";
-    }
-
-    private String getStepTitle(
-        ScenarioStep step
-    ) {
-        return switch (step) {
-            case CameraStep cameraStep ->
-                cameraStep
-                    .direction()
-                    .label();
-
-            case HotbarStep hotbarStep ->
-                "Select Hotbar Slot "
-                    + (
-                        hotbarStep.slot()
-                            + 1
-                    );
-
-            case JumpStep jumpStep ->
-                switch (jumpStep.mode()) {
-                    case SINGLE ->
-                        "Single Jump";
-
-                    case HOLD ->
-                        "Hold Jump";
-
-                    case REPEAT ->
-                        "Repeat Jumps";
-                };
-
-            case MoveStep moveStep -> {
-                String movement =
-                    moveStep.mode().label()
-                        + " "
-                        + moveStep
-                            .direction()
-                            .label();
-
-                yield moveStep.jumping()
-                    ? "Jump + " + movement
-                    : movement;
-            }
-
-            case MouseStep mouseStep ->
-                mouseStep.inputMode()
-                    == MouseInputMode
-                        .HOLD
-                            ? "Hold "
-                                + mouseStep
-                                    .action()
-                                    .label()
-                            : mouseStep
-                                .action()
-                                .label();
-
-            case WaitStep waitStep ->
-                "Wait";
-        };
-    }
-
-    private int getStepAccentColor(
-        ScenarioStep step
-    ) {
-        return switch (step) {
-            case CameraStep cameraStep ->
-                switch (cameraStep.direction()) {
-                    case LEFT ->
-                        0xFF67B6E8;
-                    case RIGHT ->
-                        0xFFB38AE8;
-                    case UP ->
-                        0xFF61D394;
-                    case DOWN ->
-                        0xFFF0A765;
-                };
-
-            case HotbarStep hotbarStep ->
-                0xFFE8D26A;
-
-            case JumpStep jumpStep ->
-                0xFF78D6C6;
-
-            case MoveStep moveStep ->
-                switch (moveStep.direction()) {
-                    case FORWARD ->
-                        0xFF61D394;
-                    case BACKWARD ->
-                        0xFFF0A765;
-                    case LEFT ->
-                        0xFF67B6E8;
-                    case RIGHT ->
-                        0xFFB38AE8;
-                };
-
-            case MouseStep mouseStep ->
-                switch (mouseStep.action()) {
-                    case LEFT_CLICK ->
-                        0xFFE66777;
-                    case RIGHT_CLICK ->
-                        0xFF67C7E8;
-                };
-
-            case WaitStep waitStep ->
-                0xFFA49BAD;
-        };
     }
 
     private int getWideLibraryWidth() {
