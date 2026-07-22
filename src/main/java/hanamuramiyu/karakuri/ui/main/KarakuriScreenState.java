@@ -4,13 +4,18 @@ import hanamuramiyu.karakuri.scenario.ScenarioLibrary;
 import hanamuramiyu.karakuri.scenario.model.Scenario;
 import hanamuramiyu.karakuri.task.composite.RepeatTask;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 public final class KarakuriScreenState {
     private static final int MAX_SCENARIO_NAME_LENGTH = 64;
 
     private List<Scenario> scenarios;
     private int selectedScenarioIndex;
+    private String searchQuery = "";
+    private ScenarioSortMode sortMode = ScenarioSortMode.LIBRARY_ORDER;
     private ExecutionMode executionMode = ExecutionMode.ONCE;
 
     public KarakuriScreenState() {
@@ -21,7 +26,7 @@ public final class KarakuriScreenState {
     public Scenario selectedScenario() {
         normalizeSelection();
 
-        if (scenarios.isEmpty()) {
+        if (!isSelectedScenarioVisible()) {
             return null;
         }
 
@@ -33,16 +38,66 @@ public final class KarakuriScreenState {
         return selectedScenarioIndex;
     }
 
+    public int selectedVisibleIndex() {
+        List<ScenarioEntry> visible = visibleScenarios();
+
+        for (int index = 0; index < visible.size(); index++) {
+            if (visible.get(index).libraryIndex() == selectedScenarioIndex) {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
     public int scenarioCount() {
         return scenarios.size();
+    }
+
+    public int visibleScenarioCount() {
+        return visibleScenarios().size();
     }
 
     public boolean hasScenario() {
         return !scenarios.isEmpty();
     }
 
-    public boolean hasMultipleScenarios() {
-        return scenarios.size() > 1;
+    public boolean hasVisibleScenario() {
+        return !visibleScenarios().isEmpty();
+    }
+
+    public String searchQuery() {
+        return searchQuery;
+    }
+
+    public ScenarioSortMode sortMode() {
+        return sortMode;
+    }
+
+    public List<ScenarioEntry> visibleScenarios() {
+        String normalizedQuery = searchQuery
+            .trim()
+            .toLowerCase(Locale.ROOT);
+
+        List<ScenarioEntry> visible = new ArrayList<>();
+
+        for (int index = 0; index < scenarios.size(); index++) {
+            Scenario scenario = scenarios.get(index);
+
+            if (
+                normalizedQuery.isEmpty()
+                    || scenario.name()
+                        .toLowerCase(Locale.ROOT)
+                        .contains(normalizedQuery)
+            ) {
+                visible.add(
+                    new ScenarioEntry(index, scenario)
+                );
+            }
+        }
+
+        visible.sort(comparatorFor(sortMode));
+        return List.copyOf(visible);
     }
 
     public String executionModeLabel() {
@@ -53,15 +108,58 @@ public final class KarakuriScreenState {
         return executionMode.repeatCount;
     }
 
-    public void selectScenario(int offset) {
-        if (scenarios.size() <= 1) {
+    public void setSearchQuery(String searchQuery) {
+        this.searchQuery = searchQuery == null
+            ? ""
+            : searchQuery;
+        ensureVisibleSelection();
+    }
+
+    public void setSortMode(ScenarioSortMode sortMode) {
+        if (sortMode == null) {
+            throw new IllegalArgumentException(
+                "Scenario sort mode must not be null"
+            );
+        }
+
+        this.sortMode = sortMode;
+        ensureVisibleSelection();
+    }
+
+    public void selectScenarioIndex(int libraryIndex) {
+        if (libraryIndex < 0 || libraryIndex >= scenarios.size()) {
             return;
         }
 
-        selectedScenarioIndex = Math.floorMod(
-            selectedScenarioIndex + offset,
-            scenarios.size()
+        selectedScenarioIndex = libraryIndex;
+    }
+
+    public void selectVisibleScenario(int visibleIndex) {
+        List<ScenarioEntry> visible = visibleScenarios();
+
+        if (visibleIndex < 0 || visibleIndex >= visible.size()) {
+            return;
+        }
+
+        selectedScenarioIndex = visible.get(visibleIndex).libraryIndex();
+    }
+
+    public void selectVisibleOffset(int offset) {
+        List<ScenarioEntry> visible = visibleScenarios();
+
+        if (visible.size() <= 1) {
+            return;
+        }
+
+        int currentVisibleIndex = selectedVisibleIndex();
+        int updatedVisibleIndex = Math.floorMod(
+            Math.max(0, currentVisibleIndex) + offset,
+            visible.size()
         );
+
+        selectedScenarioIndex = visible
+            .get(updatedVisibleIndex)
+            .libraryIndex();
     }
 
     public void cycleExecutionMode() {
@@ -75,8 +173,7 @@ public final class KarakuriScreenState {
             return null;
         }
 
-        String duplicateName =
-            createDuplicateName(source.name());
+        String duplicateName = createDuplicateName(source.name());
 
         ScenarioLibrary.add(
             new Scenario(
@@ -103,6 +200,7 @@ public final class KarakuriScreenState {
         scenarios = ScenarioLibrary.getScenarios();
         selectedScenarioIndex = findScenarioIndex(selectedScenarioName);
         normalizeSelection();
+        ensureVisibleSelection();
     }
 
     public void refreshAfterDeletion(int deletedIndex) {
@@ -117,11 +215,73 @@ public final class KarakuriScreenState {
             deletedIndex,
             scenarios.size() - 1
         );
+        ensureVisibleSelection();
     }
 
-    private String createDuplicateName(
-        String sourceName
+    private Comparator<ScenarioEntry> comparatorFor(
+        ScenarioSortMode sortMode
     ) {
+        Comparator<ScenarioEntry> byName = Comparator.comparing(
+            entry -> entry.scenario().name(),
+            String.CASE_INSENSITIVE_ORDER
+        );
+
+        return switch (sortMode) {
+            case LIBRARY_ORDER -> Comparator.comparingInt(
+                ScenarioEntry::libraryIndex
+            );
+            case NAME_ASCENDING -> byName
+                .thenComparingInt(ScenarioEntry::libraryIndex);
+            case NAME_DESCENDING -> byName
+                .reversed()
+                .thenComparingInt(ScenarioEntry::libraryIndex);
+            case MOST_ACTIONS -> Comparator
+                .comparingInt(
+                    (ScenarioEntry entry) -> entry
+                        .scenario()
+                        .steps()
+                        .size()
+                )
+                .reversed()
+                .thenComparing(byName);
+            case FEWEST_ACTIONS -> Comparator
+                .comparingInt(
+                    (ScenarioEntry entry) -> entry
+                        .scenario()
+                        .steps()
+                        .size()
+                )
+                .thenComparing(byName);
+        };
+    }
+
+    private boolean isSelectedScenarioVisible() {
+        for (ScenarioEntry entry : visibleScenarios()) {
+            if (entry.libraryIndex() == selectedScenarioIndex) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void ensureVisibleSelection() {
+        List<ScenarioEntry> visible = visibleScenarios();
+
+        if (visible.isEmpty()) {
+            return;
+        }
+
+        for (ScenarioEntry entry : visible) {
+            if (entry.libraryIndex() == selectedScenarioIndex) {
+                return;
+            }
+        }
+
+        selectedScenarioIndex = visible.getFirst().libraryIndex();
+    }
+
+    private String createDuplicateName(String sourceName) {
         int copyNumber = 1;
 
         while (true) {
@@ -130,24 +290,17 @@ public final class KarakuriScreenState {
                 : " Copy " + copyNumber;
 
             int maximumBaseLength =
-                MAX_SCENARIO_NAME_LENGTH
-                    - suffix.length();
+                MAX_SCENARIO_NAME_LENGTH - suffix.length();
 
-            String baseName = sourceName.length()
-                <= maximumBaseLength
-                    ? sourceName
-                    : sourceName
-                        .substring(0, maximumBaseLength)
-                        .stripTrailing();
+            String baseName = sourceName.length() <= maximumBaseLength
+                ? sourceName
+                : sourceName
+                    .substring(0, maximumBaseLength)
+                    .stripTrailing();
 
             String candidate = baseName + suffix;
 
-            if (
-                !ScenarioLibrary.containsName(
-                    candidate,
-                    -1
-                )
-            ) {
+            if (!ScenarioLibrary.containsName(candidate, -1)) {
                 return candidate;
             }
 
@@ -180,6 +333,12 @@ public final class KarakuriScreenState {
             0,
             scenarios.size() - 1
         );
+    }
+
+    public record ScenarioEntry(
+        int libraryIndex,
+        Scenario scenario
+    ) {
     }
 
     private enum ExecutionMode {
