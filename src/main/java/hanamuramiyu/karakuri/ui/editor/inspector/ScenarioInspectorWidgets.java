@@ -2,18 +2,32 @@ package hanamuramiyu.karakuri.ui.editor.inspector;
 
 import hanamuramiyu.karakuri.scenario.model.CameraDirection;
 import hanamuramiyu.karakuri.scenario.model.CameraMotion;
+import hanamuramiyu.karakuri.scenario.model.CameraStep;
+import hanamuramiyu.karakuri.scenario.model.HotbarStep;
 import hanamuramiyu.karakuri.scenario.model.JumpMode;
+import hanamuramiyu.karakuri.scenario.model.JumpStep;
 import hanamuramiyu.karakuri.scenario.model.JumpStopMode;
 import hanamuramiyu.karakuri.scenario.model.MouseAction;
 import hanamuramiyu.karakuri.scenario.model.MouseInputMode;
+import hanamuramiyu.karakuri.scenario.model.MouseStep;
 import hanamuramiyu.karakuri.scenario.model.MouseStopMode;
 import hanamuramiyu.karakuri.scenario.model.MoveDirection;
 import hanamuramiyu.karakuri.scenario.model.MoveMode;
+import hanamuramiyu.karakuri.scenario.model.MoveStep;
 import hanamuramiyu.karakuri.scenario.model.RepeatMode;
+import hanamuramiyu.karakuri.scenario.model.RepeatStep;
+import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
+import hanamuramiyu.karakuri.ui.editor.ScenarioEditorState;
+import hanamuramiyu.karakuri.ui.editor.ScenarioEditorTheme;
+import hanamuramiyu.karakuri.ui.editor.ScenarioStepPresentation;
+import hanamuramiyu.karakuri.ui.editor.ScenarioStepRules;
 import hanamuramiyu.karakuri.ui.widget.KarakuriButton;
+import hanamuramiyu.karakuri.ui.widget.KarakuriDropdown;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -22,17 +36,30 @@ import java.util.Objects;
 
 final class ScenarioInspectorWidgets {
     private static final int BUTTON_GAP = 6;
-    private static final int BUTTON_HEIGHT = 22;
+    private static final int BUTTON_HEIGHT = 20;
+    private static final int WIDE_ROW_STRIDE = 40;
+    private static final int COMPACT_ROW_STRIDE = 24;
 
     private final Font font;
     private final ScenarioInspectorLayout.Mode layoutMode;
     private final Actions actions;
     private final List<AbstractWidget> widgets = new ArrayList<>();
+    private final List<Label> labels = new ArrayList<>();
+    private final List<KarakuriDropdown<?>> dropdowns = new ArrayList<>();
+    private final List<AbstractWidget> regularWidgets = new ArrayList<>();
 
     private final int inspectorX;
     private final int inspectorY;
     private final int inspectorWidth;
     private final int inspectorHeight;
+    private final int contentX;
+    private final int contentWidth;
+
+    private String description;
+    private int descriptionX;
+    private int descriptionY;
+    private int descriptionColor;
+    private boolean infiniteWarning;
 
     int secondaryFrameX;
     int secondaryFrameY;
@@ -41,35 +68,18 @@ final class ScenarioInspectorWidgets {
     int primaryFrameY;
     int primaryFrameWidth;
 
-    KarakuriButton forwardDirectionButton;
-    KarakuriButton backwardDirectionButton;
-    KarakuriButton leftDirectionButton;
-    KarakuriButton rightDirectionButton;
-    KarakuriButton walkModeButton;
-    KarakuriButton sprintModeButton;
-    KarakuriButton sneakModeButton;
+    final KarakuriDropdown<MoveDirection> moveDirectionDropdown;
+    final KarakuriDropdown<MoveMode> moveModeDropdown;
+    final KarakuriDropdown<JumpMode> jumpModeDropdown;
+    final KarakuriDropdown<JumpStopMode> jumpStopDropdown;
+    final KarakuriDropdown<RepeatMode> repeatModeDropdown;
+    final KarakuriDropdown<CameraDirection> cameraDirectionDropdown;
+    final KarakuriDropdown<CameraMotion> cameraMotionDropdown;
+    final KarakuriDropdown<MouseAction> mouseActionDropdown;
+    final KarakuriDropdown<MouseInputMode> mouseInputDropdown;
+    final KarakuriDropdown<MouseStopMode> mouseStopDropdown;
+
     KarakuriButton jumpToggleButton;
-    KarakuriButton singleJumpModeButton;
-    KarakuriButton holdJumpModeButton;
-    KarakuriButton repeatJumpModeButton;
-    KarakuriButton jumpDurationStopButton;
-    KarakuriButton jumpCountStopButton;
-    KarakuriButton jumpManualStopButton;
-    KarakuriButton repeatCountModeButton;
-    KarakuriButton repeatForeverModeButton;
-    KarakuriButton cameraLeftButton;
-    KarakuriButton cameraRightButton;
-    KarakuriButton cameraUpButton;
-    KarakuriButton cameraDownButton;
-    KarakuriButton instantMotionButton;
-    KarakuriButton smoothMotionButton;
-    KarakuriButton leftMouseButton;
-    KarakuriButton rightMouseButton;
-    KarakuriButton holdModeButton;
-    KarakuriButton clickModeButton;
-    KarakuriButton durationStopButton;
-    KarakuriButton clickCountStopButton;
-    KarakuriButton manualStopButton;
     KarakuriButton cpsDecreaseButton;
     KarakuriButton cpsIncreaseButton;
     KarakuriButton angleDecreaseButton;
@@ -104,1620 +114,751 @@ final class ScenarioInspectorWidgets {
         this.inspectorY = layout.y();
         this.inspectorWidth = layout.width();
         this.inspectorHeight = layout.height();
-
+        this.contentX = inspectorX + 10;
+        this.contentWidth = inspectorWidth - 20;
         this.actions = Objects.requireNonNull(
             actions,
             "Inspector actions must not be null"
         );
 
-        createInspectorWidgets();
+        moveDirectionDropdown = createDropdown(
+            options(
+                option(MoveDirection.FORWARD, "Forward"),
+                option(MoveDirection.BACKWARD, "Backward"),
+                option(MoveDirection.LEFT, "Left"),
+                option(MoveDirection.RIGHT, "Right")
+            ),
+            MoveDirection.FORWARD,
+            actions::setDirection
+        );
+        moveModeDropdown = createDropdown(
+            options(
+                option(MoveMode.WALK, "Walk"),
+                option(MoveMode.SPRINT, "Sprint"),
+                option(MoveMode.SNEAK, "Sneak")
+            ),
+            MoveMode.WALK,
+            actions::setMoveMode
+        );
+        jumpModeDropdown = createDropdown(
+            options(
+                option(JumpMode.SINGLE, "Single"),
+                option(JumpMode.HOLD, "Hold"),
+                option(JumpMode.REPEAT, "Repeat")
+            ),
+            JumpMode.SINGLE,
+            actions::setJumpMode
+        );
+        jumpStopDropdown = createDropdown(
+            options(
+                option(JumpStopMode.DURATION, "Time"),
+                option(JumpStopMode.JUMP_COUNT, "Jump count"),
+                option(JumpStopMode.MANUAL, "Manual")
+            ),
+            JumpStopMode.DURATION,
+            actions::setJumpStopMode
+        );
+        repeatModeDropdown = createDropdown(
+            options(
+                option(RepeatMode.COUNT, "Count"),
+                option(RepeatMode.FOREVER, "Forever")
+            ),
+            RepeatMode.COUNT,
+            actions::setRepeatMode
+        );
+        cameraDirectionDropdown = createDropdown(
+            options(
+                option(CameraDirection.LEFT, "Turn Left"),
+                option(CameraDirection.RIGHT, "Turn Right"),
+                option(CameraDirection.UP, "Look Up"),
+                option(CameraDirection.DOWN, "Look Down")
+            ),
+            CameraDirection.LEFT,
+            actions::setCameraDirection
+        );
+        cameraMotionDropdown = createDropdown(
+            options(
+                option(CameraMotion.INSTANT, "Instant"),
+                option(CameraMotion.SMOOTH, "Smooth")
+            ),
+            CameraMotion.INSTANT,
+            actions::setCameraMotion
+        );
+        mouseActionDropdown = createDropdown(
+            options(
+                option(MouseAction.LEFT_CLICK, "Left"),
+                option(MouseAction.RIGHT_CLICK, "Right")
+            ),
+            MouseAction.LEFT_CLICK,
+            actions::setMouseAction
+        );
+        mouseInputDropdown = createDropdown(
+            options(
+                option(MouseInputMode.HOLD, "Hold"),
+                option(MouseInputMode.CLICK, "Repeated click")
+            ),
+            MouseInputMode.HOLD,
+            actions::setMouseInputMode
+        );
+        mouseStopDropdown = createDropdown(
+            options(
+                option(MouseStopMode.DURATION, "Time"),
+                option(MouseStopMode.CLICK_COUNT, "Click count"),
+                option(MouseStopMode.MANUAL, "Manual")
+            ),
+            MouseStopMode.DURATION,
+            actions::setMouseStopMode
+        );
+
+        createRegularWidgets();
+
+        widgets.addAll(regularWidgets);
+        widgets.addAll(dropdowns);
     }
 
     List<AbstractWidget> widgets() {
         return List.copyOf(widgets);
     }
 
-    private void addWidget(
-        AbstractWidget widget
+    boolean mouseClicked(
+        MouseButtonEvent event,
+        boolean doubled
     ) {
-        widgets.add(widget);
+        KarakuriDropdown<?> expanded = expandedDropdown();
+
+        return expanded != null
+            && expanded.mouseClicked(event, doubled);
     }
 
-    private void createInspectorWidgets() {
-        if (
-            layoutMode
-                == ScenarioInspectorLayout.Mode.WIDE
-        ) {
-            createWideInspectorWidgets();
-        } else {
-            createCompactInspectorWidgets();
+    void renderDropdownOverlay(
+        GuiGraphics graphics,
+        int mouseX,
+        int mouseY,
+        float delta
+    ) {
+        KarakuriDropdown<?> expanded = expandedDropdown();
+
+        if (expanded != null) {
+            expanded.renderOverlay(
+                graphics,
+                mouseX,
+                mouseY,
+                delta
+            );
+        }
+    }
+
+    void renderDecorations(
+        GuiGraphics graphics
+    ) {
+        for (Label label : labels) {
+            graphics.drawString(
+                font,
+                Component.literal(label.text()),
+                label.x(),
+                label.y(),
+                label.color(),
+                false
+            );
         }
 
-        addWidget(
-            forwardDirectionButton
-        );
-        addWidget(
-            backwardDirectionButton
-        );
-        addWidget(
-            leftDirectionButton
-        );
-        addWidget(
-            rightDirectionButton
-        );
+        if (description != null) {
+            graphics.drawString(
+                font,
+                Component.literal(description),
+                descriptionX,
+                descriptionY,
+                descriptionColor,
+                false
+            );
+        }
+    }
 
-        addWidget(
-            walkModeButton
-        );
-        addWidget(
-            sprintModeButton
-        );
-        addWidget(
-            sneakModeButton
-        );
-        addWidget(
-            jumpToggleButton
-        );
+    void update(
+        ScenarioStep step,
+        boolean visible,
+        boolean infiniteWarning
+    ) {
+        this.infiniteWarning = infiniteWarning;
+        hideAll();
+        labels.clear();
+        description = null;
 
-        addWidget(
-            singleJumpModeButton
-        );
-        addWidget(
-            holdJumpModeButton
-        );
-        addWidget(
-            repeatJumpModeButton
-        );
-        addWidget(
-            jumpDurationStopButton
-        );
-        addWidget(
-            jumpCountStopButton
-        );
-        addWidget(
-            jumpManualStopButton
-        );
-        addWidget(
-            repeatCountModeButton
-        );
-        addWidget(
-            repeatForeverModeButton
-        );
+        if (!visible) {
+            collapseHiddenDropdowns();
+            return;
+        }
 
-        addWidget(
-            cameraLeftButton
-        );
-        addWidget(
-            cameraRightButton
-        );
-        addWidget(
-            cameraUpButton
-        );
-        addWidget(
-            cameraDownButton
-        );
-        addWidget(
-            instantMotionButton
-        );
-        addWidget(
-            smoothMotionButton
-        );
+        if (layoutMode == ScenarioInspectorLayout.Mode.WIDE) {
+            layoutWide(step);
+        } else {
+            layoutCompact(step);
+        }
 
-        addWidget(
-            leftMouseButton
-        );
-        addWidget(
-            rightMouseButton
-        );
-        addWidget(
-            holdModeButton
-        );
-        addWidget(
-            clickModeButton
-        );
-        addWidget(
-            durationStopButton
-        );
-        addWidget(
-            clickCountStopButton
-        );
-        addWidget(
-            manualStopButton
-        );
-        addWidget(
-            cpsDecreaseButton
-        );
-        addWidget(
-            cpsIncreaseButton
-        );
+        for (KarakuriDropdown<?> dropdown : dropdowns) {
+            if (!dropdown.visible) {
+                dropdown.collapse();
+            }
+        }
 
-        addWidget(
-            angleDecreaseButton
-        );
-        addWidget(
-            angleField
-        );
-        addWidget(
-            angleIncreaseButton
-        );
+        updateValues(step);
+        updateDropdownInteractionState();
+    }
 
-        addWidget(
-            primaryDecreaseButton
-        );
-        addWidget(
-            durationField
-        );
-        addWidget(
-            countField
-        );
-        addWidget(
-            primaryIncreaseButton
-        );
+    private void layoutWide(
+        ScenarioStep step
+    ) {
+        int row1 = inspectorY + 58;
+        int row2 = row1 + WIDE_ROW_STRIDE;
+        int row3 = row2 + WIDE_ROW_STRIDE;
+        int row4 = row3 + WIDE_ROW_STRIDE;
+        int row5 = row4 + WIDE_ROW_STRIDE;
 
-        addWidget(
-            testButton
-        );
-        addWidget(
-            duplicateButton
-        );
-        addWidget(
-            deleteButton
+        setWidePrefixes();
+
+        if (step instanceof MoveStep moveStep) {
+            placeWideDropdown(moveDirectionDropdown, "Direction", row1);
+            placeWideDropdown(moveModeDropdown, "Movement style", row2);
+            placeWideButton(jumpToggleButton, "Jumping", row3);
+            placeWidePrimary("Duration in seconds", row4);
+            setDescription(
+                moveStep.jumping()
+                    ? "Jump is held together with movement"
+                    : "Jump is disabled for this movement",
+                row5 - 10,
+                ScenarioEditorTheme.TEXT_MUTED
+            );
+        } else if (step instanceof JumpStep jumpStep) {
+            placeWideDropdown(jumpModeDropdown, "Jump mode", row1);
+
+            if (jumpStep.mode() != JumpMode.SINGLE) {
+                placeWideDropdown(jumpStopDropdown, "Stop after", row2);
+            }
+
+            String label = ScenarioStepPresentation.jumpPrimaryValueLabel(jumpStep);
+            if (label != null) {
+                placeWidePrimary(label, row3);
+            }
+
+            setDescription(
+                ScenarioStepPresentation.jumpDescription(jumpStep),
+                row5 - 10,
+                warningColor(jumpStep.isInfinite())
+            );
+        } else if (step instanceof RepeatStep repeatStep) {
+            placeWideDropdown(repeatModeDropdown, "Repeat mode", row1);
+
+            if (repeatStep.mode() == RepeatMode.COUNT) {
+                placeWidePrimary("Repeat count", row2);
+            }
+
+            setDescription(
+                ScenarioStepPresentation.repeatDescription(repeatStep),
+                row4 - 10,
+                warningColor(repeatStep.isInfinite())
+            );
+        } else if (step instanceof CameraStep cameraStep) {
+            placeWideDropdown(cameraDirectionDropdown, "Direction", row1);
+            placeWideDropdown(cameraMotionDropdown, "Motion", row2);
+            placeWideSecondary("Angle", row3);
+
+            if (cameraStep.motion() == CameraMotion.SMOOTH) {
+                placeWidePrimary("Duration in seconds", row4);
+            }
+
+            setDescription(
+                cameraStep.motion() == CameraMotion.INSTANT
+                    ? "Rotation is applied immediately"
+                    : "Smooth camera movement",
+                row5 - 10,
+                ScenarioEditorTheme.TEXT_MUTED
+            );
+        } else if (step instanceof MouseStep mouseStep) {
+            placeWideDropdown(mouseActionDropdown, "Mouse button", row1);
+            placeWideDropdown(mouseInputDropdown, "Input mode", row2);
+            placeWideDropdown(mouseStopDropdown, "Stop after", row3);
+
+            if (ScenarioStepRules.usesCps(step)) {
+                placeWideSecondary("Click rate", row4);
+            }
+
+            String label = ScenarioStepPresentation.mousePrimaryValueLabel(mouseStep);
+            if (label != null) {
+                placeWidePrimary(label, row5);
+            }
+
+            int descriptionY = Math.min(
+                inspectorY + inspectorHeight - 48,
+                row5 + 26
+            );
+            setDescription(
+                ScenarioStepPresentation.mouseEstimate(mouseStep),
+                descriptionY,
+                warningColor(mouseStep.isInfinite())
+            );
+        } else if (step instanceof HotbarStep) {
+            placeWidePrimary("Hotbar slot", row1);
+            setDescription(
+                "Selects the item held in the main hand",
+                row3 - 10,
+                ScenarioEditorTheme.TEXT_MUTED
+            );
+        } else {
+            placeWidePrimary("Duration in seconds", row1);
+        }
+
+        placeActionButtons(
+            contentX,
+            inspectorY + inspectorHeight - BUTTON_HEIGHT - 8,
+            contentWidth
         );
     }
 
-    private void createWideInspectorWidgets() {
-        int contentX =
-            inspectorX + 10;
+    private void layoutCompact(
+        ScenarioStep step
+    ) {
+        int top = inspectorY + 40;
+        int row1 = top;
+        int row2 = row1 + COMPACT_ROW_STRIDE;
+        int row3 = row2 + COMPACT_ROW_STRIDE;
+        int halfWidth = (contentWidth - BUTTON_GAP) / 2;
+        int rightX = contentX + halfWidth + BUTTON_GAP;
 
-        int contentWidth =
-            inspectorWidth - 20;
+        setCompactPrefixes();
 
-        int halfWidth =
-            (
-                contentWidth
-                    - BUTTON_GAP
-            ) / 2;
-
-        int thirdWidth =
-            (
-                contentWidth
-                    - BUTTON_GAP * 2
-            ) / 3;
-
-        int selectorY =
-            inspectorY + 58;
-
-        forwardDirectionButton =
-            createButton(
-                contentX,
-                selectorY,
-                halfWidth,
+        if (step instanceof MoveStep moveStep) {
+            placeDropdown(moveDirectionDropdown, contentX, row1, halfWidth);
+            placeDropdown(moveModeDropdown, rightX, row1, halfWidth);
+            placeButton(jumpToggleButton, contentX, row2, halfWidth);
+            placePrimary(rightX, row2, halfWidth, "Duration");
+            jumpToggleButton.setMessage(
                 Component.literal(
-                    "Forward"
-                ),
-                () -> actions.setDirection(
-                    MoveDirection
-                        .FORWARD
-                ),
-                KarakuriButton
-                    .Style.GHOST
+                    "Jump: " + (moveStep.jumping() ? "On" : "Off")
+                )
             );
+        } else if (step instanceof JumpStep jumpStep) {
+            placeDropdown(jumpModeDropdown, contentX, row1, halfWidth);
+            if (jumpStep.mode() != JumpMode.SINGLE) {
+                placeDropdown(jumpStopDropdown, rightX, row1, halfWidth);
+            }
+            if (ScenarioStepRules.usesPrimaryValue(step)) {
+                placePrimary(contentX, row2, contentWidth, "Value");
+            }
+        } else if (step instanceof RepeatStep repeatStep) {
+            placeDropdown(repeatModeDropdown, contentX, row1, contentWidth);
+            if (repeatStep.mode() == RepeatMode.COUNT) {
+                placePrimary(contentX, row2, contentWidth, "Count");
+            }
+        } else if (step instanceof CameraStep cameraStep) {
+            placeDropdown(cameraDirectionDropdown, contentX, row1, halfWidth);
+            placeDropdown(cameraMotionDropdown, rightX, row1, halfWidth);
+            placeSecondary(contentX, row2, halfWidth, "Angle");
+            if (cameraStep.motion() == CameraMotion.SMOOTH) {
+                placePrimary(rightX, row2, halfWidth, "Duration");
+            }
+        } else if (step instanceof MouseStep mouseStep) {
+            placeDropdown(mouseActionDropdown, contentX, row1, halfWidth);
+            placeDropdown(mouseInputDropdown, rightX, row1, halfWidth);
+            placeDropdown(mouseStopDropdown, contentX, row2, halfWidth);
 
-        backwardDirectionButton =
-            createButton(
-                contentX
-                    + halfWidth
-                    + BUTTON_GAP,
-                selectorY,
-                halfWidth,
-                Component.literal(
-                    "Backward"
-                ),
-                () -> actions.setDirection(
-                    MoveDirection
-                        .BACKWARD
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
+            if (ScenarioStepRules.usesCps(step)) {
+                placeSecondary(rightX, row2, halfWidth, "Rate");
+            }
 
-        leftDirectionButton =
-            createButton(
-                contentX,
-                selectorY + 26,
-                halfWidth,
-                Component.literal(
-                    "Left"
-                ),
-                () -> actions.setDirection(
-                    MoveDirection
-                        .LEFT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
+            if (ScenarioStepRules.usesPrimaryValue(step)) {
+                placePrimary(contentX, row3, halfWidth, "Value");
+            }
+        } else {
+            placePrimary(contentX, row1, contentWidth, "Value");
+        }
 
-        rightDirectionButton =
-            createButton(
-                contentX
-                    + halfWidth
-                    + BUTTON_GAP,
-                selectorY + 26,
-                halfWidth,
-                Component.literal(
-                    "Right"
-                ),
-                () -> actions.setDirection(
-                    MoveDirection
-                        .RIGHT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
+        int actionX = step instanceof MouseStep
+            && ScenarioStepRules.usesPrimaryValue(step)
+                ? rightX
+                : contentX;
+        int actionWidth = step instanceof MouseStep
+            && ScenarioStepRules.usesPrimaryValue(step)
+                ? halfWidth
+                : contentWidth;
+        int actionY = step instanceof MouseStep
+            && ScenarioStepRules.usesPrimaryValue(step)
+                ? row3
+                : row3;
 
-        singleJumpModeButton =
-            createButton(
-                contentX,
-                selectorY,
-                thirdWidth,
-                Component.literal("Single"),
-                () -> actions.setJumpMode(
-                    JumpMode.SINGLE
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        holdJumpModeButton =
-            createButton(
-                contentX
-                    + thirdWidth
-                    + BUTTON_GAP,
-                selectorY,
-                thirdWidth,
-                Component.literal("Hold"),
-                () -> actions.setJumpMode(
-                    JumpMode.HOLD
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        repeatJumpModeButton =
-            createButton(
-                contentX
-                    + (
-                        thirdWidth
-                            + BUTTON_GAP
-                    ) * 2,
-                selectorY,
-                thirdWidth,
-                Component.literal("Repeat"),
-                () -> actions.setJumpMode(
-                    JumpMode.REPEAT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        repeatCountModeButton =
-            createButton(
-                contentX,
-                selectorY,
-                halfWidth,
-                Component.literal("Count"),
-                () -> actions.setRepeatMode(
-                    RepeatMode.COUNT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        repeatForeverModeButton =
-            createButton(
-                contentX
-                    + halfWidth
-                    + BUTTON_GAP,
-                selectorY,
-                halfWidth,
-                Component.literal("Forever"),
-                () -> actions.setRepeatMode(
-                    RepeatMode.FOREVER
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        cameraLeftButton =
-            createButton(
-                contentX,
-                selectorY,
-                halfWidth,
-                Component.literal(
-                    "Turn Left"
-                ),
-                () -> actions.setCameraDirection(
-                    CameraDirection
-                        .LEFT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        cameraRightButton =
-            createButton(
-                contentX
-                    + halfWidth
-                    + BUTTON_GAP,
-                selectorY,
-                halfWidth,
-                Component.literal(
-                    "Turn Right"
-                ),
-                () -> actions.setCameraDirection(
-                    CameraDirection
-                        .RIGHT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        cameraUpButton =
-            createButton(
-                contentX,
-                selectorY + 26,
-                halfWidth,
-                Component.literal(
-                    "Look Up"
-                ),
-                () -> actions.setCameraDirection(
-                    CameraDirection
-                        .UP
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        cameraDownButton =
-            createButton(
-                contentX
-                    + halfWidth
-                    + BUTTON_GAP,
-                selectorY + 26,
-                halfWidth,
-                Component.literal(
-                    "Look Down"
-                ),
-                () -> actions.setCameraDirection(
-                    CameraDirection
-                        .DOWN
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        leftMouseButton =
-            createButton(
-                contentX,
-                selectorY,
-                halfWidth,
-                Component.literal(
-                    "Left"
-                ),
-                () -> actions.setMouseAction(
-                    MouseAction
-                        .LEFT_CLICK
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        rightMouseButton =
-            createButton(
-                contentX
-                    + halfWidth
-                    + BUTTON_GAP,
-                selectorY,
-                halfWidth,
-                Component.literal(
-                    "Right"
-                ),
-                () -> actions.setMouseAction(
-                    MouseAction
-                        .RIGHT_CLICK
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        int inputModeY =
-            inspectorY + 84;
-
-        holdModeButton =
-            createButton(
-                contentX,
-                inputModeY,
-                halfWidth,
-                Component.literal(
-                    "Hold"
-                ),
-                () -> actions.setMouseInputMode(
-                    MouseInputMode
-                        .HOLD
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        clickModeButton =
-            createButton(
-                contentX
-                    + halfWidth
-                    + BUTTON_GAP,
-                inputModeY,
-                halfWidth,
-                Component.literal(
-                    "Click"
-                ),
-                () -> actions.setMouseInputMode(
-                    MouseInputMode
-                        .CLICK
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        int modeY =
-            inspectorY + 110;
-
-        walkModeButton =
-            createButton(
-                contentX,
-                modeY,
-                thirdWidth,
-                Component.literal(
-                    "Walk"
-                ),
-                () -> actions.setMoveMode(
-                    MoveMode.WALK
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        sprintModeButton =
-            createButton(
-                contentX
-                    + thirdWidth
-                    + BUTTON_GAP,
-                modeY,
-                thirdWidth,
-                Component.literal(
-                    "Sprint"
-                ),
-                () -> actions.setMoveMode(
-                    MoveMode.SPRINT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        sneakModeButton =
-            createButton(
-                contentX
-                    + (
-                        thirdWidth
-                            + BUTTON_GAP
-                    ) * 2,
-                modeY,
-                thirdWidth,
-                Component.literal(
-                    "Sneak"
-                ),
-                () -> actions.setMoveMode(
-                    MoveMode.SNEAK
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        jumpDurationStopButton =
-            createButton(
-                contentX,
-                modeY,
-                thirdWidth,
-                Component.literal("Time"),
-                () -> actions.setJumpStopMode(
-                    JumpStopMode.DURATION
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        jumpCountStopButton =
-            createButton(
-                contentX
-                    + thirdWidth
-                    + BUTTON_GAP,
-                modeY,
-                thirdWidth,
-                Component.literal("Jumps"),
-                () -> actions.setJumpStopMode(
-                    JumpStopMode.JUMP_COUNT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        jumpManualStopButton =
-            createButton(
-                contentX
-                    + (
-                        thirdWidth
-                            + BUTTON_GAP
-                    ) * 2,
-                modeY,
-                thirdWidth,
-                Component.literal("Manual"),
-                () -> actions.setJumpStopMode(
-                    JumpStopMode.MANUAL
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        instantMotionButton =
-            createButton(
-                contentX,
-                modeY,
-                halfWidth,
-                Component.literal(
-                    "Instant"
-                ),
-                () -> actions.setCameraMotion(
-                    CameraMotion
-                        .INSTANT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        smoothMotionButton =
-            createButton(
-                contentX
-                    + halfWidth
-                    + BUTTON_GAP,
-                modeY,
-                halfWidth,
-                Component.literal(
-                    "Smooth"
-                ),
-                () -> actions.setCameraMotion(
-                    CameraMotion
-                        .SMOOTH
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        durationStopButton =
-            createButton(
-                contentX,
-                modeY,
-                thirdWidth,
-                Component.literal(
-                    "Time"
-                ),
-                () -> actions.setMouseStopMode(
-                    MouseStopMode
-                        .DURATION
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        clickCountStopButton =
-            createButton(
-                contentX
-                    + thirdWidth
-                    + BUTTON_GAP,
-                modeY,
-                thirdWidth,
-                Component.literal(
-                    "Clicks"
-                ),
-                () -> actions.setMouseStopMode(
-                    MouseStopMode
-                        .CLICK_COUNT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        manualStopButton =
-            createButton(
-                contentX
-                    + (
-                        thirdWidth
-                            + BUTTON_GAP
-                    ) * 2,
-                modeY,
-                thirdWidth,
-                Component.literal(
-                    "Manual"
-                ),
-                () -> actions.setMouseStopMode(
-                    MouseStopMode
-                        .MANUAL
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        secondaryFrameX =
-            contentX + 40;
-
-        secondaryFrameY =
-            inspectorY + 136;
-
-        secondaryFrameWidth =
-            contentWidth - 80;
-
-        jumpToggleButton =
-            createButton(
-                contentX,
-                secondaryFrameY,
-                contentWidth,
-                Component.literal(
-                    "Jumping: Off"
-                ),
-                actions::toggleMoveJumping,
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        cpsDecreaseButton =
-            createButton(
-                contentX,
-                secondaryFrameY,
-                34,
-                Component.literal("-"),
-                () -> actions.changeCps(-1),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        cpsIncreaseButton =
-            createButton(
-                contentX
-                    + contentWidth
-                    - 34,
-                secondaryFrameY,
-                34,
-                Component.literal("+"),
-                () -> actions.changeCps(1),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        angleDecreaseButton =
-            createButton(
-                contentX,
-                secondaryFrameY,
-                34,
-                Component.literal("-"),
-                () -> actions.changeAngle(-1),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        angleIncreaseButton =
-            createButton(
-                contentX
-                    + contentWidth
-                    - 34,
-                secondaryFrameY,
-                34,
-                Component.literal("+"),
-                () -> actions.changeAngle(1),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        primaryFrameX =
-            contentX + 40;
-
-        primaryFrameY =
-            inspectorY + 162;
-
-        primaryFrameWidth =
-            contentWidth - 80;
-
-        primaryDecreaseButton =
-            createButton(
-                contentX,
-                primaryFrameY,
-                34,
-                Component.literal("-"),
-                () -> actions.changePrimaryValue(
-                    -1
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        createValueFields();
-
-        primaryIncreaseButton =
-            createButton(
-                contentX
-                    + contentWidth
-                    - 34,
-                primaryFrameY,
-                34,
-                Component.literal("+"),
-                () -> actions.changePrimaryValue(
-                    1
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        int actionY =
-            inspectorY + 188;
-
-        int actionWidth =
-            (
-                contentWidth
-                    - BUTTON_GAP * 2
-            ) / 3;
-
-        testButton =
-            createButton(
-                contentX,
-                actionY,
-                actionWidth,
-                Component.literal(
-                    "Test Step"
-                ),
-                actions::testSelectedStep,
-                KarakuriButton
-                    .Style.SUCCESS
-            );
-
-        duplicateButton =
-            createButton(
-                contentX
-                    + actionWidth
-                    + BUTTON_GAP,
-                actionY,
-                actionWidth,
-                Component.literal(
-                    "Duplicate"
-                ),
-                actions::duplicateSelectedStep,
-                KarakuriButton
-                    .Style.SECONDARY
-            );
-
-        deleteButton =
-            createButton(
-                contentX
-                    + (
-                        actionWidth
-                            + BUTTON_GAP
-                    ) * 2,
-                actionY,
-                actionWidth,
-                Component.literal(
-                    "Delete"
-                ),
-                actions::deleteSelectedStep,
-                KarakuriButton
-                    .Style.DANGER
-            );
+        placeActionButtons(actionX, actionY, actionWidth);
     }
 
-    private void createCompactInspectorWidgets() {
-        int padding = 8;
-
-        int contentX =
-            inspectorX + padding;
-
-        int contentWidth =
-            inspectorWidth
-                - padding * 2;
-
-        int quarterWidth =
-            (
-                contentWidth
-                    - BUTTON_GAP * 3
-            ) / 4;
-
-        int thirdWidth =
-            (
-                contentWidth
-                    - BUTTON_GAP * 2
-            ) / 3;
-
-        int halfWidth =
-            (
-                contentWidth
-                    - BUTTON_GAP
-            ) / 2;
-
-        int firstRowY =
-            inspectorY + 42;
-
-        forwardDirectionButton =
-            createButton(
-                contentX,
-                firstRowY,
-                quarterWidth,
+    private void updateValues(
+        ScenarioStep step
+    ) {
+        durationField.visible = ScenarioStepRules.usesDuration(step);
+        countField.visible = ScenarioStepRules.usesCount(step);
+        angleField.visible = ScenarioStepRules.usesAngle(step);
+        if (step instanceof MoveStep moveStep) {
+            moveDirectionDropdown.setValue(moveStep.direction());
+            moveModeDropdown.setValue(moveStep.mode());
+            jumpToggleButton.setMessage(
                 Component.literal(
-                    "Forward"
-                ),
-                () -> actions.setDirection(
-                    MoveDirection
-                        .FORWARD
-                ),
-                KarakuriButton
-                    .Style.GHOST
+                    layoutMode == ScenarioInspectorLayout.Mode.WIDE
+                        ? "Jumping: " + (moveStep.jumping() ? "On" : "Off")
+                        : "Jump: " + (moveStep.jumping() ? "On" : "Off")
+                )
             );
-
-        backwardDirectionButton =
-            createButton(
-                contentX
-                    + quarterWidth
-                    + BUTTON_GAP,
-                firstRowY,
-                quarterWidth,
-                Component.literal(
-                    "Back"
-                ),
-                () -> actions.setDirection(
-                    MoveDirection
-                        .BACKWARD
-                ),
-                KarakuriButton
-                    .Style.GHOST
+            jumpToggleButton.setStyle(
+                moveStep.jumping()
+                    ? KarakuriButton.Style.PRIMARY
+                    : KarakuriButton.Style.SECONDARY
             );
+        }
 
-        leftDirectionButton =
-            createButton(
-                contentX
-                    + (
-                        quarterWidth
-                            + BUTTON_GAP
-                    ) * 2,
-                firstRowY,
-                quarterWidth,
-                Component.literal(
-                    "Left"
-                ),
-                () -> actions.setDirection(
-                    MoveDirection
-                        .LEFT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
+        if (step instanceof JumpStep jumpStep) {
+            jumpModeDropdown.setValue(jumpStep.mode());
+            jumpStopDropdown.setValue(jumpStep.stopMode());
+        }
 
-        rightDirectionButton =
-            createButton(
-                contentX
-                    + (
-                        quarterWidth
-                            + BUTTON_GAP
-                    ) * 3,
-                firstRowY,
-                quarterWidth,
-                Component.literal(
-                    "Right"
-                ),
-                () -> actions.setDirection(
-                    MoveDirection
-                        .RIGHT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
+        if (step instanceof RepeatStep repeatStep) {
+            repeatModeDropdown.setValue(repeatStep.mode());
+        }
 
-        singleJumpModeButton =
-            createButton(
-                contentX,
-                firstRowY,
-                thirdWidth,
-                Component.literal("Single"),
-                () -> actions.setJumpMode(
-                    JumpMode.SINGLE
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
+        if (step instanceof CameraStep cameraStep) {
+            cameraDirectionDropdown.setValue(cameraStep.direction());
+            cameraMotionDropdown.setValue(cameraStep.motion());
+            angleDecreaseButton.active = cameraStep.angleDegrees() > CameraStep.MIN_ANGLE_DEGREES;
+            angleIncreaseButton.active = cameraStep.angleDegrees() < CameraStep.MAX_ANGLE_DEGREES;
+        }
 
-        holdJumpModeButton =
-            createButton(
-                contentX
-                    + thirdWidth
-                    + BUTTON_GAP,
-                firstRowY,
-                thirdWidth,
-                Component.literal("Hold"),
-                () -> actions.setJumpMode(
-                    JumpMode.HOLD
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
+        if (step instanceof MouseStep mouseStep) {
+            mouseActionDropdown.setValue(mouseStep.action());
+            mouseInputDropdown.setValue(mouseStep.inputMode());
+            mouseStopDropdown.setValue(mouseStep.stopMode());
+            cpsDecreaseButton.active = mouseStep.clicksPerSecondHalfSteps() > MouseStep.MIN_CPS_HALF_STEPS;
+            cpsIncreaseButton.active = mouseStep.clicksPerSecondHalfSteps() < MouseStep.MAX_CPS_HALF_STEPS;
+        }
 
-        repeatJumpModeButton =
-            createButton(
-                contentX
-                    + (
-                        thirdWidth
-                            + BUTTON_GAP
-                    ) * 2,
-                firstRowY,
-                thirdWidth,
-                Component.literal("Repeat"),
-                () -> actions.setJumpMode(
-                    JumpMode.REPEAT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        repeatCountModeButton =
-            createButton(
-                contentX,
-                firstRowY,
-                halfWidth,
-                Component.literal("Count"),
-                () -> actions.setRepeatMode(
-                    RepeatMode.COUNT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        repeatForeverModeButton =
-            createButton(
-                contentX
-                    + halfWidth
-                    + BUTTON_GAP,
-                firstRowY,
-                halfWidth,
-                Component.literal("Forever"),
-                () -> actions.setRepeatMode(
-                    RepeatMode.FOREVER
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        cameraLeftButton =
-            createButton(
-                contentX,
-                firstRowY,
-                quarterWidth,
-                Component.literal(
-                    "Left"
-                ),
-                () -> actions.setCameraDirection(
-                    CameraDirection
-                        .LEFT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        cameraRightButton =
-            createButton(
-                contentX
-                    + quarterWidth
-                    + BUTTON_GAP,
-                firstRowY,
-                quarterWidth,
-                Component.literal(
-                    "Right"
-                ),
-                () -> actions.setCameraDirection(
-                    CameraDirection
-                        .RIGHT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        cameraUpButton =
-            createButton(
-                contentX
-                    + (
-                        quarterWidth
-                            + BUTTON_GAP
-                    ) * 2,
-                firstRowY,
-                quarterWidth,
-                Component.literal(
-                    "Up"
-                ),
-                () -> actions.setCameraDirection(
-                    CameraDirection
-                        .UP
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        cameraDownButton =
-            createButton(
-                contentX
-                    + (
-                        quarterWidth
-                            + BUTTON_GAP
-                    ) * 3,
-                firstRowY,
-                quarterWidth,
-                Component.literal(
-                    "Down"
-                ),
-                () -> actions.setCameraDirection(
-                    CameraDirection
-                        .DOWN
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        leftMouseButton =
-            createButton(
-                contentX,
-                firstRowY,
-                quarterWidth,
-                Component.literal(
-                    "Left"
-                ),
-                () -> actions.setMouseAction(
-                    MouseAction
-                        .LEFT_CLICK
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        rightMouseButton =
-            createButton(
-                contentX
-                    + quarterWidth
-                    + BUTTON_GAP,
-                firstRowY,
-                quarterWidth,
-                Component.literal(
-                    "Right"
-                ),
-                () -> actions.setMouseAction(
-                    MouseAction
-                        .RIGHT_CLICK
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        holdModeButton =
-            createButton(
-                contentX
-                    + (
-                        quarterWidth
-                            + BUTTON_GAP
-                    ) * 2,
-                firstRowY,
-                quarterWidth,
-                Component.literal(
-                    "Hold"
-                ),
-                () -> actions.setMouseInputMode(
-                    MouseInputMode
-                        .HOLD
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        clickModeButton =
-            createButton(
-                contentX
-                    + (
-                        quarterWidth
-                            + BUTTON_GAP
-                    ) * 3,
-                firstRowY,
-                quarterWidth,
-                Component.literal(
-                    "Click"
-                ),
-                () -> actions.setMouseInputMode(
-                    MouseInputMode
-                        .CLICK
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        int secondRowY =
-            inspectorY + 68;
-
-        walkModeButton =
-            createButton(
-                contentX,
-                secondRowY,
-                quarterWidth,
-                Component.literal(
-                    "Walk"
-                ),
-                () -> actions.setMoveMode(
-                    MoveMode.WALK
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        sprintModeButton =
-            createButton(
-                contentX
-                    + quarterWidth
-                    + BUTTON_GAP,
-                secondRowY,
-                quarterWidth,
-                Component.literal(
-                    "Sprint"
-                ),
-                () -> actions.setMoveMode(
-                    MoveMode.SPRINT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        sneakModeButton =
-            createButton(
-                contentX
-                    + (
-                        quarterWidth
-                            + BUTTON_GAP
-                    ) * 2,
-                secondRowY,
-                quarterWidth,
-                Component.literal(
-                    "Sneak"
-                ),
-                () -> actions.setMoveMode(
-                    MoveMode.SNEAK
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        jumpToggleButton =
-            createButton(
-                contentX
-                    + (
-                        quarterWidth
-                            + BUTTON_GAP
-                    ) * 3,
-                secondRowY,
-                quarterWidth,
-                Component.literal(
-                    "Jump"
-                ),
-                actions::toggleMoveJumping,
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        jumpDurationStopButton =
-            createButton(
-                contentX,
-                secondRowY,
-                thirdWidth,
-                Component.literal("Time"),
-                () -> actions.setJumpStopMode(
-                    JumpStopMode.DURATION
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        jumpCountStopButton =
-            createButton(
-                contentX
-                    + thirdWidth
-                    + BUTTON_GAP,
-                secondRowY,
-                thirdWidth,
-                Component.literal("Jumps"),
-                () -> actions.setJumpStopMode(
-                    JumpStopMode.JUMP_COUNT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        jumpManualStopButton =
-            createButton(
-                contentX
-                    + (
-                        thirdWidth
-                            + BUTTON_GAP
-                    ) * 2,
-                secondRowY,
-                thirdWidth,
-                Component.literal("Manual"),
-                () -> actions.setJumpStopMode(
-                    JumpStopMode.MANUAL
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        instantMotionButton =
-            createButton(
-                contentX,
-                secondRowY,
-                halfWidth,
-                Component.literal(
-                    "Instant"
-                ),
-                () -> actions.setCameraMotion(
-                    CameraMotion
-                        .INSTANT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        smoothMotionButton =
-            createButton(
-                contentX
-                    + halfWidth
-                    + BUTTON_GAP,
-                secondRowY,
-                halfWidth,
-                Component.literal(
-                    "Smooth"
-                ),
-                () -> actions.setCameraMotion(
-                    CameraMotion
-                        .SMOOTH
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        durationStopButton =
-            createButton(
-                contentX,
-                secondRowY,
-                thirdWidth,
-                Component.literal(
-                    "Time"
-                ),
-                () -> actions.setMouseStopMode(
-                    MouseStopMode
-                        .DURATION
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        clickCountStopButton =
-            createButton(
-                contentX
-                    + thirdWidth
-                    + BUTTON_GAP,
-                secondRowY,
-                thirdWidth,
-                Component.literal(
-                    "Clicks"
-                ),
-                () -> actions.setMouseStopMode(
-                    MouseStopMode
-                        .CLICK_COUNT
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        manualStopButton =
-            createButton(
-                contentX
-                    + (
-                        thirdWidth
-                            + BUTTON_GAP
-                    ) * 2,
-                secondRowY,
-                thirdWidth,
-                Component.literal(
-                    "Manual"
-                ),
-                () -> actions.setMouseStopMode(
-                    MouseStopMode
-                        .MANUAL
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        int columnGap = 10;
-
-        int columnWidth =
-            (
-                contentWidth
-                    - columnGap
-            ) / 2;
-
-        int leftColumnX =
-            contentX;
-
-        int rightColumnX =
-            contentX
-                + columnWidth
-                + columnGap;
-
-        int valueRowY =
-            inspectorY + 94;
-
-        secondaryFrameX =
-            leftColumnX + 28;
-
-        secondaryFrameY =
-            valueRowY;
-
-        secondaryFrameWidth =
-            columnWidth - 56;
-
-        cpsDecreaseButton =
-            createButton(
-                leftColumnX,
-                valueRowY,
-                24,
-                Component.literal("-"),
-                () -> actions.changeCps(-1),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        cpsIncreaseButton =
-            createButton(
-                leftColumnX
-                    + columnWidth
-                    - 24,
-                valueRowY,
-                24,
-                Component.literal("+"),
-                () -> actions.changeCps(1),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        angleDecreaseButton =
-            createButton(
-                leftColumnX,
-                valueRowY,
-                24,
-                Component.literal("-"),
-                () -> actions.changeAngle(-1),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        angleIncreaseButton =
-            createButton(
-                leftColumnX
-                    + columnWidth
-                    - 24,
-                valueRowY,
-                24,
-                Component.literal("+"),
-                () -> actions.changeAngle(1),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        primaryFrameX =
-            rightColumnX + 28;
-
-        primaryFrameY =
-            valueRowY;
-
-        primaryFrameWidth =
-            columnWidth - 56;
-
-        primaryDecreaseButton =
-            createButton(
-                rightColumnX,
-                valueRowY,
-                24,
-                Component.literal("-"),
-                () -> actions.changePrimaryValue(
-                    -1
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        createValueFields();
-
-        primaryIncreaseButton =
-            createButton(
-                rightColumnX
-                    + columnWidth
-                    - 24,
-                valueRowY,
-                24,
-                Component.literal("+"),
-                () -> actions.changePrimaryValue(
-                    1
-                ),
-                KarakuriButton
-                    .Style.GHOST
-            );
-
-        int actionRowY =
-            inspectorY + 120;
-
-        int actionWidth =
-            (
-                contentWidth
-                    - BUTTON_GAP * 2
-            ) / 3;
-
-        testButton =
-            createButton(
-                contentX,
-                actionRowY,
-                actionWidth,
-                Component.literal(
-                    "Test"
-                ),
-                actions::testSelectedStep,
-                KarakuriButton
-                    .Style.SUCCESS
-            );
-
-        duplicateButton =
-            createButton(
-                contentX
-                    + actionWidth
-                    + BUTTON_GAP,
-                actionRowY,
-                actionWidth,
-                Component.literal(
-                    "Copy"
-                ),
-                actions::duplicateSelectedStep,
-                KarakuriButton
-                    .Style.SECONDARY
-            );
-
-        deleteButton =
-            createButton(
-                contentX
-                    + (
-                        actionWidth
-                            + BUTTON_GAP
-                    ) * 2,
-                actionRowY,
-                actionWidth,
-                Component.literal(
-                    "Delete"
-                ),
-                actions::deleteSelectedStep,
-                KarakuriButton
-                    .Style.DANGER
-            );
+        if (ScenarioStepRules.usesDuration(step)) {
+            primaryDecreaseButton.active = step.durationTicks() > ScenarioEditorState.MIN_DURATION_TICKS;
+            primaryIncreaseButton.active = step.durationTicks() < ScenarioEditorState.MAX_DURATION_TICKS;
+        } else if (step instanceof RepeatStep repeatStep && ScenarioStepRules.usesCount(step)) {
+            primaryDecreaseButton.active = repeatStep.repeatCount() > RepeatStep.MIN_REPEAT_COUNT;
+            primaryIncreaseButton.active = repeatStep.repeatCount() < RepeatStep.MAX_REPEAT_COUNT;
+        } else if (step instanceof JumpStep jumpStep && ScenarioStepRules.usesCount(step)) {
+            primaryDecreaseButton.active = jumpStep.jumpCount() > JumpStep.MIN_JUMP_COUNT;
+            primaryIncreaseButton.active = jumpStep.jumpCount() < JumpStep.MAX_JUMP_COUNT;
+        } else if (step instanceof MouseStep mouseStep && ScenarioStepRules.usesCount(step)) {
+            primaryDecreaseButton.active = mouseStep.clickCount() > MouseStep.MIN_CLICK_COUNT;
+            primaryIncreaseButton.active = mouseStep.clickCount() < MouseStep.MAX_CLICK_COUNT;
+        } else if (step instanceof HotbarStep hotbarStep) {
+            primaryDecreaseButton.active = hotbarStep.slot() > HotbarStep.MIN_SLOT;
+            primaryIncreaseButton.active = hotbarStep.slot() < HotbarStep.MAX_SLOT;
+        }
     }
 
-    private void createValueFields() {
-        durationField = new EditBox(
+    private void createRegularWidgets() {
+        jumpToggleButton = createButton(
+            contentX,
+            inspectorY,
+            contentWidth,
+            "Jumping: Off",
+            actions::toggleMoveJumping,
+            KarakuriButton.Style.SECONDARY
+        );
+        cpsDecreaseButton = createButton(contentX, inspectorY, 34, "-", () -> actions.changeCps(-1), KarakuriButton.Style.GHOST);
+        cpsIncreaseButton = createButton(contentX, inspectorY, 34, "+", () -> actions.changeCps(1), KarakuriButton.Style.GHOST);
+        angleDecreaseButton = createButton(contentX, inspectorY, 34, "-", () -> actions.changeAngle(-1), KarakuriButton.Style.GHOST);
+        angleIncreaseButton = createButton(contentX, inspectorY, 34, "+", () -> actions.changeAngle(1), KarakuriButton.Style.GHOST);
+        primaryDecreaseButton = createButton(contentX, inspectorY, 34, "-", () -> actions.changePrimaryValue(-1), KarakuriButton.Style.GHOST);
+        primaryIncreaseButton = createButton(contentX, inspectorY, 34, "+", () -> actions.changePrimaryValue(1), KarakuriButton.Style.GHOST);
+
+        durationField = createField("Duration in seconds", 7, "[0-9]{0,4}(\\.[0-9]{0,2})?", actions::onDurationFieldChanged);
+        countField = createField("Count", 6, "[0-9]{0,6}", actions::onCountFieldChanged);
+        angleField = createField("Camera angle", 3, "[0-9]{0,3}", actions::onAngleFieldChanged);
+
+        testButton = createButton(contentX, inspectorY, 80, "Test Step", actions::testSelectedStep, KarakuriButton.Style.SUCCESS);
+        duplicateButton = createButton(contentX, inspectorY, 80, "Duplicate", actions::duplicateSelectedStep, KarakuriButton.Style.SECONDARY);
+        deleteButton = createButton(contentX, inspectorY, 80, "Delete", actions::deleteSelectedStep, KarakuriButton.Style.DANGER);
+
+        regularWidgets.add(jumpToggleButton);
+        regularWidgets.add(cpsDecreaseButton);
+        regularWidgets.add(cpsIncreaseButton);
+        regularWidgets.add(angleDecreaseButton);
+        regularWidgets.add(angleField);
+        regularWidgets.add(angleIncreaseButton);
+        regularWidgets.add(primaryDecreaseButton);
+        regularWidgets.add(durationField);
+        regularWidgets.add(countField);
+        regularWidgets.add(primaryIncreaseButton);
+        regularWidgets.add(testButton);
+        regularWidgets.add(duplicateButton);
+        regularWidgets.add(deleteButton);
+    }
+
+    private void placeWideDropdown(
+        KarakuriDropdown<?> dropdown,
+        String label,
+        int y
+    ) {
+        addLabel(label, contentX, y - 12);
+        placeDropdown(dropdown, contentX, y, contentWidth);
+    }
+
+    private void placeWideButton(
+        KarakuriButton button,
+        String label,
+        int y
+    ) {
+        addLabel(label, contentX, y - 12);
+        placeButton(button, contentX, y, contentWidth);
+    }
+
+    private void placeWideSecondary(
+        String label,
+        int y
+    ) {
+        addLabel(label, contentX, y - 12);
+        placeSecondary(contentX, y, contentWidth, label);
+    }
+
+    private void placeWidePrimary(
+        String label,
+        int y
+    ) {
+        addLabel(label, contentX, y - 12);
+        placePrimary(contentX, y, contentWidth, label);
+    }
+
+    private void placeDropdown(
+        KarakuriDropdown<?> dropdown,
+        int x,
+        int y,
+        int width
+    ) {
+        dropdown.setX(x);
+        dropdown.setY(y);
+        dropdown.setWidth(width);
+        dropdown.visible = true;
+        dropdown.active = true;
+    }
+
+    private void placeButton(
+        KarakuriButton button,
+        int x,
+        int y,
+        int width
+    ) {
+        button.setX(x);
+        button.setY(y);
+        button.setWidth(width);
+        button.visible = true;
+    }
+
+    private void placeSecondary(
+        int x,
+        int y,
+        int width,
+        String label
+    ) {
+        int sideWidth = layoutMode == ScenarioInspectorLayout.Mode.WIDE ? 34 : 24;
+        secondaryFrameX = x + sideWidth + 6;
+        secondaryFrameY = y;
+        secondaryFrameWidth = width - sideWidth * 2 - 12;
+
+        positionButton(cpsDecreaseButton, x, y, sideWidth);
+        positionButton(cpsIncreaseButton, x + width - sideWidth, y, sideWidth);
+        positionButton(angleDecreaseButton, x, y, sideWidth);
+        positionButton(angleIncreaseButton, x + width - sideWidth, y, sideWidth);
+        positionField(angleField, secondaryFrameX + 6, y + 3, secondaryFrameWidth - 12);
+
+        boolean angle = label.equals("Angle");
+        cpsDecreaseButton.visible = !angle;
+        cpsIncreaseButton.visible = !angle;
+        angleDecreaseButton.visible = angle;
+        angleField.visible = angle;
+        angleIncreaseButton.visible = angle;
+    }
+
+    private void placePrimary(
+        int x,
+        int y,
+        int width,
+        String label
+    ) {
+        int sideWidth = layoutMode == ScenarioInspectorLayout.Mode.WIDE ? 34 : 24;
+        primaryFrameX = x + sideWidth + 6;
+        primaryFrameY = y;
+        primaryFrameWidth = width - sideWidth * 2 - 12;
+
+        positionButton(primaryDecreaseButton, x, y, sideWidth);
+        positionButton(primaryIncreaseButton, x + width - sideWidth, y, sideWidth);
+        positionField(durationField, primaryFrameX + 6, y + 3, primaryFrameWidth - 12);
+        positionField(countField, primaryFrameX + 6, y + 3, primaryFrameWidth - 12);
+
+        primaryDecreaseButton.visible = true;
+        primaryIncreaseButton.visible = true;
+    }
+
+    private void placeActionButtons(
+        int x,
+        int y,
+        int width
+    ) {
+        int actionWidth = (width - BUTTON_GAP * 2) / 3;
+        positionButton(testButton, x, y, actionWidth);
+        positionButton(duplicateButton, x + actionWidth + BUTTON_GAP, y, actionWidth);
+        positionButton(deleteButton, x + (actionWidth + BUTTON_GAP) * 2, y, actionWidth);
+        testButton.visible = true;
+        duplicateButton.visible = true;
+        deleteButton.visible = true;
+    }
+
+    private void positionButton(
+        AbstractWidget widget,
+        int x,
+        int y,
+        int width
+    ) {
+        widget.setX(x);
+        widget.setY(y);
+        widget.setWidth(width);
+    }
+
+    private void positionField(
+        EditBox field,
+        int x,
+        int y,
+        int width
+    ) {
+        field.setX(x);
+        field.setY(y);
+        field.setWidth(width);
+    }
+
+    private void setDescription(
+        String text,
+        int y,
+        int color
+    ) {
+        description = text;
+        descriptionX = contentX;
+        descriptionY = y;
+        descriptionColor = color;
+    }
+
+    private void addLabel(
+        String text,
+        int x,
+        int y
+    ) {
+        labels.add(
+            new Label(
+                text,
+                x,
+                y,
+                ScenarioEditorTheme.TEXT_MUTED
+            )
+        );
+    }
+
+    private int warningColor(boolean infinite) {
+        return infinite && infiniteWarning
+            ? ScenarioEditorTheme.ERROR
+            : ScenarioEditorTheme.TEXT_MUTED;
+    }
+
+    private void setWidePrefixes() {
+        for (KarakuriDropdown<?> dropdown : dropdowns) {
+            dropdown.setLabelPrefix("");
+        }
+    }
+
+    private void setCompactPrefixes() {
+        moveDirectionDropdown.setLabelPrefix("Dir: ");
+        moveModeDropdown.setLabelPrefix("Style: ");
+        jumpModeDropdown.setLabelPrefix("Mode: ");
+        jumpStopDropdown.setLabelPrefix("Stop: ");
+        repeatModeDropdown.setLabelPrefix("Repeat: ");
+        cameraDirectionDropdown.setLabelPrefix("Dir: ");
+        cameraMotionDropdown.setLabelPrefix("Motion: ");
+        mouseActionDropdown.setLabelPrefix("Button: ");
+        mouseInputDropdown.setLabelPrefix("Input: ");
+        mouseStopDropdown.setLabelPrefix("Stop: ");
+    }
+
+    private void hideAll() {
+        for (AbstractWidget widget : widgets) {
+            widget.visible = false;
+            widget.active = true;
+        }
+    }
+
+    private void collapseHiddenDropdowns() {
+        for (KarakuriDropdown<?> dropdown : dropdowns) {
+            dropdown.collapse();
+        }
+    }
+
+    private void updateDropdownInteractionState() {
+        KarakuriDropdown<?> expanded = expandedDropdown();
+
+        if (expanded == null) {
+            return;
+        }
+
+        for (KarakuriDropdown<?> dropdown : dropdowns) {
+            if (dropdown != expanded) {
+                dropdown.collapse();
+            }
+        }
+    }
+
+    private KarakuriDropdown<?> expandedDropdown() {
+        for (KarakuriDropdown<?> dropdown : dropdowns) {
+            if (dropdown.visible && dropdown.isExpanded()) {
+                return dropdown;
+            }
+        }
+
+        return null;
+    }
+
+    private <T> KarakuriDropdown<T> createDropdown(
+        List<KarakuriDropdown.Option<T>> options,
+        T initialValue,
+        java.util.function.Consumer<T> action
+    ) {
+        KarakuriDropdown<T> dropdown = new KarakuriDropdown<>(
             font,
-            primaryFrameX + 6,
-            primaryFrameY + 3,
-            primaryFrameWidth - 12,
-            16,
-            Component.literal(
-                "Duration in seconds"
-            )
+            contentX,
+            inspectorY,
+            contentWidth,
+            BUTTON_HEIGHT,
+            options,
+            initialValue,
+            action,
+            actions::dropdownStateChanged
         );
+        dropdowns.add(dropdown);
+        return dropdown;
+    }
 
-        durationField.setBordered(false);
-        durationField.setTextColor(
-            0xFFF4F0F7
-        );
-        durationField.setTextColorUneditable(
-            0xFF81798E
-        );
-        durationField.setTextShadow(false);
-        durationField.setMaxLength(7);
+    @SafeVarargs
+    private static <T> List<KarakuriDropdown.Option<T>> options(
+        KarakuriDropdown.Option<T>... options
+    ) {
+        return List.of(options);
+    }
 
-        durationField.setFilter(
-            value -> value.matches(
-                "[0-9]{0,4}(\\.[0-9]{0,2})?"
-            )
-        );
-
-        durationField.setResponder(
-            actions::onDurationFieldChanged
-        );
-
-        countField = new EditBox(
-            font,
-            primaryFrameX + 6,
-            primaryFrameY + 3,
-            primaryFrameWidth - 12,
-            16,
-            Component.literal(
-                "Count"
-            )
-        );
-
-        countField.setBordered(false);
-        countField.setTextColor(
-            0xFFF4F0F7
-        );
-        countField.setTextColorUneditable(
-            0xFF81798E
-        );
-        countField.setTextShadow(false);
-        countField.setMaxLength(6);
-
-        countField.setFilter(
-            value -> value.matches(
-                "[0-9]{0,6}"
-            )
-        );
-
-        countField.setResponder(
-            actions::onCountFieldChanged
-        );
-
-        angleField = new EditBox(
-            font,
-            secondaryFrameX + 6,
-            secondaryFrameY + 3,
-            secondaryFrameWidth - 12,
-            16,
-            Component.literal(
-                "Camera angle"
-            )
-        );
-
-        angleField.setBordered(false);
-        angleField.setTextColor(
-            0xFFF4F0F7
-        );
-        angleField.setTextColorUneditable(
-            0xFF81798E
-        );
-        angleField.setTextShadow(false);
-        angleField.setMaxLength(3);
-
-        angleField.setFilter(
-            value -> value.matches(
-                "[0-9]{0,3}"
-            )
-        );
-
-        angleField.setResponder(
-            actions::onAngleFieldChanged
-        );
+    private static <T> KarakuriDropdown.Option<T> option(
+        T value,
+        String label
+    ) {
+        return new KarakuriDropdown.Option<>(value, label);
     }
 
     private KarakuriButton createButton(
         int x,
         int y,
-        int buttonWidth,
-        Component message,
+        int width,
+        String message,
         Runnable action,
         KarakuriButton.Style style
     ) {
@@ -1725,12 +866,44 @@ final class ScenarioInspectorWidgets {
             font,
             x,
             y,
-            buttonWidth,
+            width,
             BUTTON_HEIGHT,
-            message,
+            Component.literal(message),
             action,
             style
         );
+    }
+
+    private EditBox createField(
+        String narration,
+        int maxLength,
+        String regex,
+        java.util.function.Consumer<String> responder
+    ) {
+        EditBox field = new EditBox(
+            font,
+            contentX,
+            inspectorY,
+            Math.max(24, contentWidth - 80),
+            16,
+            Component.literal(narration)
+        );
+        field.setBordered(false);
+        field.setTextColor(ScenarioEditorTheme.TEXT);
+        field.setTextColorUneditable(ScenarioEditorTheme.TEXT_MUTED);
+        field.setTextShadow(false);
+        field.setMaxLength(maxLength);
+        field.setFilter(value -> value.matches(regex));
+        field.setResponder(responder);
+        return field;
+    }
+
+    private record Label(
+        String text,
+        int x,
+        int y,
+        int color
+    ) {
     }
 
     interface Actions {
@@ -1773,5 +946,7 @@ final class ScenarioInspectorWidgets {
         void onCountFieldChanged(String value);
 
         void onAngleFieldChanged(String value);
+
+        void dropdownStateChanged();
     }
 }

@@ -1,6 +1,7 @@
 package hanamuramiyu.karakuri.ui.editor.workflow;
 
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
+import hanamuramiyu.karakuri.ui.editor.ScenarioEditorTheme;
 import hanamuramiyu.karakuri.ui.editor.ScenarioStepPresentation;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -69,7 +70,7 @@ public final class ScenarioWorkflowCanvas {
             viewport.y(),
             viewport.x() + viewport.width(),
             viewport.y() + viewport.height(),
-            0xFF100F17
+            ScenarioEditorTheme.CANVAS
         );
 
         graphics.renderOutline(
@@ -77,7 +78,7 @@ public final class ScenarioWorkflowCanvas {
             viewport.y(),
             viewport.width(),
             viewport.height(),
-            0xFF393246
+            ScenarioEditorTheme.OUTLINE
         );
 
         graphics.enableScissor(
@@ -172,7 +173,7 @@ public final class ScenarioWorkflowCanvas {
                 centerY - 1,
                 endX,
                 centerY + 1,
-                0xFF625A70
+                0xFF51485D
             );
 
             graphics.drawString(
@@ -180,7 +181,7 @@ public final class ScenarioWorkflowCanvas {
                 Component.literal(">"),
                 endX - 11,
                 centerY - 4,
-                0xFF9B91AA,
+                ScenarioEditorTheme.TEXT_MUTED,
                 false
             );
         }
@@ -272,21 +273,21 @@ public final class ScenarioWorkflowCanvas {
 
         int background =
             selected
-                ? 0xFF392D4E
+                ? 0xFF342A45
                 : hovered
-                    ? 0xFF292333
-                    : 0xFF211D29;
+                    ? 0xFF24202C
+                    : 0xFF191720;
 
         int outline =
             selected
-                ? 0xFF9B79D1
+                ? ScenarioEditorTheme.ACCENT
                 : hovered
-                    ? 0xFF6F607F
-                    : 0xFF484052;
+                    ? 0xFF685777
+                    : 0xFF3C3645;
 
         if (ghost) {
-            background = 0xEE45365E;
-            outline = 0xFFB68CEB;
+            background = 0xEE3B304F;
+            outline = ScenarioEditorTheme.ACCENT;
         }
 
         graphics.fill(
@@ -314,7 +315,7 @@ public final class ScenarioWorkflowCanvas {
         graphics.fill(
             cardX,
             cardY,
-            cardX + 4,
+            cardX + 3,
             cardY
                 + ScenarioWorkflowViewport
                     .CARD_HEIGHT,
@@ -322,18 +323,18 @@ public final class ScenarioWorkflowCanvas {
         );
 
         graphics.fill(
-            cardX + 10,
-            cardY + 10,
-            cardX + 30,
-            cardY + 30,
-            0xFF16131D
+            cardX + 8,
+            cardY + 7,
+            cardX + 26,
+            cardY + 25,
+            0xFF0E0D12
         );
 
         graphics.renderOutline(
-            cardX + 10,
-            cardY + 10,
-            20,
-            20,
+            cardX + 8,
+            cardY + 7,
+            18,
+            18,
             accent
         );
 
@@ -347,9 +348,9 @@ public final class ScenarioWorkflowCanvas {
             font,
             icon,
             cardX
-                + 20
+                + 17
                 - font.width(icon) / 2,
-            cardY + 16,
+            cardY + 12,
             accent,
             false
         );
@@ -360,9 +361,9 @@ public final class ScenarioWorkflowCanvas {
                 ScenarioStepPresentation
                     .workflowTitle(step)
             ),
-            cardX + 38,
-            cardY + 10,
-            0xFFF4F4F7,
+            cardX + 32,
+            cardY + 7,
+            ScenarioEditorTheme.TEXT,
             false
         );
 
@@ -372,9 +373,9 @@ public final class ScenarioWorkflowCanvas {
                 ScenarioStepPresentation
                     .workflowSubtitle(step)
             ),
-            cardX + 38,
-            cardY + 26,
-            0xFFB8AFC2,
+            cardX + 32,
+            cardY + 22,
+            ScenarioEditorTheme.TEXT_SECONDARY,
             false
         );
 
@@ -390,17 +391,17 @@ public final class ScenarioWorkflowCanvas {
                 + cardWidth
                 - 8
                 - font.width(indexText),
-            cardY + 42,
-            0xFF81798E,
+            cardY + 36,
+            ScenarioEditorTheme.TEXT_MUTED,
             false
         );
 
         graphics.drawString(
             font,
             Component.literal("::"),
-            cardX + 10,
-            cardY + 42,
-            0xFF81798E,
+            cardX + 8,
+            cardY + 36,
+            ScenarioEditorTheme.TEXT_MUTED,
             false
         );
     }
@@ -444,8 +445,8 @@ public final class ScenarioWorkflowCanvas {
                     cardWidth
                         - font.width(text)
                 ) / 2,
-            cardY + 25,
-            0xFF9B91AA,
+            cardY + 20,
+            ScenarioEditorTheme.TEXT_MUTED,
             false
         );
     }

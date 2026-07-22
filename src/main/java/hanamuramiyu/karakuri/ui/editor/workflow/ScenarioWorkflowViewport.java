@@ -1,18 +1,18 @@
 package hanamuramiyu.karakuri.ui.editor.workflow;
 
 final class ScenarioWorkflowViewport {
-    static final int CARD_HEIGHT = 58;
+    static final int CARD_HEIGHT = 48;
 
-    private static final int CARD_MIN_WIDTH = 104;
-    private static final int CARD_MAX_WIDTH = 132;
-    private static final int CARD_GAP = 30;
-    private static final int CONTENT_PADDING = 12;
+    private static final int CARD_MIN_WIDTH = 96;
+    private static final int CARD_MAX_WIDTH = 122;
+    private static final int CARD_GAP = 22;
+    private static final int CONTENT_PADDING = 10;
     private static final int VISIBILITY_PADDING = 8;
     private static final int FOOTER_HEIGHT = 16;
-    private static final int MIN_CARD_TOP_PADDING = 60;
+    private static final int MIN_CARD_TOP_PADDING = 8;
     private static final int AUTO_SCROLL_EDGE = 24;
     private static final int AUTO_SCROLL_STEP = 8;
-    private static final int SCROLL_STEP = 36;
+    private static final int SCROLL_STEP = 32;
 
     private int x;
     private int y;

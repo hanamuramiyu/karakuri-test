@@ -22,6 +22,7 @@ import hanamuramiyu.karakuri.scenario.model.WaitStep;
 import hanamuramiyu.karakuri.task.TaskManager;
 import hanamuramiyu.karakuri.task.TaskStatus;
 import hanamuramiyu.karakuri.ui.editor.ScenarioEditorState;
+import hanamuramiyu.karakuri.ui.editor.ScenarioEditorTheme;
 import hanamuramiyu.karakuri.ui.editor.ScenarioStepPresentation;
 import hanamuramiyu.karakuri.ui.editor.ScenarioStepRules;
 import hanamuramiyu.karakuri.ui.editor.ScenarioValueFormatter;
@@ -29,6 +30,7 @@ import hanamuramiyu.karakuri.ui.widget.KarakuriButton;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 import java.util.List;
@@ -36,7 +38,7 @@ import java.util.Objects;
 
 public final class ScenarioInspector
     implements ScenarioInspectorWidgets.Actions {
-    private static final int BUTTON_HEIGHT = 22;
+    private static final int BUTTON_HEIGHT = 20;
 
     private final Font font;
     private final ScenarioEditorState state;
@@ -136,6 +138,32 @@ public final class ScenarioInspector
         update();
     }
 
+    public boolean mouseClicked(
+        MouseButtonEvent event,
+        boolean doubled
+    ) {
+        return visible
+            && widgets.mouseClicked(event, doubled);
+    }
+
+    public void renderDropdownOverlay(
+        GuiGraphics graphics,
+        int mouseX,
+        int mouseY,
+        float delta
+    ) {
+        if (!visible) {
+            return;
+        }
+
+        widgets.renderDropdownOverlay(
+            graphics,
+            mouseX,
+            mouseY,
+            delta
+        );
+    }
+
     public boolean isValid() {
         return validationMessage() == null;
     }
@@ -191,7 +219,7 @@ public final class ScenarioInspector
             inspectorY,
             inspectorX + inspectorWidth,
             inspectorY + inspectorHeight,
-            0xFF121018
+            ScenarioEditorTheme.PANEL
         );
 
         graphics.renderOutline(
@@ -199,7 +227,7 @@ public final class ScenarioInspector
             inspectorY,
             inspectorWidth,
             inspectorHeight,
-            0xFF393243
+            ScenarioEditorTheme.OUTLINE
         );
 
         graphics.fill(
@@ -213,11 +241,11 @@ public final class ScenarioInspector
         graphics.drawString(
             font,
             Component.literal(
-                "Inspector"
+                "Properties"
             ),
             inspectorX + 10,
             inspectorY + 8,
-            0xFFF1ECF5,
+            ScenarioEditorTheme.TEXT,
             false
         );
 
@@ -240,7 +268,7 @@ public final class ScenarioInspector
                 - 10
                 - font.width(position),
             inspectorY + 8,
-            0xFF81778A,
+            ScenarioEditorTheme.TEXT_MUTED,
             false
         );
 
@@ -251,360 +279,15 @@ public final class ScenarioInspector
             ),
             inspectorX + 10,
             inspectorY + 24,
-            0xFFF4F0F7,
+            ScenarioEditorTheme.TEXT,
             false
         );
 
-        if (
-            layout.mode()
-                == ScenarioInspectorLayout.Mode.WIDE
-        ) {
-            renderWideInspectorLabels(
-                graphics,
-                step
-            );
-        } else {
-            renderCompactInspectorLabels(
-                graphics,
-                step
-            );
-        }
+        widgets.renderDecorations(graphics);
 
         renderValueFrames(
             graphics,
             step
-        );
-    }
-    private void renderWideInspectorLabels(
-        GuiGraphics graphics,
-        ScenarioStep step
-    ) {
-        if (
-            step
-                instanceof
-                JumpStep jumpStep
-        ) {
-            drawInspectorLabel(
-                graphics,
-                "Jump mode",
-                46
-            );
-
-            if (
-                jumpStep.mode()
-                    != JumpMode.SINGLE
-            ) {
-                drawInspectorLabel(
-                    graphics,
-                    "Stop after",
-                    98
-                );
-            }
-
-            String primaryLabel =
-                ScenarioStepPresentation.jumpPrimaryValueLabel(
-                    jumpStep
-                );
-
-            if (primaryLabel != null) {
-                drawInspectorLabel(
-                    graphics,
-                    primaryLabel,
-                    150
-                );
-            }
-
-            graphics.drawString(
-                font,
-                Component.literal(
-                    ScenarioStepPresentation.jumpDescription(
-                        jumpStep
-                    )
-                ),
-                inspectorX + 10,
-                inspectorY + 216,
-                jumpStep.isInfinite()
-                    && state.selectedIndex()
-                        < state.size() - 1
-                        ? 0xFFE66777
-                        : 0xFF81798E,
-                false
-            );
-
-            return;
-        }
-
-        if (
-            step
-                instanceof
-                HotbarStep
-        ) {
-            drawInspectorLabel(
-                graphics,
-                "Hotbar slot",
-                150
-            );
-
-            graphics.drawString(
-                font,
-                Component.literal(
-                    "Selects the item held in the main hand"
-                ),
-                inspectorX + 10,
-                inspectorY + 216,
-                0xFF81798E,
-                false
-            );
-
-            return;
-        }
-
-        if (
-            step
-                instanceof
-                MoveStep moveStep
-        ) {
-            drawInspectorLabel(
-                graphics,
-                "Direction",
-                46
-            );
-
-            drawInspectorLabel(
-                graphics,
-                "Movement style",
-                98
-            );
-
-            drawInspectorLabel(
-                graphics,
-                "Jumping",
-                124
-            );
-
-            drawInspectorLabel(
-                graphics,
-                "Duration in seconds",
-                150
-            );
-
-            graphics.drawString(
-                font,
-                Component.literal(
-                    moveStep.jumping()
-                        ? "Jump is held together with movement"
-                        : "Jump is disabled for this movement"
-                ),
-                inspectorX + 10,
-                inspectorY + 216,
-                0xFF81798E,
-                false
-            );
-
-            return;
-        }
-
-        if (
-            step
-                instanceof
-                CameraStep cameraStep
-        ) {
-            drawInspectorLabel(
-                graphics,
-                "Direction",
-                46
-            );
-
-            drawInspectorLabel(
-                graphics,
-                "Motion",
-                98
-            );
-
-            drawInspectorLabel(
-                graphics,
-                "Angle",
-                124
-            );
-
-            if (
-                cameraStep.motion()
-                    == CameraMotion
-                        .SMOOTH
-            ) {
-                drawInspectorLabel(
-                    graphics,
-                    "Duration in seconds",
-                    150
-                );
-            }
-
-            graphics.drawString(
-                font,
-                Component.literal(
-                    cameraStep.motion()
-                        == CameraMotion
-                            .INSTANT
-                                ? "Rotation is applied immediately"
-                                : "Smooth camera movement"
-                ),
-                inspectorX + 10,
-                inspectorY + 216,
-                0xFF81798E,
-                false
-            );
-
-            return;
-        }
-
-        if (
-            step
-                instanceof
-                RepeatStep repeatStep
-        ) {
-            drawInspectorLabel(
-                graphics,
-                "Repeat mode",
-                46
-            );
-
-            if (
-                repeatStep.mode()
-                    == RepeatMode.COUNT
-            ) {
-                drawInspectorLabel(
-                    graphics,
-                    "Repeat count",
-                    150
-                );
-            }
-
-            graphics.drawString(
-                font,
-                Component.literal(
-                    ScenarioStepPresentation.repeatDescription(
-                        repeatStep
-                    )
-                ),
-                inspectorX + 10,
-                inspectorY + 216,
-                repeatStep.isInfinite()
-                    && state.selectedIndex()
-                        < state.size() - 1
-                        ? 0xFFE66777
-                        : 0xFF81798E,
-                false
-            );
-
-            return;
-        }
-
-        if (
-            step
-                instanceof
-                WaitStep
-        ) {
-            drawInspectorLabel(
-                graphics,
-                "Duration in seconds",
-                150
-            );
-
-            return;
-        }
-
-        MouseStep mouseStep =
-            (MouseStep) step;
-
-        drawInspectorLabel(
-            graphics,
-            "Mouse button",
-            46
-        );
-
-        drawInspectorLabel(
-            graphics,
-            "Input mode",
-            72
-        );
-
-        drawInspectorLabel(
-            graphics,
-            "Stop after",
-            98
-        );
-
-        if (
-            mouseStep.inputMode()
-                == MouseInputMode
-                    .CLICK
-        ) {
-            drawInspectorLabel(
-                graphics,
-                "Click rate",
-                124
-            );
-        }
-
-        String primaryLabel =
-            ScenarioStepPresentation.mousePrimaryValueLabel(
-                mouseStep
-            );
-
-        if (primaryLabel != null) {
-            drawInspectorLabel(
-                graphics,
-                primaryLabel,
-                150
-            );
-        }
-
-        graphics.drawString(
-            font,
-            Component.literal(
-                ScenarioStepPresentation.mouseEstimate(
-                    mouseStep
-                )
-            ),
-            inspectorX + 10,
-            inspectorY + 216,
-            mouseStep.isInfinite()
-                && state.selectedIndex()
-                    < state.size() - 1
-                        ? 0xFFE66777
-                        : 0xFF81798E,
-            false
-        );
-    }
-    private void renderCompactInspectorLabels(
-        GuiGraphics graphics,
-        ScenarioStep step
-    ) {
-        graphics.drawString(
-            font,
-            Component.literal(
-                ScenarioStepPresentation.compactInspectorLabel(
-                    step
-                )
-            ),
-            inspectorX + 8,
-            inspectorY + 32,
-            0xFF918699,
-            false
-        );
-    }
-    private void drawInspectorLabel(
-        GuiGraphics graphics,
-        String label,
-        int offsetY
-    ) {
-        graphics.drawString(
-            font,
-            Component.literal(label),
-            inspectorX + 10,
-            inspectorY + offsetY,
-            0xFF918699,
-            false
         );
     }
     private void renderValueFrames(
@@ -684,7 +367,7 @@ public final class ScenarioInspector
                         hotbarStep.slot()
                             + 1
                     ),
-                0xFFF4F0F7
+                ScenarioEditorTheme.TEXT
             );
         }
 
@@ -702,7 +385,7 @@ public final class ScenarioInspector
                         )
                             .clicksPerSecondHalfSteps()
                     ),
-                0xFFF4F0F7
+                ScenarioEditorTheme.TEXT
             );
         }
 
@@ -1130,561 +813,30 @@ public final class ScenarioInspector
     }
 
     public void update() {
-        boolean inspectorVisible =
-            visible;
-
-        ScenarioStep step =
-            getSelectedStep();
-
-        boolean movement =
-            step
-                instanceof
-                MoveStep;
-
-        boolean jump =
-            step
-                instanceof
-                JumpStep;
-
-        boolean repeat =
-            step
-                instanceof
-                RepeatStep;
-
-        boolean camera =
-            step
-                instanceof
-                CameraStep;
-
-        boolean mouse =
-            step
-                instanceof
-                MouseStep;
-
-        boolean hotbar =
-            step
-                instanceof
-                HotbarStep;
-
-        boolean mouseClickMode =
-            mouse
-                && (
-                    (MouseStep)
-                        step
-                ).inputMode()
-                    == MouseInputMode
-                        .CLICK;
-
-        boolean jumpSingleMode =
-            jump
-                && (
-                    (JumpStep)
-                        step
-                ).mode()
-                    == JumpMode
-                        .SINGLE;
-
-        boolean jumpRepeatMode =
-            jump
-                && (
-                    (JumpStep)
-                        step
-                ).mode()
-                    == JumpMode
-                        .REPEAT;
-
-        boolean cpsUsed =
-            ScenarioStepRules.usesCps(step);
-
-        boolean angleUsed =
-            ScenarioStepRules.usesAngle(step);
-
-        boolean durationUsed =
-            ScenarioStepRules.usesDuration(step);
-
-        boolean countUsed =
-            ScenarioStepRules.usesCount(step);
-
-        boolean primaryValueUsed =
-            durationUsed
-                || countUsed
-                || hotbar;
-
-        widgets.forwardDirectionButton.visible =
-            inspectorVisible && movement;
-
-        widgets.backwardDirectionButton.visible =
-            inspectorVisible && movement;
-
-        widgets.leftDirectionButton.visible =
-            inspectorVisible && movement;
-
-        widgets.rightDirectionButton.visible =
-            inspectorVisible && movement;
-
-        widgets.walkModeButton.visible =
-            inspectorVisible && movement;
-
-        widgets.sprintModeButton.visible =
-            inspectorVisible && movement;
-
-        widgets.sneakModeButton.visible =
-            inspectorVisible && movement;
-
-        widgets.jumpToggleButton.visible =
-            inspectorVisible && movement;
-
-        widgets.singleJumpModeButton.visible =
-            inspectorVisible && jump;
-
-        widgets.holdJumpModeButton.visible =
-            inspectorVisible && jump;
-
-        widgets.repeatJumpModeButton.visible =
-            inspectorVisible && jump;
-
-        widgets.jumpDurationStopButton.visible =
-            inspectorVisible
-                && jump
-                && !jumpSingleMode;
-
-        widgets.jumpCountStopButton.visible =
-            inspectorVisible
-                && jumpRepeatMode;
-
-        widgets.jumpManualStopButton.visible =
-            inspectorVisible
-                && jump
-                && !jumpSingleMode;
-
-        widgets.repeatCountModeButton.visible =
-            inspectorVisible && repeat;
-
-        widgets.repeatForeverModeButton.visible =
-            inspectorVisible && repeat;
-
-        widgets.cameraLeftButton.visible =
-            inspectorVisible && camera;
-
-        widgets.cameraRightButton.visible =
-            inspectorVisible && camera;
-
-        widgets.cameraUpButton.visible =
-            inspectorVisible && camera;
-
-        widgets.cameraDownButton.visible =
-            inspectorVisible && camera;
-
-        widgets.instantMotionButton.visible =
-            inspectorVisible && camera;
-
-        widgets.smoothMotionButton.visible =
-            inspectorVisible && camera;
-
-        widgets.leftMouseButton.visible =
-            inspectorVisible && mouse;
-
-        widgets.rightMouseButton.visible =
-            inspectorVisible && mouse;
-
-        widgets.holdModeButton.visible =
-            inspectorVisible && mouse;
-
-        widgets.clickModeButton.visible =
-            inspectorVisible && mouse;
-
-        widgets.durationStopButton.visible =
-            inspectorVisible && mouse;
-
-        widgets.clickCountStopButton.visible =
-            inspectorVisible
-                && mouseClickMode;
-
-        widgets.manualStopButton.visible =
-            inspectorVisible && mouse;
-
-        widgets.cpsDecreaseButton.visible =
-            inspectorVisible && cpsUsed;
-
-        widgets.cpsIncreaseButton.visible =
-            inspectorVisible && cpsUsed;
-
-        widgets.angleDecreaseButton.visible =
-            inspectorVisible && angleUsed;
-
-        widgets.angleField.visible =
-            inspectorVisible && angleUsed;
-
-        widgets.angleIncreaseButton.visible =
-            inspectorVisible && angleUsed;
-
-        widgets.primaryDecreaseButton.visible =
-            inspectorVisible
-                && primaryValueUsed;
-
-        widgets.primaryIncreaseButton.visible =
-            inspectorVisible
-                && primaryValueUsed;
-
-        widgets.durationField.visible =
-            inspectorVisible
-                && durationUsed;
-
-        widgets.countField.visible =
-            inspectorVisible
-                && countUsed;
-
-        widgets.testButton.visible =
-            inspectorVisible;
-
-        widgets.duplicateButton.visible =
-            inspectorVisible;
-
-        widgets.deleteButton.visible =
-            inspectorVisible;
-
-        if (
-            step
-                instanceof
-                MoveStep moveStep
-        ) {
-            updateSelectorButton(
-                widgets.forwardDirectionButton,
-                moveStep.direction()
-                    == MoveDirection
-                        .FORWARD
-            );
-
-            updateSelectorButton(
-                widgets.backwardDirectionButton,
-                moveStep.direction()
-                    == MoveDirection
-                        .BACKWARD
-            );
-
-            updateSelectorButton(
-                widgets.leftDirectionButton,
-                moveStep.direction()
-                    == MoveDirection
-                        .LEFT
-            );
-
-            updateSelectorButton(
-                widgets.rightDirectionButton,
-                moveStep.direction()
-                    == MoveDirection
-                        .RIGHT
-            );
-
-            updateSelectorButton(
-                widgets.walkModeButton,
-                moveStep.mode()
-                    == MoveMode.WALK
-            );
-
-            updateSelectorButton(
-                widgets.sprintModeButton,
-                moveStep.mode()
-                    == MoveMode.SPRINT
-            );
-
-            updateSelectorButton(
-                widgets.sneakModeButton,
-                moveStep.mode()
-                    == MoveMode.SNEAK
-            );
-
-            widgets.jumpToggleButton.setMessage(
-                Component.literal(
-                    layout.mode()
-                        == ScenarioInspectorLayout.Mode.WIDE
-                            ? "Jumping: "
-                                + (
-                                    moveStep.jumping()
-                                        ? "On"
-                                        : "Off"
-                                )
-                            : "Jump"
-                )
-            );
-
-            updateSelectorButton(
-                widgets.jumpToggleButton,
-                moveStep.jumping()
-            );
-        }
-
-        if (
-            step
-                instanceof
-                JumpStep jumpStep
-        ) {
-            updateSelectorButton(
-                widgets.singleJumpModeButton,
-                jumpStep.mode()
-                    == JumpMode.SINGLE
-            );
-
-            updateSelectorButton(
-                widgets.holdJumpModeButton,
-                jumpStep.mode()
-                    == JumpMode.HOLD
-            );
-
-            updateSelectorButton(
-                widgets.repeatJumpModeButton,
-                jumpStep.mode()
-                    == JumpMode.REPEAT
-            );
-
-            updateSelectorButton(
-                widgets.jumpDurationStopButton,
-                jumpStep.stopMode()
-                    == JumpStopMode.DURATION
-            );
-
-            updateSelectorButton(
-                widgets.jumpCountStopButton,
-                jumpStep.stopMode()
-                    == JumpStopMode.JUMP_COUNT
-            );
-
-            updateSelectorButton(
-                widgets.jumpManualStopButton,
-                jumpStep.stopMode()
-                    == JumpStopMode.MANUAL
-            );
-        }
-
-        if (
-            step
-                instanceof
-                RepeatStep repeatStep
-        ) {
-            updateSelectorButton(
-                widgets.repeatCountModeButton,
-                repeatStep.mode()
-                    == RepeatMode.COUNT
-            );
-
-            updateSelectorButton(
-                widgets.repeatForeverModeButton,
-                repeatStep.mode()
-                    == RepeatMode.FOREVER
-            );
-        }
-
-        if (
-            step
-                instanceof
-                CameraStep cameraStep
-        ) {
-            updateSelectorButton(
-                widgets.cameraLeftButton,
-                cameraStep.direction()
-                    == CameraDirection
-                        .LEFT
-            );
-
-            updateSelectorButton(
-                widgets.cameraRightButton,
-                cameraStep.direction()
-                    == CameraDirection
-                        .RIGHT
-            );
-
-            updateSelectorButton(
-                widgets.cameraUpButton,
-                cameraStep.direction()
-                    == CameraDirection
-                        .UP
-            );
-
-            updateSelectorButton(
-                widgets.cameraDownButton,
-                cameraStep.direction()
-                    == CameraDirection
-                        .DOWN
-            );
-
-            updateSelectorButton(
-                widgets.instantMotionButton,
-                cameraStep.motion()
-                    == CameraMotion
-                        .INSTANT
-            );
-
-            updateSelectorButton(
-                widgets.smoothMotionButton,
-                cameraStep.motion()
-                    == CameraMotion
-                        .SMOOTH
-            );
-
-            widgets.angleDecreaseButton.active =
-                cameraStep.angleDegrees()
-                    > CameraStep
-                        .MIN_ANGLE_DEGREES;
-
-            widgets.angleIncreaseButton.active =
-                cameraStep.angleDegrees()
-                    < CameraStep
-                        .MAX_ANGLE_DEGREES;
-        }
-
-        if (
-            step
-                instanceof
-                MouseStep mouseStep
-        ) {
-            updateSelectorButton(
-                widgets.leftMouseButton,
-                mouseStep.action()
-                    == MouseAction
-                        .LEFT_CLICK
-            );
-
-            updateSelectorButton(
-                widgets.rightMouseButton,
-                mouseStep.action()
-                    == MouseAction
-                        .RIGHT_CLICK
-            );
-
-            updateSelectorButton(
-                widgets.holdModeButton,
-                mouseStep.inputMode()
-                    == MouseInputMode
-                        .HOLD
-            );
-
-            updateSelectorButton(
-                widgets.clickModeButton,
-                mouseStep.inputMode()
-                    == MouseInputMode
-                        .CLICK
-            );
-
-            updateSelectorButton(
-                widgets.durationStopButton,
-                mouseStep.stopMode()
-                    == MouseStopMode
-                        .DURATION
-            );
-
-            updateSelectorButton(
-                widgets.clickCountStopButton,
-                mouseStep.stopMode()
-                    == MouseStopMode
-                        .CLICK_COUNT
-            );
-
-            updateSelectorButton(
-                widgets.manualStopButton,
-                mouseStep.stopMode()
-                    == MouseStopMode
-                        .MANUAL
-            );
-
-            widgets.cpsDecreaseButton.active =
-                mouseStep
-                    .clicksPerSecondHalfSteps()
-                    > MouseStep
-                        .MIN_CPS_HALF_STEPS;
-
-            widgets.cpsIncreaseButton.active =
-                mouseStep
-                    .clicksPerSecondHalfSteps()
-                    < MouseStep
-                        .MAX_CPS_HALF_STEPS;
-        }
-
-        if (durationUsed) {
-            widgets.primaryDecreaseButton.active =
-                step.durationTicks()
-                    > ScenarioEditorState.MIN_DURATION_TICKS;
-
-            widgets.primaryIncreaseButton.active =
-                step.durationTicks()
-                    < ScenarioEditorState.MAX_DURATION_TICKS;
-        } else if (
-            step
-                instanceof
-                RepeatStep repeatStep
-                && countUsed
-        ) {
-            widgets.primaryDecreaseButton.active =
-                repeatStep.repeatCount()
-                    > RepeatStep.MIN_REPEAT_COUNT;
-
-            widgets.primaryIncreaseButton.active =
-                repeatStep.repeatCount()
-                    < RepeatStep.MAX_REPEAT_COUNT;
-        } else if (
-            step
-                instanceof
-                JumpStep jumpStep
-                && countUsed
-        ) {
-            widgets.primaryDecreaseButton.active =
-                jumpStep.jumpCount()
-                    > JumpStep
-                        .MIN_JUMP_COUNT;
-
-            widgets.primaryIncreaseButton.active =
-                jumpStep.jumpCount()
-                    < JumpStep
-                        .MAX_JUMP_COUNT;
-        } else if (
-            step
-                instanceof
-                MouseStep mouseStep
-                && countUsed
-        ) {
-            widgets.primaryDecreaseButton.active =
-                mouseStep.clickCount()
-                    > MouseStep
-                        .MIN_CLICK_COUNT;
-
-            widgets.primaryIncreaseButton.active =
-                mouseStep.clickCount()
-                    < MouseStep
-                        .MAX_CLICK_COUNT;
-        } else if (
-            step
-                instanceof
-                HotbarStep hotbarStep
-        ) {
-            widgets.primaryDecreaseButton.active =
-                hotbarStep.slot()
-                    > HotbarStep
-                        .MIN_SLOT;
-
-            widgets.primaryIncreaseButton.active =
-                hotbarStep.slot()
-                    < HotbarStep
-                        .MAX_SLOT;
-        }
-
-        TaskStatus status =
-            TaskManager.getStatus();
+        ScenarioStep step = getSelectedStep();
+
+        widgets.update(
+            step,
+            visible,
+            step.isInfinite()
+                && state.selectedIndex() < state.size() - 1
+        );
+
+        TaskStatus status = TaskManager.getStatus();
 
         widgets.testButton.setMessage(
             Component.literal(
                 status == TaskStatus.IDLE
                     ? step instanceof RepeatStep
-                        ? layout.mode()
-                            == ScenarioInspectorLayout.Mode.WIDE
-                                ? "Test Group"
-                                : "Test"
-                        : layout.mode()
-                            == ScenarioInspectorLayout.Mode.WIDE
-                                ? "Test Step"
-                                : "Test"
-                    : layout.mode()
-                        == ScenarioInspectorLayout.Mode.WIDE
-                            ? "Stop Test"
-                            : "Stop"
+                        ? layout.mode() == ScenarioInspectorLayout.Mode.WIDE
+                            ? "Test Group"
+                            : "Test"
+                        : layout.mode() == ScenarioInspectorLayout.Mode.WIDE
+                            ? "Test Step"
+                            : "Test"
+                    : layout.mode() == ScenarioInspectorLayout.Mode.WIDE
+                        ? "Stop Test"
+                        : "Stop"
             )
         );
 
@@ -1706,15 +858,9 @@ public final class ScenarioInspector
                 && state.size() > 1;
     }
 
-    private void updateSelectorButton(
-        KarakuriButton button,
-        boolean selected
-    ) {
-        button.setStyle(
-            selected
-                ? KarakuriButton.Style.PRIMARY
-                : KarakuriButton.Style.GHOST
-        );
+    @Override
+    public void dropdownStateChanged() {
+        update();
     }
 
     private boolean isPrimaryValueValid(

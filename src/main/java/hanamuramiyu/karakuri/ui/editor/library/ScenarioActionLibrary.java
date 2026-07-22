@@ -1,5 +1,6 @@
 package hanamuramiyu.karakuri.ui.editor.library;
 
+import hanamuramiyu.karakuri.ui.editor.ScenarioEditorTheme;
 import hanamuramiyu.karakuri.ui.widget.KarakuriButton;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -14,6 +15,7 @@ public final class ScenarioActionLibrary {
     private final ScenarioActionLibraryWidgets widgets;
 
     private Category selectedCategory = Category.MOVEMENT;
+    private boolean drawerOpen;
     private boolean visible = true;
 
     public ScenarioActionLibrary(
@@ -28,7 +30,8 @@ public final class ScenarioActionLibrary {
             font,
             layout,
             Objects.requireNonNull(actions, "Actions must not be null"),
-            this::selectCategory
+            this::selectCategory,
+            this::closeDrawer
         );
         updateWidgets();
     }
@@ -52,7 +55,7 @@ public final class ScenarioActionLibrary {
             layout.y(),
             layout.x() + layout.width(),
             layout.y() + layout.height(),
-            0xFF121018
+            ScenarioEditorTheme.PANEL
         );
 
         graphics.renderOutline(
@@ -60,104 +63,187 @@ public final class ScenarioActionLibrary {
             layout.y(),
             layout.width(),
             layout.height(),
-            0xFF393243
+            ScenarioEditorTheme.OUTLINE
         );
 
         graphics.fill(
             layout.x(),
             layout.y(),
-            layout.x() + 3,
-            layout.y() + layout.height(),
-            0xFF776092
+            layout.x() + layout.width(),
+            layout.y() + 2,
+            ScenarioEditorTheme.ACCENT
         );
 
-        graphics.drawString(
-            font,
-            Component.literal("Action Library"),
-            layout.x() + ScenarioActionLibraryLayout.PADDING,
-            layout.y() + 9,
-            0xFFF1ECF5,
-            false
-        );
+        if (layout.isToolbar()) {
+            int labelX =
+                layout.x()
+                    + ScenarioActionLibraryLayout.PADDING;
+            int labelY = layout.y() + 5;
+            int labelWidth =
+                layout.toolbarCategoryX()
+                    - ScenarioActionLibraryLayout.BUTTON_GAP
+                    - labelX;
 
-        if (layout.isSidebar()) {
-            renderSidebarHeader(graphics);
+            graphics.fill(
+                labelX,
+                labelY,
+                labelX + labelWidth,
+                labelY
+                    + ScenarioActionLibraryLayout.CATEGORY_HEIGHT,
+                ScenarioEditorTheme.PANEL_ELEVATED
+            );
+            graphics.renderOutline(
+                labelX,
+                labelY,
+                labelWidth,
+                ScenarioActionLibraryLayout.CATEGORY_HEIGHT,
+                ScenarioEditorTheme.OUTLINE
+            );
+
+            Component addAction =
+                Component.literal("Add Action");
+
+            graphics.drawString(
+                font,
+                addAction,
+                labelX
+                    + (labelWidth - font.width(addAction)) / 2,
+                labelY
+                    + (
+                        ScenarioActionLibraryLayout.CATEGORY_HEIGHT
+                            - font.lineHeight
+                    ) / 2
+                    + 1,
+                ScenarioEditorTheme.TEXT,
+                false
+            );
+        } else {
+            graphics.drawString(
+                font,
+                Component.literal("Action Library"),
+                layout.x()
+                    + ScenarioActionLibraryLayout.PADDING,
+                layout.y() + 10,
+                ScenarioEditorTheme.TEXT,
+                false
+            );
         }
 
-        if (layout.height() >= 118) {
+        if (!layout.isToolbar()) {
+            graphics.drawString(
+                font,
+                Component.literal("Choose a category"),
+                layout.x() + ScenarioActionLibraryLayout.PADDING,
+                layout.y() + 22,
+                ScenarioEditorTheme.TEXT_MUTED,
+                false
+            );
+        }
+
+        if (layout.height() >= 106) {
             graphics.drawString(
                 font,
                 Component.literal(
-                    layout.isSidebar()
-                        ? "Inserted after selected block"
-                        : "Inserted after the selected block"
+                    "Add "
+                        + selectedCategory.sectionLabel
+                        + " after the selected block"
                 ),
                 layout.x() + ScenarioActionLibraryLayout.PADDING,
-                layout.y() + layout.height() - 14,
-                0xFF716A79,
+                layout.y() + layout.height() - 13,
+                ScenarioEditorTheme.TEXT_MUTED,
                 false
             );
         }
     }
 
-    private void renderSidebarHeader(GuiGraphics graphics) {
-        graphics.drawString(
-            font,
-            Component.literal("Categories"),
-            layout.x() + ScenarioActionLibraryLayout.PADDING,
-            layout.y() + 20,
-            0xFF81778A,
-            false
-        );
+    public void renderDrawer(GuiGraphics graphics) {
+        if (
+            !visible
+                || !layout.isToolbar()
+                || !drawerOpen
+        ) {
+            return;
+        }
 
-        int dividerY = layout.sidebarDividerY();
+        int drawerY = layout.drawerY();
+        int drawerHeight = ScenarioActionLibraryLayout.DRAWER_HEIGHT;
 
         graphics.fill(
-            layout.x() + ScenarioActionLibraryLayout.PADDING,
-            dividerY,
-            layout.x() + layout.width() - ScenarioActionLibraryLayout.PADDING,
-            dividerY + 1,
-            0xFF302B37
+            layout.x(),
+            drawerY,
+            layout.x() + layout.width(),
+            drawerY + drawerHeight,
+            ScenarioEditorTheme.PANEL_ELEVATED
         );
-
+        graphics.renderOutline(
+            layout.x(),
+            drawerY,
+            layout.width(),
+            drawerHeight,
+            ScenarioEditorTheme.OUTLINE_STRONG
+        );
         graphics.drawString(
             font,
-            Component.literal("Add " + selectedCategory.sectionLabel),
+            Component.literal(selectedCategory.sectionLabel),
             layout.x() + ScenarioActionLibraryLayout.PADDING,
-            dividerY + 8,
-            0xFF9E94A8,
+            drawerY
+                + (drawerHeight - font.lineHeight) / 2
+                + 1,
+            ScenarioEditorTheme.TEXT_MUTED,
             false
         );
     }
 
     private void selectCategory(Category category) {
-        selectedCategory = category;
+        if (
+            selectedCategory == category
+                && drawerOpen
+        ) {
+            drawerOpen = false;
+        } else {
+            selectedCategory = category;
+            drawerOpen = true;
+        }
+
+        updateWidgets();
+    }
+
+    private void closeDrawer() {
+        if (!layout.isToolbar()) {
+            return;
+        }
+
+        drawerOpen = false;
         updateWidgets();
     }
 
     private void updateWidgets() {
-        widgets.update(visible, selectedCategory);
+        widgets.update(
+            visible,
+            selectedCategory,
+            !layout.isToolbar() || drawerOpen
+        );
     }
 
     enum Category {
-        MOVEMENT("Movement", "Move", "Movement"),
-        TIMING("Timing", "Time", "Timing"),
-        MOUSE("Mouse", "Mouse", "Mouse"),
-        CAMERA("Camera", "Camera", "Camera"),
-        BLOCKS("Blocks  ·  Soon", "Blocks", "Blocks"),
-        INVENTORY("Inventory", "Inventory", "Hotbar");
+        MOVEMENT("Movement", "Move", "Direction actions"),
+        TIMING("Timing", "Time", "Flow controls"),
+        MOUSE("Mouse", "Mouse", "Mouse input"),
+        CAMERA("Camera", "Camera", "Camera direction"),
+        BLOCKS("Blocks", "Blocks", "Block actions"),
+        INVENTORY("Inventory", "Items", "Inventory actions");
 
-        final String sidebarLabel;
-        final String horizontalLabel;
+        final String panelLabel;
+        final String toolbarLabel;
         final String sectionLabel;
 
         Category(
-            String sidebarLabel,
-            String horizontalLabel,
+            String panelLabel,
+            String toolbarLabel,
             String sectionLabel
         ) {
-            this.sidebarLabel = sidebarLabel;
-            this.horizontalLabel = horizontalLabel;
+            this.panelLabel = panelLabel;
+            this.toolbarLabel = toolbarLabel;
             this.sectionLabel = sectionLabel;
         }
     }

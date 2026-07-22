@@ -127,9 +127,15 @@ public final class ScenarioEditorState {
     }
 
     public String workflowLabel() {
-        return isInsideGroup()
-            ? "Group L" + groupDepth()
-            : "Root";
+        StringBuilder label =
+            new StringBuilder("Scenario");
+
+        for (GroupContext context : groupPath) {
+            label.append("  >  Repeat #")
+                .append(context.groupIndex() + 1);
+        }
+
+        return label.toString();
     }
 
     public void insertMoveStep(

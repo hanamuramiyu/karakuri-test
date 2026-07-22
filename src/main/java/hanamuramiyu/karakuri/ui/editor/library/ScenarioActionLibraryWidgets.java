@@ -17,6 +17,7 @@ final class ScenarioActionLibraryWidgets {
     private final ScenarioActionLibraryLayout layout;
     private final ScenarioActionLibraryActions actions;
     private final Consumer<ScenarioActionLibrary.Category> categoryAction;
+    private final Runnable actionExecuted;
     private final EnumMap<ScenarioActionLibrary.Category, KarakuriButton> categoryButtons =
         new EnumMap<>(ScenarioActionLibrary.Category.class);
     private final EnumMap<Action, KarakuriButton> actionButtons =
@@ -27,17 +28,19 @@ final class ScenarioActionLibraryWidgets {
         Font font,
         ScenarioActionLibraryLayout layout,
         ScenarioActionLibraryActions actions,
-        Consumer<ScenarioActionLibrary.Category> categoryAction
+        Consumer<ScenarioActionLibrary.Category> categoryAction,
+        Runnable actionExecuted
     ) {
         this.font = font;
         this.layout = layout;
         this.actions = actions;
         this.categoryAction = categoryAction;
+        this.actionExecuted = actionExecuted;
 
-        if (layout.isSidebar()) {
-            createSidebarWidgets();
+        if (layout.isToolbar()) {
+            createToolbarWidgets();
         } else {
-            createHorizontalWidgets();
+            createPanelWidgets();
         }
 
         categoryButtons.get(ScenarioActionLibrary.Category.BLOCKS).active = false;
@@ -58,7 +61,8 @@ final class ScenarioActionLibraryWidgets {
 
     void update(
         boolean visible,
-        ScenarioActionLibrary.Category selectedCategory
+        ScenarioActionLibrary.Category selectedCategory,
+        boolean drawerOpen
     ) {
         for (KarakuriButton widget : widgets) {
             widget.visible = visible;
@@ -71,7 +75,7 @@ final class ScenarioActionLibraryWidgets {
         for (ScenarioActionLibrary.Category category : ScenarioActionLibrary.Category.values()) {
             KarakuriButton button = categoryButtons.get(category);
             button.setStyle(
-                category == selectedCategory
+                drawerOpen && category == selectedCategory
                     ? KarakuriButton.Style.PRIMARY
                     : KarakuriButton.Style.GHOST
             );
@@ -79,51 +83,74 @@ final class ScenarioActionLibraryWidgets {
 
         for (Action action : Action.values()) {
             KarakuriButton button = actionButtons.get(action);
-            button.visible = action.category == selectedCategory;
+            button.visible = drawerOpen && action.category == selectedCategory;
             button.setStyle(KarakuriButton.Style.SECONDARY);
         }
     }
 
-    private void createSidebarWidgets() {
-        int x = layout.contentX();
-        int width = layout.contentWidth();
-        int categoryY = layout.y() + 30;
+    private void createToolbarWidgets() {
+        int categoryX = layout.toolbarCategoryX();
+        int categoryWidth = layout.toolbarCategoryWidth();
 
         for (ScenarioActionLibrary.Category category : ScenarioActionLibrary.Category.values()) {
             createCategoryButton(
                 category,
-                x,
-                categoryY + category.ordinal() * 26,
-                width,
-                category.sidebarLabel,
-                KarakuriButton.TextAlignment.LEFT
+                categoryX
+                    + category.ordinal()
+                    * (
+                        categoryWidth
+                            + ScenarioActionLibraryLayout.BUTTON_GAP
+                    ),
+                layout.y() + 5,
+                categoryWidth,
+                category.toolbarLabel,
+                KarakuriButton.TextAlignment.CENTER
             );
         }
 
-        int actionY = layout.sidebarActionY();
-        int halfWidth = (width - ScenarioActionLibraryLayout.BUTTON_GAP) / 2;
-        int thirdWidth = (width - ScenarioActionLibraryLayout.BUTTON_GAP * 2) / 3;
+        int actionX =
+            layout.contentX()
+                + getToolbarDrawerLabelWidth();
 
-        createActionButton(Action.FORWARD, x, actionY, thirdWidth, "Forward", () -> actions.moveAction().accept(MoveDirection.FORWARD));
-        createActionButton(Action.BACKWARD, x + thirdWidth + ScenarioActionLibraryLayout.BUTTON_GAP, actionY, thirdWidth, "Back", () -> actions.moveAction().accept(MoveDirection.BACKWARD));
-        createActionButton(Action.JUMP, x + (thirdWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 2, actionY, thirdWidth, "Jump", actions.jumpAction());
-        createActionButton(Action.LEFT, x, actionY + 26, halfWidth, "Left", () -> actions.moveAction().accept(MoveDirection.LEFT));
-        createActionButton(Action.RIGHT, x + halfWidth + ScenarioActionLibraryLayout.BUTTON_GAP, actionY + 26, halfWidth, "Right", () -> actions.moveAction().accept(MoveDirection.RIGHT));
-        createActionButton(Action.WAIT, x, actionY, width, "Wait", actions.waitAction());
-        createActionButton(Action.REPEAT, x, actionY + 26, width, "Repeat Group", actions.repeatAction());
-        createActionButton(Action.LEFT_CLICK, x, actionY, halfWidth, "Left Click", () -> actions.mouseAction().accept(MouseAction.LEFT_CLICK));
-        createActionButton(Action.RIGHT_CLICK, x + halfWidth + ScenarioActionLibraryLayout.BUTTON_GAP, actionY, halfWidth, "Right Click", () -> actions.mouseAction().accept(MouseAction.RIGHT_CLICK));
-        createActionButton(Action.CAMERA_LEFT, x, actionY, halfWidth, "Turn Left", () -> actions.cameraAction().accept(CameraDirection.LEFT));
-        createActionButton(Action.CAMERA_RIGHT, x + halfWidth + ScenarioActionLibraryLayout.BUTTON_GAP, actionY, halfWidth, "Turn Right", () -> actions.cameraAction().accept(CameraDirection.RIGHT));
-        createActionButton(Action.CAMERA_UP, x, actionY + 26, halfWidth, "Look Up", () -> actions.cameraAction().accept(CameraDirection.UP));
-        createActionButton(Action.CAMERA_DOWN, x + halfWidth + ScenarioActionLibraryLayout.BUTTON_GAP, actionY + 26, halfWidth, "Look Down", () -> actions.cameraAction().accept(CameraDirection.DOWN));
-        createActionButton(Action.HOTBAR, x, actionY, width, "Select Hotbar Slot", actions.hotbarAction());
+        int actionWidth =
+            layout.x()
+                + layout.width()
+                - ScenarioActionLibraryLayout.PADDING
+                - actionX;
+
+        createActionButtons(
+            actionX,
+            layout.drawerButtonY(),
+            actionWidth
+        );
     }
 
-    private void createHorizontalWidgets() {
+
+    private int getToolbarDrawerLabelWidth() {
+        int labelWidth = 0;
+
+        for (ScenarioActionLibrary.Category category : ScenarioActionLibrary.Category.values()) {
+            labelWidth = Math.max(
+                labelWidth,
+                font.width(
+                    Component.literal(
+                        category.sectionLabel
+                    )
+                )
+            );
+        }
+
+        return labelWidth + 16;
+    }
+
+    private void createPanelWidgets() {
         int x = layout.contentX();
         int width = layout.contentWidth();
-        int categoryWidth = (width - ScenarioActionLibraryLayout.BUTTON_GAP * 2) / 3;
+        int categoryWidth =
+            (
+                width
+                    - ScenarioActionLibraryLayout.BUTTON_GAP * 2
+            ) / 3;
 
         for (ScenarioActionLibrary.Category category : ScenarioActionLibrary.Category.values()) {
             int column = category.ordinal() % 3;
@@ -131,35 +158,65 @@ final class ScenarioActionLibraryWidgets {
 
             createCategoryButton(
                 category,
-                x + column * (categoryWidth + ScenarioActionLibraryLayout.BUTTON_GAP),
-                layout.y() + 28 + row * 26,
+                x
+                    + column
+                    * (
+                        categoryWidth
+                            + ScenarioActionLibraryLayout.BUTTON_GAP
+                    ),
+                layout.y() + 35 + row * 22,
                 categoryWidth,
-                category.horizontalLabel,
+                category.panelLabel,
                 KarakuriButton.TextAlignment.CENTER
             );
         }
 
-        int actionY = layout.y() + 84;
-        int movementWidth = (width - ScenarioActionLibraryLayout.BUTTON_GAP * 4) / 5;
+        createActionButtons(
+            x,
+            layout.actionY(),
+            width
+        );
+    }
 
-        createActionButton(Action.FORWARD, x, actionY, movementWidth, "Forward", () -> actions.moveAction().accept(MoveDirection.FORWARD));
-        createActionButton(Action.BACKWARD, x + movementWidth + ScenarioActionLibraryLayout.BUTTON_GAP, actionY, movementWidth, "Back", () -> actions.moveAction().accept(MoveDirection.BACKWARD));
-        createActionButton(Action.LEFT, x + (movementWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 2, actionY, movementWidth, "Left", () -> actions.moveAction().accept(MoveDirection.LEFT));
-        createActionButton(Action.RIGHT, x + (movementWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 3, actionY, movementWidth, "Right", () -> actions.moveAction().accept(MoveDirection.RIGHT));
-        createActionButton(Action.JUMP, x + (movementWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 4, actionY, movementWidth, "Jump", actions.jumpAction());
-        int halfWidth = (width - ScenarioActionLibraryLayout.BUTTON_GAP) / 2;
-        createActionButton(Action.WAIT, x, actionY, halfWidth, "Wait", actions.waitAction());
-        createActionButton(Action.REPEAT, x + halfWidth + ScenarioActionLibraryLayout.BUTTON_GAP, actionY, halfWidth, "Repeat Group", actions.repeatAction());
+    private void createActionButtons(
+        int x,
+        int y,
+        int width
+    ) {
+        int movementWidth =
+            (
+                width
+                    - ScenarioActionLibraryLayout.BUTTON_GAP * 4
+            ) / 5;
 
-        createActionButton(Action.LEFT_CLICK, x, actionY, halfWidth, "Left Click", () -> actions.mouseAction().accept(MouseAction.LEFT_CLICK));
-        createActionButton(Action.RIGHT_CLICK, x + halfWidth + ScenarioActionLibraryLayout.BUTTON_GAP, actionY, halfWidth, "Right Click", () -> actions.mouseAction().accept(MouseAction.RIGHT_CLICK));
+        createActionButton(Action.FORWARD, x, y, movementWidth, "Forward", () -> actions.moveAction().accept(MoveDirection.FORWARD));
+        createActionButton(Action.BACKWARD, x + movementWidth + ScenarioActionLibraryLayout.BUTTON_GAP, y, movementWidth, "Back", () -> actions.moveAction().accept(MoveDirection.BACKWARD));
+        createActionButton(Action.LEFT, x + (movementWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 2, y, movementWidth, "Left", () -> actions.moveAction().accept(MoveDirection.LEFT));
+        createActionButton(Action.RIGHT, x + (movementWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 3, y, movementWidth, "Right", () -> actions.moveAction().accept(MoveDirection.RIGHT));
+        createActionButton(Action.JUMP, x + (movementWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 4, y, movementWidth, "Jump", actions.jumpAction());
 
-        int cameraWidth = (width - ScenarioActionLibraryLayout.BUTTON_GAP * 3) / 4;
-        createActionButton(Action.CAMERA_LEFT, x, actionY, cameraWidth, "Left", () -> actions.cameraAction().accept(CameraDirection.LEFT));
-        createActionButton(Action.CAMERA_RIGHT, x + cameraWidth + ScenarioActionLibraryLayout.BUTTON_GAP, actionY, cameraWidth, "Right", () -> actions.cameraAction().accept(CameraDirection.RIGHT));
-        createActionButton(Action.CAMERA_UP, x + (cameraWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 2, actionY, cameraWidth, "Up", () -> actions.cameraAction().accept(CameraDirection.UP));
-        createActionButton(Action.CAMERA_DOWN, x + (cameraWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 3, actionY, cameraWidth, "Down", () -> actions.cameraAction().accept(CameraDirection.DOWN));
-        createActionButton(Action.HOTBAR, x, actionY, width, "Select Hotbar Slot", actions.hotbarAction());
+        int halfWidth =
+            (
+                width
+                    - ScenarioActionLibraryLayout.BUTTON_GAP
+            ) / 2;
+
+        createActionButton(Action.WAIT, x, y, halfWidth, "Wait", actions.waitAction());
+        createActionButton(Action.REPEAT, x + halfWidth + ScenarioActionLibraryLayout.BUTTON_GAP, y, halfWidth, "Repeat Group", actions.repeatAction());
+        createActionButton(Action.LEFT_CLICK, x, y, halfWidth, "Left Click", () -> actions.mouseAction().accept(MouseAction.LEFT_CLICK));
+        createActionButton(Action.RIGHT_CLICK, x + halfWidth + ScenarioActionLibraryLayout.BUTTON_GAP, y, halfWidth, "Right Click", () -> actions.mouseAction().accept(MouseAction.RIGHT_CLICK));
+
+        int cameraWidth =
+            (
+                width
+                    - ScenarioActionLibraryLayout.BUTTON_GAP * 3
+            ) / 4;
+
+        createActionButton(Action.CAMERA_LEFT, x, y, cameraWidth, "Left", () -> actions.cameraAction().accept(CameraDirection.LEFT));
+        createActionButton(Action.CAMERA_RIGHT, x + cameraWidth + ScenarioActionLibraryLayout.BUTTON_GAP, y, cameraWidth, "Right", () -> actions.cameraAction().accept(CameraDirection.RIGHT));
+        createActionButton(Action.CAMERA_UP, x + (cameraWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 2, y, cameraWidth, "Up", () -> actions.cameraAction().accept(CameraDirection.UP));
+        createActionButton(Action.CAMERA_DOWN, x + (cameraWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 3, y, cameraWidth, "Down", () -> actions.cameraAction().accept(CameraDirection.DOWN));
+        createActionButton(Action.HOTBAR, x, y, width, "Select Hotbar Slot", actions.hotbarAction());
     }
 
     private void createCategoryButton(
@@ -177,7 +234,15 @@ final class ScenarioActionLibraryWidgets {
 
         categoryButtons.put(
             category,
-            createButton(x, y, width, label, action, alignment)
+            createButton(
+                x,
+                y,
+                width,
+                ScenarioActionLibraryLayout.CATEGORY_HEIGHT,
+                label,
+                action,
+                alignment
+            )
         );
     }
 
@@ -195,8 +260,12 @@ final class ScenarioActionLibraryWidgets {
                 x,
                 y,
                 width,
+                ScenarioActionLibraryLayout.ACTION_HEIGHT,
                 label,
-                callback,
+                () -> {
+                    callback.run();
+                    actionExecuted.run();
+                },
                 KarakuriButton.TextAlignment.CENTER
             )
         );
@@ -206,6 +275,7 @@ final class ScenarioActionLibraryWidgets {
         int x,
         int y,
         int width,
+        int height,
         String label,
         Runnable action,
         KarakuriButton.TextAlignment alignment
@@ -215,7 +285,7 @@ final class ScenarioActionLibraryWidgets {
             x,
             y,
             width,
-            ScenarioActionLibraryLayout.BUTTON_HEIGHT,
+            height,
             Component.literal(label),
             action,
             KarakuriButton.Style.GHOST

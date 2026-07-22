@@ -1,20 +1,21 @@
 package hanamuramiyu.karakuri.ui;
 
+import hanamuramiyu.karakuri.scenario.ScenarioLibrary;
 import hanamuramiyu.karakuri.scenario.model.CameraDirection;
 import hanamuramiyu.karakuri.scenario.model.MouseAction;
 import hanamuramiyu.karakuri.scenario.model.MoveDirection;
 import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.Scenario;
-import hanamuramiyu.karakuri.scenario.ScenarioLibrary;
-import hanamuramiyu.karakuri.task.factory.ScenarioTaskFactory;
 import hanamuramiyu.karakuri.task.TaskManager;
 import hanamuramiyu.karakuri.task.TaskStatus;
+import hanamuramiyu.karakuri.task.factory.ScenarioTaskFactory;
 import hanamuramiyu.karakuri.ui.editor.ScenarioEditorState;
+import hanamuramiyu.karakuri.ui.editor.ScenarioEditorTheme;
+import hanamuramiyu.karakuri.ui.editor.inspector.ScenarioInspector;
+import hanamuramiyu.karakuri.ui.editor.inspector.ScenarioInspectorLayout;
 import hanamuramiyu.karakuri.ui.editor.library.ScenarioActionLibrary;
 import hanamuramiyu.karakuri.ui.editor.library.ScenarioActionLibraryActions;
 import hanamuramiyu.karakuri.ui.editor.library.ScenarioActionLibraryLayout;
-import hanamuramiyu.karakuri.ui.editor.inspector.ScenarioInspector;
-import hanamuramiyu.karakuri.ui.editor.inspector.ScenarioInspectorLayout;
 import hanamuramiyu.karakuri.ui.editor.workflow.ScenarioWorkflowCanvas;
 import hanamuramiyu.karakuri.ui.widget.KarakuriButton;
 import net.minecraft.client.gui.GuiGraphics;
@@ -25,23 +26,33 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 public final class ScenarioEditorScreen extends Screen {
-    private static final int WIDE_MIN_WIDTH = 760;
-    private static final int WIDE_MIN_HEIGHT = 390;
-    private static final int WIDE_MAX_WIDTH = 1440;
-    private static final int WIDE_MAX_HEIGHT = 760;
-    private static final int WIDE_MARGIN = 12;
+    private static final int WIDE_MIN_WIDTH = 900;
+    private static final int WIDE_MIN_HEIGHT = 420;
+    private static final int WIDE_MAX_WIDTH = 1600;
+    private static final int WIDE_MAX_HEIGHT = 900;
+    private static final int WIDE_MARGIN = 8;
     private static final int COMPACT_MARGIN = 4;
-    private static final int CONTENT_MARGIN = 10;
-    private static final int PANEL_GAP = 8;
-    private static final int BUTTON_GAP = 6;
-    private static final int BUTTON_HEIGHT = 22;
+    private static final int CONTENT_MARGIN = 6;
+    private static final int PANEL_GAP = 6;
+    private static final int BUTTON_GAP = 4;
+    private static final int BUTTON_HEIGHT = 20;
+    private static final int WIDE_TOOLBAR_HEIGHT = 42;
+    private static final int COMPACT_TOOLBAR_HEIGHT = 66;
+    private static final int COMPACT_TAB_HEIGHT = 20;
+    private static final int STATUS_HEIGHT = 22;
+    private static final int ACTION_TOOLBAR_HEIGHT = 28;
+    private static final int WIDE_BACK_WIDTH = 72;
+    private static final int COMPACT_BACK_WIDTH = 68;
+    private static final int WIDE_SAVE_WIDTH = 86;
+    private static final int COMPACT_SAVE_WIDTH = 72;
+    private static final int WIDE_WORKFLOW_HEADER_HEIGHT = 28;
+    private static final int COMPACT_WORKFLOW_HEADER_HEIGHT = 50;
 
     private final KarakuriScreen parent;
     private final ScenarioEditorState state;
 
     private LayoutMode layoutMode;
-    private CompactTab compactTab =
-        CompactTab.WORKFLOW;
+    private CompactTab compactTab = CompactTab.WORKFLOW;
 
     private int panelX;
     private int panelY;
@@ -60,8 +71,20 @@ public final class ScenarioEditorScreen extends Screen {
     private int nameFrameY;
     private int nameFrameWidth;
     private int nameFrameHeight;
+    private int modeBadgeX;
+    private int modeBadgeY;
+    private int modeBadgeWidth;
+    private int modeBadgeHeight;
     private int workflowX;
     private int workflowWidth;
+    private int workflowHeaderY;
+    private int workflowHeaderHeight;
+    private int workflowY;
+    private int workflowHeight;
+    private int actionLibraryX;
+    private int actionLibraryY;
+    private int actionLibraryWidth;
+    private int actionLibraryHeight;
 
     private ScenarioActionLibrary actionLibrary;
     private ScenarioWorkflowCanvas workflowCanvas;
@@ -72,13 +95,16 @@ public final class ScenarioEditorScreen extends Screen {
     private KarakuriButton workflowTabButton;
     private KarakuriButton actionsTabButton;
     private KarakuriButton inspectorTabButton;
-
+    private KarakuriButton backButton;
     private KarakuriButton saveButton;
     private KarakuriButton groupBackButton;
+    private KarakuriButton groupActionsButton;
     private KarakuriButton moveOutButton;
     private KarakuriButton openGroupButton;
     private KarakuriButton includePreviousButton;
     private KarakuriButton includeNextButton;
+
+    private boolean groupActionsOpen;
 
     public ScenarioEditorScreen(
         KarakuriScreen parent,
@@ -102,153 +128,91 @@ public final class ScenarioEditorScreen extends Screen {
 
     @Override
     protected void init() {
-        layoutMode =
-            isWideScreen()
-                ? LayoutMode.WIDE
-                : LayoutMode.COMPACT;
+        layoutMode = isWideScreen()
+            ? LayoutMode.WIDE
+            : LayoutMode.COMPACT;
 
-        panelWidth =
-            getResponsivePanelWidth();
+        panelWidth = getResponsivePanelWidth();
+        panelHeight = getResponsivePanelHeight();
+        panelX = (width - panelWidth) / 2;
+        panelY = (height - panelHeight) / 2;
 
-        panelHeight =
-            getResponsivePanelHeight();
-
-        panelX =
-            (width - panelWidth) / 2;
-
-        panelY =
-            (height - panelHeight) / 2;
-
-        if (
-            layoutMode
-                == LayoutMode.WIDE
-        ) {
+        if (layoutMode == LayoutMode.WIDE) {
             initializeWideLayout();
         } else {
             initializeCompactLayout();
         }
 
+        createToolbarWidgets();
         createNameField();
 
-        actionLibrary =
-            new ScenarioActionLibrary(
-                font,
-                new ScenarioActionLibraryLayout(
-                    bodyX,
-                    bodyY,
-                    layoutMode
-                        == LayoutMode.WIDE
-                            ? getWideLibraryWidth()
-                            : bodyWidth,
-                    bodyHeight,
-                    layoutMode
-                        == LayoutMode.WIDE
-                            ? ScenarioActionLibraryLayout.Mode.SIDEBAR
-                            : ScenarioActionLibraryLayout.Mode.HORIZONTAL
-                ),
-                new ScenarioActionLibraryActions(
-                    this::insertMoveStep,
-                    this::insertJumpStep,
-                    this::insertWaitStep,
-                    this::insertRepeatGroup,
-                    this::insertMouseStep,
-                    this::insertCameraStep,
-                    this::insertHotbarStep
-                )
-            );
+        actionLibrary = new ScenarioActionLibrary(
+            font,
+            new ScenarioActionLibraryLayout(
+                actionLibraryX,
+                actionLibraryY,
+                actionLibraryWidth,
+                actionLibraryHeight,
+                layoutMode == LayoutMode.WIDE
+                    ? ScenarioActionLibraryLayout.Mode.TOOLBAR
+                    : ScenarioActionLibraryLayout.Mode.PANEL
+            ),
+            new ScenarioActionLibraryActions(
+                this::insertMoveStep,
+                this::insertJumpStep,
+                this::insertWaitStep,
+                this::insertRepeatGroup,
+                this::insertMouseStep,
+                this::insertCameraStep,
+                this::insertHotbarStep
+            )
+        );
 
-        for (
-            KarakuriButton widget :
-            actionLibrary.widgets()
-        ) {
+        for (KarakuriButton widget : actionLibrary.widgets()) {
             addRenderableWidget(widget);
         }
 
-        int canvasX;
-        int canvasWidth;
-
-        if (
-            layoutMode
-                == LayoutMode.WIDE
-        ) {
-            int libraryWidth =
-                getWideLibraryWidth();
-
-            canvasX =
-                bodyX
-                    + libraryWidth
-                    + PANEL_GAP;
-
-            canvasWidth =
-                bodyWidth
-                    - libraryWidth
-                    - inspectorWidth
-                    - PANEL_GAP * 2;
-        } else {
-            canvasX = bodyX;
-            canvasWidth = bodyWidth;
-        }
-
-        workflowX = canvasX;
-        workflowWidth = canvasWidth;
-
-        workflowCanvas =
-            new ScenarioWorkflowCanvas(
-                font,
-                state.steps(),
-                this::onCanvasSelectionChanged,
-                this::onCanvasContentChanged
-            );
+        workflowCanvas = new ScenarioWorkflowCanvas(
+            font,
+            state.steps(),
+            this::onCanvasSelectionChanged,
+            this::onCanvasContentChanged
+        );
 
         workflowCanvas.setBounds(
-            canvasX,
-            bodyY,
-            canvasWidth,
-            bodyHeight
+            workflowX,
+            workflowY,
+            workflowWidth,
+            workflowHeight
         );
-
-        workflowCanvas.setSelectedIndex(
-            state.selectedIndex()
-        );
+        workflowCanvas.setSelectedIndex(state.selectedIndex());
 
         createGroupNavigationWidgets();
 
-        inspector =
-            new ScenarioInspector(
-                font,
-                state,
-                new ScenarioInspectorLayout(
-                    layoutMode
-                        == LayoutMode.WIDE
-                            ? ScenarioInspectorLayout
-                                .Mode.WIDE
-                            : ScenarioInspectorLayout
-                                .Mode.COMPACT,
-                    inspectorX,
-                    inspectorY,
-                    inspectorWidth,
-                    inspectorHeight
-                ),
-                this::stopRunningTest,
-                this::testSelectedStep,
-                this::duplicateSelectedStep,
-                this::deleteSelectedStep,
-                this::updateButtons
-            );
+        inspector = new ScenarioInspector(
+            font,
+            state,
+            new ScenarioInspectorLayout(
+                layoutMode == LayoutMode.WIDE
+                    ? ScenarioInspectorLayout.Mode.WIDE
+                    : ScenarioInspectorLayout.Mode.COMPACT,
+                inspectorX,
+                inspectorY,
+                inspectorWidth,
+                inspectorHeight
+            ),
+            this::stopRunningTest,
+            this::testSelectedStep,
+            this::duplicateSelectedStep,
+            this::deleteSelectedStep,
+            this::updateButtons
+        );
 
-        for (
-            AbstractWidget widget :
-            inspector.widgets()
-        ) {
+        for (AbstractWidget widget : inspector.widgets()) {
             addRenderableWidget(widget);
         }
 
-        createFooterWidgets();
-
-        if (
-            layoutMode
-                == LayoutMode.COMPACT
-        ) {
+        if (layoutMode == LayoutMode.COMPACT) {
             createCompactTabs();
         }
 
@@ -273,7 +237,7 @@ public final class ScenarioEditorScreen extends Screen {
             0,
             width,
             height,
-            0xD0100E16
+            ScenarioEditorTheme.SCREEN_OVERLAY
         );
 
         graphics.fill(
@@ -281,60 +245,43 @@ public final class ScenarioEditorScreen extends Screen {
             panelY,
             panelX + panelWidth,
             panelY + panelHeight,
-            0xFF181620
+            ScenarioEditorTheme.SHELL
         );
-
         graphics.renderOutline(
             panelX,
             panelY,
             panelWidth,
             panelHeight,
-            0xFF6F5A91
+            ScenarioEditorTheme.OUTLINE_STRONG
         );
 
-        graphics.fill(
-            panelX,
-            panelY,
-            panelX + 4,
-            panelY + panelHeight,
-            0xFF9B79D1
-        );
-
-        renderHeader(graphics);
+        renderToolbar(graphics);
         actionLibrary.render(graphics);
 
         if (isWorkflowVisible()) {
+            renderWorkflowHeader(graphics);
             workflowCanvas.render(
                 graphics,
                 mouseX,
                 mouseY,
                 Component.literal(
-                    state.workflowLabel()
-                        + "  |  "
-                        + (
-                            layoutMode
-                                == LayoutMode.WIDE
-                                    ? "Drag to reorder  |  Scroll to adjust the main value"
-                                    : "Drag to reorder  |  Scroll to adjust value"
-                        )
+                    "Drag to reorder  ·  Scroll a card to adjust its main value"
                 ),
-                0xFF81798E
+                ScenarioEditorTheme.TEXT_MUTED
             );
         }
 
+        actionLibrary.renderDrawer(graphics);
         inspector.render(graphics);
+        renderStatusBar(graphics);
 
-        renderFooter(graphics);
-
-        super.render(
+        super.render(graphics, mouseX, mouseY, delta);
+        inspector.renderCenteredValues(graphics);
+        inspector.renderDropdownOverlay(
             graphics,
             mouseX,
             mouseY,
             delta
-        );
-
-        inspector.renderCenteredValues(
-            graphics
         );
     }
 
@@ -344,11 +291,19 @@ public final class ScenarioEditorScreen extends Screen {
         boolean doubled
     ) {
         if (
-            super.mouseClicked(
-                event,
-                doubled
-            )
+            inspector != null
+                && inspector.mouseClicked(event, doubled)
         ) {
+            return true;
+        }
+
+        if (super.mouseClicked(event, doubled)) {
+            return true;
+        }
+
+        if (groupActionsOpen) {
+            groupActionsOpen = false;
+            updateButtons();
             return true;
         }
 
@@ -356,14 +311,12 @@ public final class ScenarioEditorScreen extends Screen {
             return false;
         }
 
-        boolean handled =
-            workflowCanvas.mouseClicked(event);
+        boolean handled = workflowCanvas.mouseClicked(event);
 
         if (
             handled
                 && doubled
-                && state.selectedStep()
-                    instanceof RepeatStep
+                && state.selectedStep() instanceof RepeatStep
         ) {
             openSelectedGroup();
         }
@@ -379,31 +332,21 @@ public final class ScenarioEditorScreen extends Screen {
     ) {
         if (
             isWorkflowVisible()
-                && workflowCanvas.mouseDragged(
-                    event
-                )
+                && workflowCanvas.mouseDragged(event)
         ) {
             return true;
         }
 
-        return super.mouseDragged(
-            event,
-            offsetX,
-            offsetY
-        );
+        return super.mouseDragged(event, offsetX, offsetY);
     }
 
     @Override
-    public boolean mouseReleased(
-        MouseButtonEvent event
-    ) {
+    public boolean mouseReleased(MouseButtonEvent event) {
         boolean handled =
             isWorkflowVisible()
-                && workflowCanvas
-                    .mouseReleased();
+                && workflowCanvas.mouseReleased();
 
-        return super.mouseReleased(event)
-            || handled;
+        return super.mouseReleased(event) || handled;
     }
 
     @Override
@@ -415,13 +358,12 @@ public final class ScenarioEditorScreen extends Screen {
     ) {
         if (
             isWorkflowVisible()
-                && workflowCanvas
-                    .mouseScrolled(
-                        mouseX,
-                        mouseY,
-                        horizontalAmount,
-                        verticalAmount
-                    )
+                && workflowCanvas.mouseScrolled(
+                    mouseX,
+                    mouseY,
+                    horizontalAmount,
+                    verticalAmount
+                )
         ) {
             return true;
         }
@@ -446,162 +388,162 @@ public final class ScenarioEditorScreen extends Screen {
     }
 
     private void initializeWideLayout() {
-        int headerHeight = 52;
-        int footerHeight = 40;
+        int toolbarHeight = WIDE_TOOLBAR_HEIGHT;
 
-        bodyX =
-            panelX + CONTENT_MARGIN;
-
-        bodyY =
-            panelY + headerHeight;
-
-        bodyWidth =
-            panelWidth
-                - CONTENT_MARGIN * 2;
-
-        footerY =
-            panelY
-                + panelHeight
-                - footerHeight;
-
-        bodyHeight =
-            footerY
-                - bodyY
-                - PANEL_GAP;
+        footerY = panelY + panelHeight - STATUS_HEIGHT;
+        bodyX = panelX + CONTENT_MARGIN;
+        bodyY = panelY + toolbarHeight + CONTENT_MARGIN;
+        bodyWidth = panelWidth - CONTENT_MARGIN * 2;
+        bodyHeight = footerY - bodyY - CONTENT_MARGIN;
 
         inspectorWidth = Math.clamp(
-            bodyWidth * 26 / 100,
-            230,
-            310
+            bodyWidth * 24 / 100,
+            236,
+            292
         );
-
-        inspectorX =
-            bodyX
-                + bodyWidth
-                - inspectorWidth;
-
+        inspectorX = bodyX + bodyWidth - inspectorWidth;
         inspectorY = bodyY;
         inspectorHeight = bodyHeight;
+
+        workflowX = bodyX;
+        workflowWidth =
+            bodyWidth
+                - inspectorWidth
+                - PANEL_GAP;
+
+        actionLibraryX = workflowX;
+        actionLibraryY = bodyY;
+        actionLibraryWidth = workflowWidth;
+        actionLibraryHeight = ACTION_TOOLBAR_HEIGHT;
+
+        workflowHeaderY =
+            actionLibraryY
+                + actionLibraryHeight
+                + PANEL_GAP;
+        workflowHeaderHeight = WIDE_WORKFLOW_HEADER_HEIGHT;
+        workflowY = workflowHeaderY + workflowHeaderHeight;
+        workflowHeight = bodyY + bodyHeight - workflowY;
+
+        modeBadgeX = panelX + 86;
+        modeBadgeY = panelY + 11;
+        modeBadgeWidth = 52;
+        modeBadgeHeight = BUTTON_HEIGHT;
+
+        nameFrameX =
+            modeBadgeX
+                + modeBadgeWidth
+                + 8;
+        nameFrameY = panelY + 9;
+        nameFrameWidth =
+            panelX
+                + panelWidth
+                - 8
+                - WIDE_SAVE_WIDTH
+                - 8
+                - nameFrameX;
+        nameFrameHeight = 24;
     }
 
     private void initializeCompactLayout() {
-        int headerHeight =
-            panelHeight < 240
-                ? 36
-                : 42;
+        int toolbarHeight = COMPACT_TOOLBAR_HEIGHT;
 
-        int tabHeight = 22;
-        int footerHeight = 30;
-
-        int tabY =
-            panelY + headerHeight;
-
-        bodyX =
-            panelX + 6;
-
+        footerY = panelY + panelHeight - STATUS_HEIGHT;
+        bodyX = panelX + CONTENT_MARGIN;
         bodyY =
-            tabY
-                + tabHeight
-                + 4;
-
-        bodyWidth =
-            panelWidth - 12;
-
-        footerY =
             panelY
-                + panelHeight
-                - footerHeight;
-
-        bodyHeight =
-            footerY
-                - bodyY
-                - 4;
+                + toolbarHeight
+                + COMPACT_TAB_HEIGHT
+                + CONTENT_MARGIN;
+        bodyWidth = panelWidth - CONTENT_MARGIN * 2;
+        bodyHeight = footerY - bodyY - CONTENT_MARGIN;
 
         inspectorX = bodyX;
         inspectorY = bodyY;
         inspectorWidth = bodyWidth;
         inspectorHeight = bodyHeight;
+
+        workflowX = bodyX;
+        workflowWidth = bodyWidth;
+        workflowHeaderY = bodyY;
+        workflowHeaderHeight = COMPACT_WORKFLOW_HEADER_HEIGHT;
+        workflowY = workflowHeaderY + workflowHeaderHeight;
+        workflowHeight = bodyY + bodyHeight - workflowY;
+
+        actionLibraryX = bodyX;
+        actionLibraryY = bodyY;
+        actionLibraryWidth = bodyWidth;
+        actionLibraryHeight = bodyHeight;
+
+        modeBadgeX = panelX + 82;
+        modeBadgeY = panelY + 8;
+        modeBadgeWidth = 48;
+        modeBadgeHeight = BUTTON_HEIGHT;
+
+        nameFrameX = panelX + CONTENT_MARGIN;
+        nameFrameY = panelY + 38;
+        nameFrameWidth = panelWidth - CONTENT_MARGIN * 2;
+        nameFrameHeight = 24;
+    }
+
+    private void createToolbarWidgets() {
+        int backWidth = layoutMode == LayoutMode.WIDE
+            ? WIDE_BACK_WIDTH
+            : COMPACT_BACK_WIDTH;
+
+        int saveWidth = layoutMode == LayoutMode.WIDE
+            ? WIDE_SAVE_WIDTH
+            : COMPACT_SAVE_WIDTH;
+
+        backButton = createButton(
+            panelX + 8,
+            modeBadgeY,
+            backWidth,
+            Component.literal("← Back"),
+            this::cancelEditing,
+            KarakuriButton.Style.SECONDARY
+        );
+
+        saveButton = createButton(
+            panelX + panelWidth - saveWidth - 8,
+            modeBadgeY,
+            saveWidth,
+            Component.literal("Save"),
+            this::saveScenario,
+            KarakuriButton.Style.SUCCESS
+        );
+
+        addRenderableWidget(backButton);
+        addRenderableWidget(saveButton);
     }
 
     private void createNameField() {
-        int titleWidth =
-            layoutMode
-                == LayoutMode.WIDE
-                    ? 132
-                    : 104;
-
-        nameFrameX =
-            panelX + titleWidth;
-
-        nameFrameY =
-            panelY
-                + (
-                    layoutMode
-                        == LayoutMode.WIDE
-                            ? 13
-                            : 8
-                );
-
-        nameFrameWidth =
-            panelWidth
-                - titleWidth
-                - CONTENT_MARGIN;
-
-        nameFrameHeight =
-            layoutMode
-                == LayoutMode.WIDE
-                    ? 24
-                    : 22;
-
         nameField = new EditBox(
             font,
             nameFrameX + 7,
-            nameFrameY + 3,
+            nameFrameY + (nameFrameHeight - 16) / 2 + 3,
             nameFrameWidth - 14,
             16,
-            Component.literal(
-                "Scenario name"
-            )
+            Component.literal("Scenario name")
         );
 
         nameField.setBordered(false);
-        nameField.setTextColor(
-            0xFFF4F0F7
-        );
-        nameField.setTextColorUneditable(
-            0xFF81798E
-        );
+        nameField.setTextColor(ScenarioEditorTheme.TEXT);
+        nameField.setTextColorUneditable(ScenarioEditorTheme.TEXT_MUTED);
         nameField.setTextShadow(false);
         nameField.setMaxLength(64);
-
-        nameField.setHint(
-            Component.literal(
-                "Scenario name"
-            )
-        );
-
-        nameField.setValue(
-            state.initialName()
-        );
-
-        nameField.setResponder(
-            value -> updateButtons()
-        );
-
+        nameField.setHint(Component.literal("Scenario name"));
+        nameField.setValue(state.initialName());
+        nameField.setResponder(value -> updateButtons());
         addRenderableWidget(nameField);
     }
 
     private void createCompactTabs() {
-        int tabX =
-            panelX + 6;
-
-        int tabY =
-            bodyY - 26;
-
+        int tabX = panelX + CONTENT_MARGIN;
+        int tabY = bodyY - COMPACT_TAB_HEIGHT - CONTENT_MARGIN;
         int tabWidth =
             (
                 panelWidth
-                    - 12
+                    - CONTENT_MARGIN * 2
                     - BUTTON_GAP * 2
             ) / 3;
 
@@ -610,199 +552,103 @@ public final class ScenarioEditorScreen extends Screen {
             tabY,
             tabWidth,
             Component.literal("Workflow"),
-            () -> setCompactTab(
-                CompactTab.WORKFLOW
-            ),
+            () -> setCompactTab(CompactTab.WORKFLOW),
             KarakuriButton.Style.GHOST
         );
-
         actionsTabButton = createButton(
-            tabX
-                + tabWidth
-                + BUTTON_GAP,
+            tabX + tabWidth + BUTTON_GAP,
             tabY,
             tabWidth,
-            Component.literal("Actions"),
-            () -> setCompactTab(
-                CompactTab.ACTIONS
-            ),
+            Component.literal("Add"),
+            () -> setCompactTab(CompactTab.ACTIONS),
             KarakuriButton.Style.GHOST
         );
-
         inspectorTabButton = createButton(
-            tabX
-                + (
-                    tabWidth
-                        + BUTTON_GAP
-                ) * 2,
+            tabX + (tabWidth + BUTTON_GAP) * 2,
             tabY,
             tabWidth,
-            Component.literal("Inspector"),
-            () -> setCompactTab(
-                CompactTab.INSPECTOR
-            ),
+            Component.literal("Properties"),
+            () -> setCompactTab(CompactTab.INSPECTOR),
             KarakuriButton.Style.GHOST
         );
 
-        addRenderableWidget(
-            workflowTabButton
-        );
-
-        addRenderableWidget(
-            actionsTabButton
-        );
-
-        addRenderableWidget(
-            inspectorTabButton
-        );
+        addRenderableWidget(workflowTabButton);
+        addRenderableWidget(actionsTabButton);
+        addRenderableWidget(inspectorTabButton);
     }
 
     private void createGroupNavigationWidgets() {
-        int availableWidth =
-            workflowWidth
-                - 16
-                - BUTTON_GAP * 2;
-
-        int buttonWidth = Math.max(
-            54,
-            Math.min(
-                94,
-                availableWidth / 3
-            )
-        );
-
-        int buttonX = workflowX + 8;
-        int buttonY = bodyY + 7;
+        int y = layoutMode == LayoutMode.WIDE
+            ? workflowHeaderY + 4
+            : workflowHeaderY + 27;
+        int actionsWidth = 112;
+        int parentWidth = 72;
+        int actionsX = workflowX + workflowWidth - actionsWidth - 6;
+        int parentX = actionsX - parentWidth - BUTTON_GAP;
 
         groupBackButton = createButton(
-            buttonX,
-            buttonY,
-            buttonWidth,
-            Component.literal(
-                layoutMode == LayoutMode.WIDE
-                    ? "Parent Group"
-                    : "Parent"
-            ),
+            parentX,
+            y,
+            parentWidth,
+            Component.literal("Parent"),
             this::exitCurrentGroup,
             KarakuriButton.Style.GHOST
         );
-
-        moveOutButton = createButton(
-            buttonX
-                + buttonWidth
-                + BUTTON_GAP,
-            buttonY,
-            buttonWidth,
-            Component.literal("Move Out"),
-            this::moveSelectedOutOfGroup,
+        groupActionsButton = createButton(
+            actionsX,
+            y,
+            actionsWidth,
+            Component.literal("Group actions ▾"),
+            this::toggleGroupActions,
             KarakuriButton.Style.GHOST
         );
+
+        int menuY = y + BUTTON_HEIGHT + 2;
 
         openGroupButton = createButton(
-            buttonX
-                + (
-                    buttonWidth
-                        + BUTTON_GAP
-                ) * 2,
-            buttonY,
-            buttonWidth,
-            Component.literal(
-                layoutMode == LayoutMode.WIDE
-                    ? "Open Group"
-                    : "Open"
-            ),
+            actionsX,
+            menuY,
+            actionsWidth,
+            Component.literal("Open Group"),
             this::openSelectedGroup,
-            KarakuriButton.Style.PRIMARY
+            KarakuriButton.Style.SECONDARY
         );
-
+        moveOutButton = createButton(
+            actionsX,
+            menuY + BUTTON_HEIGHT,
+            actionsWidth,
+            Component.literal("Move Out"),
+            this::moveSelectedOutOfGroup,
+            KarakuriButton.Style.SECONDARY
+        );
         includePreviousButton = createButton(
-            buttonX,
-            buttonY + 26,
-            buttonWidth,
-            Component.literal(
-                layoutMode == LayoutMode.WIDE
-                    ? "Add Previous"
-                    : "+ Previous"
-            ),
+            actionsX,
+            menuY + BUTTON_HEIGHT * 2,
+            actionsWidth,
+            Component.literal("Include Previous"),
             this::includePreviousStep,
-            KarakuriButton.Style.GHOST
+            KarakuriButton.Style.SECONDARY
         );
-
         includeNextButton = createButton(
-            buttonX
-                + buttonWidth
-                + BUTTON_GAP,
-            buttonY + 26,
-            buttonWidth,
-            Component.literal(
-                layoutMode == LayoutMode.WIDE
-                    ? "Add Next"
-                    : "+ Next"
-            ),
+            actionsX,
+            menuY + BUTTON_HEIGHT * 3,
+            actionsWidth,
+            Component.literal("Include Next"),
             this::includeNextStep,
-            KarakuriButton.Style.GHOST
+            KarakuriButton.Style.SECONDARY
         );
 
         addRenderableWidget(groupBackButton);
-        addRenderableWidget(moveOutButton);
+        addRenderableWidget(groupActionsButton);
         addRenderableWidget(openGroupButton);
+        addRenderableWidget(moveOutButton);
         addRenderableWidget(includePreviousButton);
         addRenderableWidget(includeNextButton);
     }
 
-    private void createFooterWidgets() {
-        int buttonWidth =
-            layoutMode
-                == LayoutMode.WIDE
-                    ? 126
-                    : Math.min(
-                        108,
-                        (
-                            panelWidth
-                                - 24
-                                - BUTTON_GAP
-                        ) / 2
-                    );
-
-        int buttonY =
-            footerY + 4;
-
-        saveButton = createButton(
-            panelX
-                + panelWidth
-                - CONTENT_MARGIN
-                - buttonWidth * 2
-                - BUTTON_GAP,
-            buttonY,
-            buttonWidth,
-            Component.literal(
-                layoutMode
-                    == LayoutMode.WIDE
-                        ? "Save Scenario"
-                        : "Save"
-            ),
-            this::saveScenario,
-            KarakuriButton.Style.SUCCESS
-        );
-
-        KarakuriButton cancelButton =
-            createButton(
-                panelX
-                    + panelWidth
-                    - CONTENT_MARGIN
-                    - buttonWidth,
-                buttonY,
-                buttonWidth,
-                Component.literal(
-                    "Cancel"
-                ),
-                this::cancelEditing,
-                KarakuriButton
-                    .Style.SECONDARY
-            );
-
-        addRenderableWidget(saveButton);
-        addRenderableWidget(cancelButton);
+    private void toggleGroupActions() {
+        groupActionsOpen = !groupActionsOpen;
+        updateButtons();
     }
 
     private KarakuriButton createButton(
@@ -825,88 +671,151 @@ public final class ScenarioEditorScreen extends Screen {
         );
     }
 
-    private void renderHeader(
-        GuiGraphics graphics
-    ) {
-        graphics.drawString(
-            font,
-            title,
-            panelX + 12,
-            panelY
-                + (
-                    layoutMode
-                        == LayoutMode.WIDE
-                            ? 20
-                            : 13
-                ),
-            0xFFF5F1F8,
-            false
+    private void renderToolbar(GuiGraphics graphics) {
+        graphics.fill(
+            panelX,
+            panelY,
+            panelX + panelWidth,
+            panelY + (
+                layoutMode == LayoutMode.WIDE
+                    ? WIDE_TOOLBAR_HEIGHT
+                    : COMPACT_TOOLBAR_HEIGHT
+            ),
+            ScenarioEditorTheme.TOOLBAR
         );
+
+        graphics.fill(
+            panelX,
+            panelY,
+            panelX + 3,
+            panelY + (
+                layoutMode == LayoutMode.WIDE
+                    ? WIDE_TOOLBAR_HEIGHT
+                    : COMPACT_TOOLBAR_HEIGHT
+            ),
+            ScenarioEditorTheme.ACCENT
+        );
+
+        renderModeBadge(graphics);
 
         graphics.fill(
             nameFrameX,
             nameFrameY,
             nameFrameX + nameFrameWidth,
             nameFrameY + nameFrameHeight,
-            0xFF100E16
+            ScenarioEditorTheme.CANVAS
         );
-
         graphics.renderOutline(
             nameFrameX,
             nameFrameY,
             nameFrameWidth,
             nameFrameHeight,
             isScenarioNameValid()
-                ? 0xFF51475E
-                : 0xFFC75B69
+                ? ScenarioEditorTheme.OUTLINE
+                : ScenarioEditorTheme.ERROR
         );
     }
 
-    private void renderFooter(
-        GuiGraphics graphics
-    ) {
+    private void renderModeBadge(GuiGraphics graphics) {
+        graphics.fill(
+            modeBadgeX,
+            modeBadgeY,
+            modeBadgeX + modeBadgeWidth,
+            modeBadgeY + modeBadgeHeight,
+            ScenarioEditorTheme.PANEL_ELEVATED
+        );
+        graphics.renderOutline(
+            modeBadgeX,
+            modeBadgeY,
+            modeBadgeWidth,
+            modeBadgeHeight,
+            ScenarioEditorTheme.OUTLINE_STRONG
+        );
+        graphics.fill(
+            modeBadgeX,
+            modeBadgeY,
+            modeBadgeX + 3,
+            modeBadgeY + modeBadgeHeight,
+            ScenarioEditorTheme.ACCENT
+        );
+
+        Component label = Component.literal(
+            state.scenarioIndex() < 0
+                ? "NEW"
+                : "EDIT"
+        );
+
+        graphics.drawString(
+            font,
+            label,
+            modeBadgeX
+                + (modeBadgeWidth - font.width(label)) / 2
+                + 1,
+            modeBadgeY
+                + (modeBadgeHeight - font.lineHeight) / 2
+                + 1,
+            ScenarioEditorTheme.TEXT_SECONDARY,
+            false
+        );
+    }
+
+    private void renderWorkflowHeader(GuiGraphics graphics) {
+        graphics.fill(
+            workflowX,
+            workflowHeaderY,
+            workflowX + workflowWidth,
+            workflowHeaderY + workflowHeaderHeight,
+            ScenarioEditorTheme.PANEL_ELEVATED
+        );
+        graphics.renderOutline(
+            workflowX,
+            workflowHeaderY,
+            workflowWidth,
+            workflowHeaderHeight,
+            ScenarioEditorTheme.OUTLINE
+        );
+
+        graphics.drawString(
+            font,
+            Component.literal(state.workflowLabel()),
+            workflowX + 8,
+            workflowHeaderY + 10,
+            ScenarioEditorTheme.TEXT_SECONDARY,
+            false
+        );
+    }
+
+    private void renderStatusBar(GuiGraphics graphics) {
+        graphics.fill(
+            panelX,
+            footerY,
+            panelX + panelWidth,
+            panelY + panelHeight,
+            ScenarioEditorTheme.TOOLBAR
+        );
         graphics.fill(
             panelX + CONTENT_MARGIN,
             footerY,
-            panelX
-                + panelWidth
-                - CONTENT_MARGIN,
+            panelX + panelWidth - CONTENT_MARGIN,
             footerY + 1,
-            0xFF332D3A
+            ScenarioEditorTheme.DIVIDER
         );
 
-        int saveX =
-            saveButton.getX();
-
-        if (
-            saveX
-                - (
-                    panelX
-                        + CONTENT_MARGIN
-                )
-                >= 170
-        ) {
-            String validationMessage =
-                getValidationMessage();
-
-            graphics.drawString(
-                font,
-                Component.literal(
-                    validationMessage == null
-                        ? state.isInsideGroup()
-                            ? "Editing "
-                                + state.workflowLabel()
-                            : "Stored as a .karakuri file"
-                        : validationMessage
-                ),
-                panelX + CONTENT_MARGIN,
-                footerY + 11,
+        String validationMessage = getValidationMessage();
+        graphics.drawString(
+            font,
+            Component.literal(
                 validationMessage == null
-                    ? 0xFF81798E
-                    : 0xFFE66777,
-                false
-            );
-        }
+                    ? "Ready  ·  Stored as a .karakuri file"
+                    : validationMessage
+            ),
+            panelX + CONTENT_MARGIN,
+            footerY + 8,
+            validationMessage == null
+                ? ScenarioEditorTheme.TEXT_MUTED
+                : ScenarioEditorTheme.ERROR,
+            false
+        );
     }
 
     private void setCompactTab(
@@ -1019,6 +928,7 @@ public final class ScenarioEditorScreen extends Screen {
     }
 
     private void openSelectedGroup() {
+        groupActionsOpen = false;
         stopRunningTest();
 
         if (state.enterSelectedGroup()) {
@@ -1028,6 +938,7 @@ public final class ScenarioEditorScreen extends Screen {
     }
 
     private void exitCurrentGroup() {
+        groupActionsOpen = false;
         stopRunningTest();
 
         if (state.exitGroup()) {
@@ -1037,6 +948,7 @@ public final class ScenarioEditorScreen extends Screen {
     }
 
     private void moveSelectedOutOfGroup() {
+        groupActionsOpen = false;
         stopRunningTest();
 
         if (state.moveSelectedOutOfGroup()) {
@@ -1046,6 +958,7 @@ public final class ScenarioEditorScreen extends Screen {
     }
 
     private void includePreviousStep() {
+        groupActionsOpen = false;
         stopRunningTest();
 
         if (state.includePreviousStep()) {
@@ -1054,6 +967,7 @@ public final class ScenarioEditorScreen extends Screen {
     }
 
     private void includeNextStep() {
+        groupActionsOpen = false;
         stopRunningTest();
 
         if (state.includeNextStep()) {
@@ -1153,6 +1067,7 @@ public final class ScenarioEditorScreen extends Screen {
                 || inspector == null
                 || saveButton == null
                 || groupBackButton == null
+                || groupActionsButton == null
         ) {
             return;
         }
@@ -1187,25 +1102,35 @@ public final class ScenarioEditorScreen extends Screen {
         boolean idle =
             status == TaskStatus.IDLE;
 
+        boolean groupActionsAvailable =
+            insideGroup || repeatSelected;
+
+        if (!workflowVisible || !groupActionsAvailable) {
+            groupActionsOpen = false;
+        }
+
         groupBackButton.visible =
             workflowVisible && insideGroup;
 
-        moveOutButton.visible =
-            workflowVisible && insideGroup;
+        groupActionsButton.visible =
+            workflowVisible && groupActionsAvailable;
+        groupActionsButton.setStyle(
+            groupActionsOpen
+                ? KarakuriButton.Style.PRIMARY
+                : KarakuriButton.Style.GHOST
+        );
 
         openGroupButton.visible =
-            workflowVisible
-                && repeatSelected;
-
+            groupActionsOpen && repeatSelected;
+        moveOutButton.visible =
+            groupActionsOpen && insideGroup;
         includePreviousButton.visible =
-            workflowVisible
-                && repeatSelected;
-
+            groupActionsOpen && repeatSelected;
         includeNextButton.visible =
-            workflowVisible
-                && repeatSelected;
+            groupActionsOpen && repeatSelected;
 
         groupBackButton.active = idle;
+        groupActionsButton.active = idle;
         moveOutButton.active =
             idle
                 && state.canMoveSelectedOutOfGroup();
@@ -1313,14 +1238,6 @@ public final class ScenarioEditorScreen extends Screen {
                     name,
                     state.scenarioIndex()
                 );
-    }
-
-    private int getWideLibraryWidth() {
-        return Math.clamp(
-            bodyWidth * 18 / 100,
-            150,
-            220
-        );
     }
 
     private boolean isWideScreen() {

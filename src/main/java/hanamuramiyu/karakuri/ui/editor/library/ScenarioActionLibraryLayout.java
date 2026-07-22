@@ -9,8 +9,10 @@ public record ScenarioActionLibraryLayout(
     int height,
     Mode mode
 ) {
-    static final int PADDING = 8;
-    static final int BUTTON_HEIGHT = 22;
+    static final int PADDING = 6;
+    static final int CATEGORY_HEIGHT = 20;
+    static final int ACTION_HEIGHT = 20;
+    static final int DRAWER_HEIGHT = 32;
     static final int BUTTON_GAP = 4;
 
     public ScenarioActionLibraryLayout {
@@ -33,26 +35,46 @@ public record ScenarioActionLibraryLayout(
         return width - PADDING * 2;
     }
 
-    int sidebarActionY() {
-        return Math.min(
-            y + 214,
-            y + height - 74
+    boolean isToolbar() {
+        return mode == Mode.TOOLBAR;
+    }
+
+    int toolbarCategoryX() {
+        return x + 86;
+    }
+
+    int toolbarCategoryWidth() {
+        int availableWidth =
+            x + width
+                - PADDING
+                - toolbarCategoryX();
+
+        return Math.max(
+            42,
+            (
+                availableWidth
+                    - BUTTON_GAP * 5
+            ) / 6
         );
     }
 
-    int sidebarDividerY() {
-        return Math.min(
-            y + 192,
-            y + height - 94
-        );
+    int actionY() {
+        return isToolbar()
+            ? y + height + 34
+            : y + 82;
     }
 
-    boolean isSidebar() {
-        return mode == Mode.SIDEBAR;
+    int drawerY() {
+        return actionY() - 2;
+    }
+
+    int drawerButtonY() {
+        return drawerY()
+            + (DRAWER_HEIGHT - ACTION_HEIGHT) / 2;
     }
 
     public enum Mode {
-        SIDEBAR,
-        HORIZONTAL
+        TOOLBAR,
+        PANEL
     }
 }
