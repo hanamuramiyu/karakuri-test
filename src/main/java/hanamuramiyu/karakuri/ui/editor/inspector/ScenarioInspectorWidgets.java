@@ -220,6 +220,15 @@ final class ScenarioInspectorWidgets {
         return List.copyOf(widgets);
     }
 
+    boolean hasFocusedTextField() {
+        return durationField != null
+            && durationField.isFocused()
+            || countField != null
+                && countField.isFocused()
+            || angleField != null
+                && angleField.isFocused();
+    }
+
     boolean mouseClicked(
         MouseButtonEvent event,
         boolean doubled

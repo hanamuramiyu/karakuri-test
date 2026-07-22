@@ -6,9 +6,11 @@ import hanamuramiyu.karakuri.scenario.model.MouseAction;
 import hanamuramiyu.karakuri.scenario.model.MoveDirection;
 import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.Scenario;
+import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.task.TaskManager;
 import hanamuramiyu.karakuri.task.TaskStatus;
 import hanamuramiyu.karakuri.task.factory.ScenarioTaskFactory;
+import hanamuramiyu.karakuri.ui.editor.ScenarioEditorClipboard;
 import hanamuramiyu.karakuri.ui.editor.ScenarioEditorState;
 import hanamuramiyu.karakuri.ui.editor.ScenarioEditorTheme;
 import hanamuramiyu.karakuri.ui.editor.inspector.ScenarioInspector;
@@ -44,11 +46,14 @@ public final class ScenarioEditorScreen extends Screen {
     private static final int STATUS_HEIGHT = 22;
     private static final int ACTION_TOOLBAR_HEIGHT = 28;
     private static final int WIDE_BACK_WIDTH = 72;
-    private static final int COMPACT_BACK_WIDTH = 68;
+    private static final int COMPACT_BACK_WIDTH = 54;
     private static final int WIDE_SAVE_WIDTH = 86;
-    private static final int COMPACT_SAVE_WIDTH = 72;
+    private static final int COMPACT_SAVE_WIDTH = 54;
     private static final int WIDE_HISTORY_WIDTH = 50;
-    private static final int COMPACT_HISTORY_WIDTH = 42;
+    private static final int COMPACT_HISTORY_WIDTH = 36;
+    private static final int WIDE_CLIPBOARD_WIDTH = 48;
+    private static final int COMPACT_CLIPBOARD_WIDTH = 40;
+    private static final int COMPACT_CLIPBOARD_MENU_WIDTH = 72;
     private static final int WIDE_WORKFLOW_HEADER_HEIGHT = 28;
     private static final int COMPACT_WORKFLOW_HEADER_HEIGHT = 50;
 
@@ -102,6 +107,10 @@ public final class ScenarioEditorScreen extends Screen {
     private KarakuriButton backButton;
     private KarakuriButton undoButton;
     private KarakuriButton redoButton;
+    private KarakuriButton copyButton;
+    private KarakuriButton cutButton;
+    private KarakuriButton pasteButton;
+    private KarakuriButton clipboardMenuButton;
     private KarakuriButton saveButton;
     private KarakuriButton groupBackButton;
     private KarakuriButton groupActionsButton;
@@ -111,6 +120,7 @@ public final class ScenarioEditorScreen extends Screen {
     private KarakuriButton includeNextButton;
 
     private boolean groupActionsOpen;
+    private boolean clipboardMenuOpen;
 
     public ScenarioEditorScreen(
         KarakuriScreen parent,
@@ -134,6 +144,7 @@ public final class ScenarioEditorScreen extends Screen {
 
     @Override
     protected void init() {
+        clipboardMenuOpen = false;
         layoutMode = isWideScreen()
             ? LayoutMode.WIDE
             : LayoutMode.COMPACT;
@@ -149,8 +160,8 @@ public final class ScenarioEditorScreen extends Screen {
             initializeCompactLayout();
         }
 
-        createToolbarWidgets();
         createNameField();
+        createToolbarWidgets();
 
         actionLibrary = new ScenarioActionLibrary(
             font,
@@ -297,6 +308,10 @@ public final class ScenarioEditorScreen extends Screen {
         MouseButtonEvent event,
         boolean doubled
     ) {
+        if (handleClipboardMenuClick(event, doubled)) {
+            return true;
+        }
+
         if (
             inspector != null
                 && inspector.mouseClicked(event, doubled)
@@ -387,7 +402,25 @@ public final class ScenarioEditorScreen extends Screen {
     public boolean keyPressed(
         KeyEvent event
     ) {
-        if (event.hasControlDownWithQuirk()) {
+        if (
+            event.hasControlDownWithQuirk()
+                && !hasFocusedTextField()
+        ) {
+            if (event.key() == GLFW.GLFW_KEY_C) {
+                copySelectedStep();
+                return true;
+            }
+
+            if (event.key() == GLFW.GLFW_KEY_X) {
+                cutSelectedStep();
+                return true;
+            }
+
+            if (event.key() == GLFW.GLFW_KEY_V) {
+                pasteClipboardStep();
+                return true;
+            }
+
             if (event.key() == GLFW.GLFW_KEY_Z) {
                 if (event.hasShiftDown()) {
                     redoEdit();
@@ -470,9 +503,24 @@ public final class ScenarioEditorScreen extends Screen {
                 + WIDE_HISTORY_WIDTH
                 + BUTTON_GAP;
 
-        nameFrameX =
+        int copyX =
             redoX
                 + WIDE_HISTORY_WIDTH
+                + 8;
+
+        int cutX =
+            copyX
+                + WIDE_CLIPBOARD_WIDTH
+                + BUTTON_GAP;
+
+        int pasteX =
+            cutX
+                + WIDE_CLIPBOARD_WIDTH
+                + BUTTON_GAP;
+
+        nameFrameX =
+            pasteX
+                + WIDE_CLIPBOARD_WIDTH
                 + 8;
         nameFrameY = panelY + 9;
         nameFrameWidth =
@@ -515,9 +563,9 @@ public final class ScenarioEditorScreen extends Screen {
         actionLibraryWidth = bodyWidth;
         actionLibraryHeight = bodyHeight;
 
-        modeBadgeX = panelX + 82;
+        modeBadgeX = panelX + 66;
         modeBadgeY = panelY + 8;
-        modeBadgeWidth = 48;
+        modeBadgeWidth = 38;
         modeBadgeHeight = BUTTON_HEIGHT;
 
         nameFrameX = panelX + CONTENT_MARGIN;
@@ -554,6 +602,15 @@ public final class ScenarioEditorScreen extends Screen {
                 + historyWidth
                 + BUTTON_GAP;
 
+        int clipboardX =
+            redoX
+                + historyWidth
+                + (
+                    layoutMode == LayoutMode.WIDE
+                        ? 8
+                        : BUTTON_GAP
+                );
+
         backButton = createButton(
             panelX + 8,
             modeBadgeY,
@@ -581,6 +638,87 @@ public final class ScenarioEditorScreen extends Screen {
             KarakuriButton.Style.GHOST
         );
 
+        if (layoutMode == LayoutMode.WIDE) {
+            copyButton = createButton(
+                clipboardX,
+                modeBadgeY,
+                WIDE_CLIPBOARD_WIDTH,
+                Component.literal("Copy"),
+                this::copySelectedStep,
+                KarakuriButton.Style.GHOST
+            );
+
+            cutButton = createButton(
+                clipboardX
+                    + WIDE_CLIPBOARD_WIDTH
+                    + BUTTON_GAP,
+                modeBadgeY,
+                WIDE_CLIPBOARD_WIDTH,
+                Component.literal("Cut"),
+                this::cutSelectedStep,
+                KarakuriButton.Style.GHOST
+            );
+
+            pasteButton = createButton(
+                clipboardX
+                    + (
+                        WIDE_CLIPBOARD_WIDTH
+                            + BUTTON_GAP
+                    ) * 2,
+                modeBadgeY,
+                WIDE_CLIPBOARD_WIDTH,
+                Component.literal("Paste"),
+                this::pasteClipboardStep,
+                KarakuriButton.Style.GHOST
+            );
+        } else {
+            clipboardMenuButton = createButton(
+                clipboardX,
+                modeBadgeY,
+                COMPACT_CLIPBOARD_WIDTH,
+                Component.literal("Edit"),
+                this::toggleClipboardMenu,
+                KarakuriButton.Style.GHOST
+            );
+
+            int menuX =
+                clipboardX
+                    + COMPACT_CLIPBOARD_WIDTH
+                    - COMPACT_CLIPBOARD_MENU_WIDTH;
+
+            int menuY =
+                modeBadgeY
+                    + BUTTON_HEIGHT
+                    + 2;
+
+            copyButton = createButton(
+                menuX,
+                menuY,
+                COMPACT_CLIPBOARD_MENU_WIDTH,
+                Component.literal("Copy"),
+                this::copySelectedStep,
+                KarakuriButton.Style.SECONDARY
+            );
+
+            cutButton = createButton(
+                menuX,
+                menuY + BUTTON_HEIGHT,
+                COMPACT_CLIPBOARD_MENU_WIDTH,
+                Component.literal("Cut"),
+                this::cutSelectedStep,
+                KarakuriButton.Style.SECONDARY
+            );
+
+            pasteButton = createButton(
+                menuX,
+                menuY + BUTTON_HEIGHT * 2,
+                COMPACT_CLIPBOARD_MENU_WIDTH,
+                Component.literal("Paste"),
+                this::pasteClipboardStep,
+                KarakuriButton.Style.SECONDARY
+            );
+        }
+
         saveButton = createButton(
             panelX + panelWidth - saveWidth - 8,
             modeBadgeY,
@@ -593,6 +731,14 @@ public final class ScenarioEditorScreen extends Screen {
         addRenderableWidget(backButton);
         addRenderableWidget(undoButton);
         addRenderableWidget(redoButton);
+
+        if (clipboardMenuButton != null) {
+            addRenderableWidget(clipboardMenuButton);
+        }
+
+        addRenderableWidget(copyButton);
+        addRenderableWidget(cutButton);
+        addRenderableWidget(pasteButton);
         addRenderableWidget(saveButton);
     }
 
@@ -904,6 +1050,7 @@ public final class ScenarioEditorScreen extends Screen {
     private void setCompactTab(
         CompactTab updatedTab
     ) {
+        clipboardMenuOpen = false;
         compactTab = updatedTab;
         updateButtons();
     }
@@ -1069,6 +1216,49 @@ public final class ScenarioEditorScreen extends Screen {
         syncSelectedStep();
     }
 
+    private void copySelectedStep() {
+        clipboardMenuOpen = false;
+        ScenarioEditorClipboard.copy(
+            state.selectedStep()
+        );
+        updateButtons();
+    }
+
+    private void cutSelectedStep() {
+        clipboardMenuOpen = false;
+
+        if (!state.canRemoveSelectedStep()) {
+            updateButtons();
+            return;
+        }
+
+        stopRunningTest();
+        ScenarioEditorClipboard.copy(
+            state.selectedStep()
+        );
+
+        if (state.deleteSelectedStep()) {
+            syncSelectedStep();
+        }
+    }
+
+    private void pasteClipboardStep() {
+        clipboardMenuOpen = false;
+
+        ScenarioStep step =
+            ScenarioEditorClipboard.createPaste();
+
+        if (step == null) {
+            updateButtons();
+            return;
+        }
+
+        stopRunningTest();
+        state.pasteStep(step);
+        syncSelectedStep();
+        returnToWorkflow();
+    }
+
     private void deleteSelectedStep() {
         stopRunningTest();
 
@@ -1078,6 +1268,7 @@ public final class ScenarioEditorScreen extends Screen {
     }
 
     private void undoEdit() {
+        clipboardMenuOpen = false;
         stopRunningTest();
 
         if (state.undo()) {
@@ -1086,6 +1277,7 @@ public final class ScenarioEditorScreen extends Screen {
     }
 
     private void redoEdit() {
+        clipboardMenuOpen = false;
         stopRunningTest();
 
         if (state.redo()) {
@@ -1180,6 +1372,9 @@ public final class ScenarioEditorScreen extends Screen {
                 || inspector == null
                 || undoButton == null
                 || redoButton == null
+                || copyButton == null
+                || cutButton == null
+                || pasteButton == null
                 || saveButton == null
                 || groupBackButton == null
                 || groupActionsButton == null
@@ -1260,6 +1455,31 @@ public final class ScenarioEditorScreen extends Screen {
         undoButton.active = state.canUndo();
         redoButton.active = state.canRedo();
 
+        boolean compactClipboard =
+            layoutMode == LayoutMode.COMPACT;
+
+        if (clipboardMenuButton != null) {
+            clipboardMenuButton.visible = true;
+            clipboardMenuButton.setStyle(
+                clipboardMenuOpen
+                    ? KarakuriButton.Style.PRIMARY
+                    : KarakuriButton.Style.GHOST
+            );
+        }
+
+        copyButton.visible =
+            !compactClipboard || clipboardMenuOpen;
+        cutButton.visible =
+            !compactClipboard || clipboardMenuOpen;
+        pasteButton.visible =
+            !compactClipboard || clipboardMenuOpen;
+
+        copyButton.active = true;
+        cutButton.active =
+            idle && state.canRemoveSelectedStep();
+        pasteButton.active =
+            idle && ScenarioEditorClipboard.hasContents();
+
         saveButton.active =
             status == TaskStatus.IDLE
                 && getValidationMessage()
@@ -1296,6 +1516,60 @@ public final class ScenarioEditorScreen extends Screen {
                             .Style.GHOST
             );
         }
+    }
+
+    private void toggleClipboardMenu() {
+        clipboardMenuOpen = !clipboardMenuOpen;
+        groupActionsOpen = false;
+        updateButtons();
+    }
+
+    private boolean handleClipboardMenuClick(
+        MouseButtonEvent event,
+        boolean doubled
+    ) {
+        if (
+            layoutMode != LayoutMode.COMPACT
+                || !clipboardMenuOpen
+        ) {
+            return false;
+        }
+
+        if (copyButton.isMouseOver(event.x(), event.y())) {
+            copyButton.onClick(event, doubled);
+            return true;
+        }
+
+        if (cutButton.isMouseOver(event.x(), event.y())) {
+            cutButton.onClick(event, doubled);
+            return true;
+        }
+
+        if (pasteButton.isMouseOver(event.x(), event.y())) {
+            pasteButton.onClick(event, doubled);
+            return true;
+        }
+
+        if (
+            clipboardMenuButton != null
+                && clipboardMenuButton.isMouseOver(
+                    event.x(),
+                    event.y()
+                )
+        ) {
+            return false;
+        }
+
+        clipboardMenuOpen = false;
+        updateButtons();
+        return false;
+    }
+
+    private boolean hasFocusedTextField() {
+        return nameField != null
+            && nameField.isFocused()
+            || inspector != null
+                && inspector.hasFocusedTextField();
     }
 
     private boolean isWorkflowVisible() {

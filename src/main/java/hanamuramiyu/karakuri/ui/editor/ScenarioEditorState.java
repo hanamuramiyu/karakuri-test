@@ -497,11 +497,27 @@ public final class ScenarioEditorState {
     }
 
     public void duplicateSelectedStep() {
-        insertAfterSelected(selectedStep());
+        insertAfterSelected(
+            ScenarioEditorClipboard.copyOf(
+                selectedStep()
+            )
+        );
+    }
+
+    public void pasteStep(
+        ScenarioStep step
+    ) {
+        insertAfterSelected(
+            ScenarioEditorClipboard.copyOf(step)
+        );
+    }
+
+    public boolean canRemoveSelectedStep() {
+        return activeSteps.size() > 1;
     }
 
     public boolean deleteSelectedStep() {
-        if (activeSteps.size() <= 1) {
+        if (!canRemoveSelectedStep()) {
             return false;
         }
 

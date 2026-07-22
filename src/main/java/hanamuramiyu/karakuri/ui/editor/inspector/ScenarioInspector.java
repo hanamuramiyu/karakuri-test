@@ -131,6 +131,10 @@ public final class ScenarioInspector
         return widgets.widgets();
     }
 
+    public boolean hasFocusedTextField() {
+        return widgets.hasFocusedTextField();
+    }
+
     public void setVisible(
         boolean visible
     ) {
@@ -856,7 +860,7 @@ public final class ScenarioInspector
 
         widgets.deleteButton.active =
             status == TaskStatus.IDLE
-                && state.size() > 1;
+                && state.canRemoveSelectedStep();
     }
 
     @Override
