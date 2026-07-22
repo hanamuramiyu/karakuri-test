@@ -9,6 +9,8 @@ import hanamuramiyu.karakuri.scenario.model.JumpStopMode;
 import hanamuramiyu.karakuri.scenario.model.MouseInputMode;
 import hanamuramiyu.karakuri.scenario.model.MouseStep;
 import hanamuramiyu.karakuri.scenario.model.MouseStopMode;
+import hanamuramiyu.karakuri.scenario.model.RepeatMode;
+import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 
 public final class ScenarioStepRules {
@@ -38,7 +40,10 @@ public final class ScenarioStepRules {
     public static boolean usesDuration(
         ScenarioStep step
     ) {
-        if (step instanceof HotbarStep) {
+        if (
+            step instanceof HotbarStep
+                || step instanceof RepeatStep
+        ) {
             return false;
         }
 
@@ -70,6 +75,11 @@ public final class ScenarioStepRules {
                 == JumpMode.REPEAT
                 && jumpStep.stopMode()
                     == JumpStopMode.JUMP_COUNT;
+        }
+
+        if (step instanceof RepeatStep repeatStep) {
+            return repeatStep.mode()
+                == RepeatMode.COUNT;
         }
 
         return step instanceof MouseStep mouseStep

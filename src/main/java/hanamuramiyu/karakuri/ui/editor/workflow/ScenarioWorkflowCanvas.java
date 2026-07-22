@@ -12,7 +12,7 @@ import java.util.function.IntConsumer;
 
 public final class ScenarioWorkflowCanvas {
     private final Font font;
-    private final List<ScenarioStep> steps;
+    private List<ScenarioStep> steps;
     private final ScenarioWorkflowViewport viewport;
     private final ScenarioWorkflowInteraction interaction;
 
@@ -33,6 +33,14 @@ public final class ScenarioWorkflowCanvas {
                 selectionListener,
                 contentListener
             );
+    }
+
+
+    public void setSteps(
+        List<ScenarioStep> steps
+    ) {
+        this.steps = steps;
+        interaction.setSteps(steps);
     }
 
     public void setBounds(

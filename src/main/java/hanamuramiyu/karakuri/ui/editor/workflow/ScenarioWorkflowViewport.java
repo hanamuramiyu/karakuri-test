@@ -9,7 +9,7 @@ final class ScenarioWorkflowViewport {
     private static final int CONTENT_PADDING = 12;
     private static final int VISIBILITY_PADDING = 8;
     private static final int FOOTER_HEIGHT = 16;
-    private static final int MIN_CARD_TOP_PADDING = 5;
+    private static final int MIN_CARD_TOP_PADDING = 60;
     private static final int AUTO_SCROLL_EDGE = 24;
     private static final int AUTO_SCROLL_STEP = 8;
     private static final int SCROLL_STEP = 36;
@@ -33,6 +33,11 @@ final class ScenarioWorkflowViewport {
         this.height = height;
 
         clampScrollOffset(stepCount);
+    }
+
+
+    void resetScroll() {
+        scrollOffset = 0;
     }
 
     int x() {

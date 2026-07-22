@@ -9,6 +9,8 @@ import hanamuramiyu.karakuri.scenario.model.MouseInputMode;
 import hanamuramiyu.karakuri.scenario.model.MouseStep;
 import hanamuramiyu.karakuri.scenario.model.MouseStopMode;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
+import hanamuramiyu.karakuri.scenario.model.RepeatMode;
+import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
 
@@ -66,6 +68,12 @@ final class ScenarioStepValueAdjuster {
                     direction
                 );
 
+            case RepeatStep repeatStep ->
+                adjustRepeatStep(
+                    repeatStep,
+                    direction
+                );
+
             case WaitStep waitStep ->
                 new WaitStep(
                     adjustDuration(
@@ -106,6 +114,23 @@ final class ScenarioStepValueAdjuster {
             adjustDuration(
                 step.durationTicks(),
                 direction
+            )
+        );
+    }
+
+    private static RepeatStep adjustRepeatStep(
+        RepeatStep step,
+        int direction
+    ) {
+        if (step.mode() == RepeatMode.FOREVER) {
+            return step;
+        }
+
+        return step.withRepeatCount(
+            Math.clamp(
+                step.repeatCount() + direction,
+                RepeatStep.MIN_REPEAT_COUNT,
+                RepeatStep.MAX_REPEAT_COUNT
             )
         );
     }

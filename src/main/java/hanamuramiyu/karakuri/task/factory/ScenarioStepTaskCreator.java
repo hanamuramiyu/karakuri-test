@@ -5,6 +5,8 @@ import hanamuramiyu.karakuri.scenario.model.HotbarStep;
 import hanamuramiyu.karakuri.scenario.model.JumpStep;
 import hanamuramiyu.karakuri.scenario.model.MouseStep;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
+import hanamuramiyu.karakuri.scenario.model.RepeatMode;
+import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStepVisitor;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
@@ -15,6 +17,10 @@ import hanamuramiyu.karakuri.task.action.JumpTask;
 import hanamuramiyu.karakuri.task.action.MouseButtonTask;
 import hanamuramiyu.karakuri.task.action.MoveTask;
 import hanamuramiyu.karakuri.task.action.WaitTask;
+import hanamuramiyu.karakuri.task.composite.RepeatTask;
+import hanamuramiyu.karakuri.task.composite.SequenceTask;
+
+import java.util.List;
 
 final class ScenarioStepTaskCreator
     implements ScenarioStepVisitor<ClientTask> {
@@ -61,10 +67,35 @@ final class ScenarioStepTaskCreator
 
     @Override
     public ClientTask visit(
+        RepeatStep step
+    ) {
+        int repeatCount =
+            step.mode() == RepeatMode.FOREVER
+                ? RepeatTask.INFINITE
+                : step.repeatCount();
+
+        return new RepeatTask(
+            () -> createSequence(step.steps()),
+            repeatCount
+        );
+    }
+
+    @Override
+    public ClientTask visit(
         WaitStep step
     ) {
         return new WaitTask(
             step.durationTicks()
+        );
+    }
+
+    private ClientTask createSequence(
+        List<ScenarioStep> steps
+    ) {
+        return new SequenceTask(
+            steps.stream()
+                .map(this::create)
+                .toList()
         );
     }
 }

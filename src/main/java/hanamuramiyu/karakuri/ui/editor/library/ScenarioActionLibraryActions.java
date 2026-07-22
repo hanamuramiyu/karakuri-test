@@ -11,6 +11,7 @@ public record ScenarioActionLibraryActions(
     Consumer<MoveDirection> moveAction,
     Runnable jumpAction,
     Runnable waitAction,
+    Runnable repeatAction,
     Consumer<MouseAction> mouseAction,
     Consumer<CameraDirection> cameraAction,
     Runnable hotbarAction
@@ -19,6 +20,7 @@ public record ScenarioActionLibraryActions(
         Objects.requireNonNull(moveAction, "Move action must not be null");
         Objects.requireNonNull(jumpAction, "Jump action must not be null");
         Objects.requireNonNull(waitAction, "Wait action must not be null");
+        Objects.requireNonNull(repeatAction, "Repeat action must not be null");
         Objects.requireNonNull(mouseAction, "Mouse action must not be null");
         Objects.requireNonNull(cameraAction, "Camera action must not be null");
         Objects.requireNonNull(hotbarAction, "Hotbar action must not be null");

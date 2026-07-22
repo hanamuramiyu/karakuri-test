@@ -9,6 +9,7 @@ import hanamuramiyu.karakuri.scenario.model.MouseInputMode;
 import hanamuramiyu.karakuri.scenario.model.MouseStopMode;
 import hanamuramiyu.karakuri.scenario.model.MoveDirection;
 import hanamuramiyu.karakuri.scenario.model.MoveMode;
+import hanamuramiyu.karakuri.scenario.model.RepeatMode;
 import hanamuramiyu.karakuri.ui.widget.KarakuriButton;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -54,6 +55,8 @@ final class ScenarioInspectorWidgets {
     KarakuriButton jumpDurationStopButton;
     KarakuriButton jumpCountStopButton;
     KarakuriButton jumpManualStopButton;
+    KarakuriButton repeatCountModeButton;
+    KarakuriButton repeatForeverModeButton;
     KarakuriButton cameraLeftButton;
     KarakuriButton cameraRightButton;
     KarakuriButton cameraUpButton;
@@ -173,6 +176,12 @@ final class ScenarioInspectorWidgets {
         );
         addWidget(
             jumpManualStopButton
+        );
+        addWidget(
+            repeatCountModeButton
+        );
+        addWidget(
+            repeatForeverModeButton
         );
 
         addWidget(
@@ -386,6 +395,34 @@ final class ScenarioInspectorWidgets {
                 Component.literal("Repeat"),
                 () -> actions.setJumpMode(
                     JumpMode.REPEAT
+                ),
+                KarakuriButton
+                    .Style.GHOST
+            );
+
+        repeatCountModeButton =
+            createButton(
+                contentX,
+                selectorY,
+                halfWidth,
+                Component.literal("Count"),
+                () -> actions.setRepeatMode(
+                    RepeatMode.COUNT
+                ),
+                KarakuriButton
+                    .Style.GHOST
+            );
+
+        repeatForeverModeButton =
+            createButton(
+                contentX
+                    + halfWidth
+                    + BUTTON_GAP,
+                selectorY,
+                halfWidth,
+                Component.literal("Forever"),
+                () -> actions.setRepeatMode(
+                    RepeatMode.FOREVER
                 ),
                 KarakuriButton
                     .Style.GHOST
@@ -903,6 +940,12 @@ final class ScenarioInspectorWidgets {
                     - BUTTON_GAP * 2
             ) / 3;
 
+        int halfWidth =
+            (
+                contentWidth
+                    - BUTTON_GAP
+            ) / 2;
+
         int firstRowY =
             inspectorY + 42;
 
@@ -1020,6 +1063,34 @@ final class ScenarioInspectorWidgets {
                 Component.literal("Repeat"),
                 () -> actions.setJumpMode(
                     JumpMode.REPEAT
+                ),
+                KarakuriButton
+                    .Style.GHOST
+            );
+
+        repeatCountModeButton =
+            createButton(
+                contentX,
+                firstRowY,
+                halfWidth,
+                Component.literal("Count"),
+                () -> actions.setRepeatMode(
+                    RepeatMode.COUNT
+                ),
+                KarakuriButton
+                    .Style.GHOST
+            );
+
+        repeatForeverModeButton =
+            createButton(
+                contentX
+                    + halfWidth
+                    + BUTTON_GAP,
+                firstRowY,
+                halfWidth,
+                Component.literal("Forever"),
+                () -> actions.setRepeatMode(
+                    RepeatMode.FOREVER
                 ),
                 KarakuriButton
                     .Style.GHOST
@@ -1175,12 +1246,6 @@ final class ScenarioInspectorWidgets {
 
         int secondRowY =
             inspectorY + 68;
-
-        int halfWidth =
-            (
-                contentWidth
-                    - BUTTON_GAP
-            ) / 2;
 
         walkModeButton =
             createButton(
@@ -1678,6 +1743,8 @@ final class ScenarioInspectorWidgets {
         void setJumpMode(JumpMode mode);
 
         void setJumpStopMode(JumpStopMode stopMode);
+
+        void setRepeatMode(RepeatMode mode);
 
         void setCameraDirection(CameraDirection direction);
 

@@ -1,5 +1,9 @@
 package hanamuramiyu.karakuri.scenario.persistence;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import hanamuramiyu.karakuri.scenario.model.CameraDirection;
 import hanamuramiyu.karakuri.scenario.model.CameraMotion;
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
@@ -14,11 +18,13 @@ import hanamuramiyu.karakuri.scenario.model.MouseStopMode;
 import hanamuramiyu.karakuri.scenario.model.MoveDirection;
 import hanamuramiyu.karakuri.scenario.model.MoveMode;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
+import hanamuramiyu.karakuri.scenario.model.RepeatMode;
+import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
+
+import java.util.ArrayList;
+import java.util.List;
 
 final class ScenarioStepJsonCodec {
     ScenarioStep read(
@@ -33,16 +39,13 @@ final class ScenarioStepJsonCodec {
         String type =
             values.requiredString("type");
 
-        int durationTicks =
-            values.requiredInt(
-                "durationTicks"
-            );
-
         return switch (type) {
             case "camera" ->
                 readCameraStep(
                     values,
-                    durationTicks
+                    values.requiredInt(
+                        "durationTicks"
+                    )
                 );
 
             case "hotbar" ->
@@ -51,30 +54,43 @@ final class ScenarioStepJsonCodec {
             case "jump" ->
                 readJumpStep(
                     values,
-                    durationTicks
+                    values.requiredInt(
+                        "durationTicks"
+                    )
                 );
 
             case "move" ->
                 readMoveStep(
                     values,
-                    durationTicks
+                    values.requiredInt(
+                        "durationTicks"
+                    )
                 );
 
             case "mouse" ->
                 readMouseStep(
                     values,
-                    durationTicks
+                    values.requiredInt(
+                        "durationTicks"
+                    )
                 );
+
+            case "repeat" ->
+                readRepeatStep(values);
 
             case "walk_forward" ->
                 new MoveStep(
                     MoveDirection.FORWARD,
-                    durationTicks
+                    values.requiredInt(
+                        "durationTicks"
+                    )
                 );
 
             case "wait" ->
                 new WaitStep(
-                    durationTicks
+                    values.requiredInt(
+                        "durationTicks"
+                    )
                 );
 
             default ->
@@ -110,6 +126,9 @@ final class ScenarioStepJsonCodec {
             case MouseStep mouseStep ->
                 writeMouseStep(mouseStep);
 
+            case RepeatStep repeatStep ->
+                writeRepeatStep(repeatStep);
+
             case WaitStep waitStep ->
                 writeWaitStep(waitStep);
         };
@@ -133,8 +152,7 @@ final class ScenarioStepJsonCodec {
             ),
             values.optionalInt(
                 "angleDegrees",
-                CameraStep
-                    .DEFAULT_ANGLE_DEGREES
+                CameraStep.DEFAULT_ANGLE_DEGREES
             ),
             durationTicks
         );
@@ -171,8 +189,7 @@ final class ScenarioStepJsonCodec {
             durationTicks,
             values.optionalInt(
                 "jumpCount",
-                JumpStep
-                    .DEFAULT_JUMP_COUNT
+                JumpStep.DEFAULT_JUMP_COUNT
             )
         );
     }
@@ -226,14 +243,40 @@ final class ScenarioStepJsonCodec {
             durationTicks,
             values.optionalInt(
                 "clicksPerSecondHalfSteps",
-                MouseStep
-                    .DEFAULT_CPS_HALF_STEPS
+                MouseStep.DEFAULT_CPS_HALF_STEPS
             ),
             values.optionalInt(
                 "clickCount",
-                MouseStep
-                    .DEFAULT_CLICK_COUNT
+                MouseStep.DEFAULT_CLICK_COUNT
             )
+        );
+    }
+
+    private RepeatStep readRepeatStep(
+        JsonObjectReader values
+    ) {
+        JsonArray stepArray =
+            values.requiredArray("steps");
+
+        List<ScenarioStep> steps =
+            new ArrayList<>();
+
+        for (JsonElement stepElement : stepArray) {
+            steps.add(read(stepElement));
+        }
+
+        return new RepeatStep(
+            RepeatMode.fromId(
+                values.optionalString(
+                    "mode",
+                    "count"
+                )
+            ),
+            values.optionalInt(
+                "repeatCount",
+                RepeatStep.DEFAULT_REPEAT_COUNT
+            ),
+            steps
         );
     }
 
@@ -241,7 +284,7 @@ final class ScenarioStepJsonCodec {
         CameraStep step
     ) {
         JsonObject object =
-            createStepObject(
+            createTimedStepObject(
                 "camera",
                 step.durationTicks()
             );
@@ -268,7 +311,7 @@ final class ScenarioStepJsonCodec {
         HotbarStep step
     ) {
         JsonObject object =
-            createStepObject(
+            createTimedStepObject(
                 "hotbar",
                 step.durationTicks()
             );
@@ -285,7 +328,7 @@ final class ScenarioStepJsonCodec {
         JumpStep step
     ) {
         JsonObject object =
-            createStepObject(
+            createTimedStepObject(
                 "jump",
                 step.durationTicks()
             );
@@ -312,7 +355,7 @@ final class ScenarioStepJsonCodec {
         MoveStep step
     ) {
         JsonObject object =
-            createStepObject(
+            createTimedStepObject(
                 "move",
                 step.durationTicks()
             );
@@ -339,7 +382,7 @@ final class ScenarioStepJsonCodec {
         MouseStep step
     ) {
         JsonObject object =
-            createStepObject(
+            createTimedStepObject(
                 "mouse",
                 step.durationTicks()
             );
@@ -372,18 +415,63 @@ final class ScenarioStepJsonCodec {
         return object;
     }
 
+    private JsonObject writeRepeatStep(
+        RepeatStep step
+    ) {
+        JsonObject object =
+            createStepObject("repeat");
+
+        object.addProperty(
+            "mode",
+            step.mode().id()
+        );
+
+        object.addProperty(
+            "repeatCount",
+            step.repeatCount()
+        );
+
+        JsonArray stepArray =
+            new JsonArray();
+
+        for (ScenarioStep child : step.steps()) {
+            stepArray.add(write(child));
+        }
+
+        object.add(
+            "steps",
+            stepArray
+        );
+
+        return object;
+    }
+
     private JsonObject writeWaitStep(
         WaitStep step
     ) {
-        return createStepObject(
+        return createTimedStepObject(
             "wait",
             step.durationTicks()
         );
     }
 
-    private JsonObject createStepObject(
+    private JsonObject createTimedStepObject(
         String type,
         int durationTicks
+    ) {
+        JsonObject object =
+            createStepObject(type);
+
+        object.addProperty(
+            "durationTicks",
+            durationTicks
+        );
+
+        return object;
+    }
+
+    private JsonObject createStepObject(
+        String type
     ) {
         JsonObject object =
             new JsonObject();
@@ -391,11 +479,6 @@ final class ScenarioStepJsonCodec {
         object.addProperty(
             "type",
             type
-        );
-
-        object.addProperty(
-            "durationTicks",
-            durationTicks
         );
 
         return object;

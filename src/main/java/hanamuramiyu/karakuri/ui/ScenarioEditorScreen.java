@@ -3,6 +3,7 @@ package hanamuramiyu.karakuri.ui;
 import hanamuramiyu.karakuri.scenario.model.CameraDirection;
 import hanamuramiyu.karakuri.scenario.model.MouseAction;
 import hanamuramiyu.karakuri.scenario.model.MoveDirection;
+import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.Scenario;
 import hanamuramiyu.karakuri.scenario.ScenarioLibrary;
 import hanamuramiyu.karakuri.task.factory.ScenarioTaskFactory;
@@ -59,6 +60,8 @@ public final class ScenarioEditorScreen extends Screen {
     private int nameFrameY;
     private int nameFrameWidth;
     private int nameFrameHeight;
+    private int workflowX;
+    private int workflowWidth;
 
     private ScenarioActionLibrary actionLibrary;
     private ScenarioWorkflowCanvas workflowCanvas;
@@ -71,6 +74,11 @@ public final class ScenarioEditorScreen extends Screen {
     private KarakuriButton inspectorTabButton;
 
     private KarakuriButton saveButton;
+    private KarakuriButton groupBackButton;
+    private KarakuriButton moveOutButton;
+    private KarakuriButton openGroupButton;
+    private KarakuriButton includePreviousButton;
+    private KarakuriButton includeNextButton;
 
     public ScenarioEditorScreen(
         KarakuriScreen parent,
@@ -142,6 +150,7 @@ public final class ScenarioEditorScreen extends Screen {
                     this::insertMoveStep,
                     this::insertJumpStep,
                     this::insertWaitStep,
+                    this::insertRepeatGroup,
                     this::insertMouseStep,
                     this::insertCameraStep,
                     this::insertHotbarStep
@@ -180,6 +189,9 @@ public final class ScenarioEditorScreen extends Screen {
             canvasWidth = bodyWidth;
         }
 
+        workflowX = canvasX;
+        workflowWidth = canvasWidth;
+
         workflowCanvas =
             new ScenarioWorkflowCanvas(
                 font,
@@ -198,6 +210,8 @@ public final class ScenarioEditorScreen extends Screen {
         workflowCanvas.setSelectedIndex(
             state.selectedIndex()
         );
+
+        createGroupNavigationWidgets();
 
         inspector =
             new ScenarioInspector(
@@ -295,10 +309,14 @@ public final class ScenarioEditorScreen extends Screen {
                 mouseX,
                 mouseY,
                 Component.literal(
-                    layoutMode
-                        == LayoutMode.WIDE
-                            ? "Drag to reorder  |  Scroll to adjust the main value"
-                            : "Drag to reorder  |  Scroll to adjust value"
+                    state.workflowLabel()
+                        + "  |  "
+                        + (
+                            layoutMode
+                                == LayoutMode.WIDE
+                                    ? "Drag to reorder  |  Scroll to adjust the main value"
+                                    : "Drag to reorder  |  Scroll to adjust value"
+                        )
                 ),
                 0xFF81798E
             );
@@ -334,10 +352,23 @@ public final class ScenarioEditorScreen extends Screen {
             return true;
         }
 
-        return isWorkflowVisible()
-            && workflowCanvas.mouseClicked(
-                event
-            );
+        if (!isWorkflowVisible()) {
+            return false;
+        }
+
+        boolean handled =
+            workflowCanvas.mouseClicked(event);
+
+        if (
+            handled
+                && doubled
+                && state.selectedStep()
+                    instanceof RepeatStep
+        ) {
+            openSelectedGroup();
+        }
+
+        return handled;
     }
 
     @Override
@@ -626,6 +657,99 @@ public final class ScenarioEditorScreen extends Screen {
         );
     }
 
+    private void createGroupNavigationWidgets() {
+        int availableWidth =
+            workflowWidth
+                - 16
+                - BUTTON_GAP * 2;
+
+        int buttonWidth = Math.max(
+            54,
+            Math.min(
+                94,
+                availableWidth / 3
+            )
+        );
+
+        int buttonX = workflowX + 8;
+        int buttonY = bodyY + 7;
+
+        groupBackButton = createButton(
+            buttonX,
+            buttonY,
+            buttonWidth,
+            Component.literal(
+                layoutMode == LayoutMode.WIDE
+                    ? "Parent Group"
+                    : "Parent"
+            ),
+            this::exitCurrentGroup,
+            KarakuriButton.Style.GHOST
+        );
+
+        moveOutButton = createButton(
+            buttonX
+                + buttonWidth
+                + BUTTON_GAP,
+            buttonY,
+            buttonWidth,
+            Component.literal("Move Out"),
+            this::moveSelectedOutOfGroup,
+            KarakuriButton.Style.GHOST
+        );
+
+        openGroupButton = createButton(
+            buttonX
+                + (
+                    buttonWidth
+                        + BUTTON_GAP
+                ) * 2,
+            buttonY,
+            buttonWidth,
+            Component.literal(
+                layoutMode == LayoutMode.WIDE
+                    ? "Open Group"
+                    : "Open"
+            ),
+            this::openSelectedGroup,
+            KarakuriButton.Style.PRIMARY
+        );
+
+        includePreviousButton = createButton(
+            buttonX,
+            buttonY + 26,
+            buttonWidth,
+            Component.literal(
+                layoutMode == LayoutMode.WIDE
+                    ? "Add Previous"
+                    : "+ Previous"
+            ),
+            this::includePreviousStep,
+            KarakuriButton.Style.GHOST
+        );
+
+        includeNextButton = createButton(
+            buttonX
+                + buttonWidth
+                + BUTTON_GAP,
+            buttonY + 26,
+            buttonWidth,
+            Component.literal(
+                layoutMode == LayoutMode.WIDE
+                    ? "Add Next"
+                    : "+ Next"
+            ),
+            this::includeNextStep,
+            KarakuriButton.Style.GHOST
+        );
+
+        addRenderableWidget(groupBackButton);
+        addRenderableWidget(moveOutButton);
+        addRenderableWidget(openGroupButton);
+        addRenderableWidget(includePreviousButton);
+        addRenderableWidget(includeNextButton);
+    }
+
     private void createFooterWidgets() {
         int buttonWidth =
             layoutMode
@@ -769,7 +893,10 @@ public final class ScenarioEditorScreen extends Screen {
                 font,
                 Component.literal(
                     validationMessage == null
-                        ? "Stored as a .karakuri file"
+                        ? state.isInsideGroup()
+                            ? "Editing "
+                                + state.workflowLabel()
+                            : "Stored as a .karakuri file"
                         : validationMessage
                 ),
                 panelX + CONTENT_MARGIN,
@@ -803,6 +930,7 @@ public final class ScenarioEditorScreen extends Screen {
         state.select(
             workflowCanvas.getSelectedIndex()
         );
+        state.commitCanvasChanges();
         inspector.syncSelectedStep();
         updateButtons();
     }
@@ -827,6 +955,13 @@ public final class ScenarioEditorScreen extends Screen {
         stopRunningTest();
         state.insertWaitStep();
         syncSelectedStep();
+        returnToWorkflow();
+    }
+
+    private void insertRepeatGroup() {
+        stopRunningTest();
+        state.wrapSelectedInRepeatGroup();
+        openSelectedGroup();
         returnToWorkflow();
     }
 
@@ -855,6 +990,14 @@ public final class ScenarioEditorScreen extends Screen {
         returnToWorkflow();
     }
 
+    private void syncWorkflowLevel() {
+        workflowCanvas.setSteps(
+            state.steps()
+        );
+
+        syncSelectedStep();
+    }
+
     private void syncSelectedStep() {
         workflowCanvas.setSelectedIndex(
             state.selectedIndex()
@@ -872,6 +1015,49 @@ public final class ScenarioEditorScreen extends Screen {
             setCompactTab(
                 CompactTab.WORKFLOW
             );
+        }
+    }
+
+    private void openSelectedGroup() {
+        stopRunningTest();
+
+        if (state.enterSelectedGroup()) {
+            syncWorkflowLevel();
+            returnToWorkflow();
+        }
+    }
+
+    private void exitCurrentGroup() {
+        stopRunningTest();
+
+        if (state.exitGroup()) {
+            syncWorkflowLevel();
+            returnToWorkflow();
+        }
+    }
+
+    private void moveSelectedOutOfGroup() {
+        stopRunningTest();
+
+        if (state.moveSelectedOutOfGroup()) {
+            syncWorkflowLevel();
+            returnToWorkflow();
+        }
+    }
+
+    private void includePreviousStep() {
+        stopRunningTest();
+
+        if (state.includePreviousStep()) {
+            syncSelectedStep();
+        }
+    }
+
+    private void includeNextStep() {
+        stopRunningTest();
+
+        if (state.includeNextStep()) {
+            syncSelectedStep();
         }
     }
 
@@ -895,6 +1081,11 @@ public final class ScenarioEditorScreen extends Screen {
                 != TaskStatus.IDLE
         ) {
             TaskManager.stop(minecraft);
+            updateButtons();
+            return;
+        }
+
+        if (state.selectedGroupHasInfiniteStepBeforeEnd()) {
             updateButtons();
             return;
         }
@@ -961,6 +1152,7 @@ public final class ScenarioEditorScreen extends Screen {
             actionLibrary == null
                 || inspector == null
                 || saveButton == null
+                || groupBackButton == null
         ) {
             return;
         }
@@ -981,6 +1173,49 @@ public final class ScenarioEditorScreen extends Screen {
 
         TaskStatus status =
             TaskManager.getStatus();
+
+        boolean workflowVisible =
+            isWorkflowVisible();
+
+        boolean insideGroup =
+            state.isInsideGroup();
+
+        boolean repeatSelected =
+            state.selectedStep()
+                instanceof RepeatStep;
+
+        boolean idle =
+            status == TaskStatus.IDLE;
+
+        groupBackButton.visible =
+            workflowVisible && insideGroup;
+
+        moveOutButton.visible =
+            workflowVisible && insideGroup;
+
+        openGroupButton.visible =
+            workflowVisible
+                && repeatSelected;
+
+        includePreviousButton.visible =
+            workflowVisible
+                && repeatSelected;
+
+        includeNextButton.visible =
+            workflowVisible
+                && repeatSelected;
+
+        groupBackButton.active = idle;
+        moveOutButton.active =
+            idle
+                && state.canMoveSelectedOutOfGroup();
+        openGroupButton.active = idle;
+        includePreviousButton.active =
+            idle
+                && state.canIncludePreviousStep();
+        includeNextButton.active =
+            idle
+                && state.canIncludeNextStep();
 
         saveButton.active =
             status == TaskStatus.IDLE
@@ -1058,7 +1293,7 @@ public final class ScenarioEditorScreen extends Screen {
         }
 
         if (state.hasInfiniteStepBeforeEnd()) {
-            return "A manual step must be the final block";
+            return "An infinite step must be final in every group";
         }
 
         return null;

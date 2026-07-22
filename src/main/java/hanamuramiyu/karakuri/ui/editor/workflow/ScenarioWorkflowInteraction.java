@@ -9,7 +9,7 @@ import java.util.function.IntConsumer;
 final class ScenarioWorkflowInteraction {
     private static final int DRAG_THRESHOLD = 4;
 
-    private final List<ScenarioStep> steps;
+    private List<ScenarioStep> steps;
     private final ScenarioWorkflowViewport viewport;
     private final IntConsumer selectionListener;
     private final Runnable contentListener;
@@ -31,6 +31,18 @@ final class ScenarioWorkflowInteraction {
         this.viewport = viewport;
         this.selectionListener = selectionListener;
         this.contentListener = contentListener;
+    }
+
+
+    void setSteps(
+        List<ScenarioStep> steps
+    ) {
+        this.steps = steps;
+        selectedIndex = 0;
+        pressedIndex = -1;
+        dragging = false;
+        viewport.resetScroll();
+        ensureSelectedVisible();
     }
 
     void setBounds(

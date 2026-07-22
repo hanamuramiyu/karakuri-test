@@ -14,6 +14,8 @@ import hanamuramiyu.karakuri.scenario.model.MouseStopMode;
 import hanamuramiyu.karakuri.scenario.model.MoveDirection;
 import hanamuramiyu.karakuri.scenario.model.MoveMode;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
+import hanamuramiyu.karakuri.scenario.model.RepeatMode;
+import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.Scenario;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
@@ -32,8 +34,11 @@ public final class ScenarioEditorState {
 
     private final int scenarioIndex;
     private final String initialName;
-    private final List<ScenarioStep> steps;
+    private final List<ScenarioStep> rootSteps;
+    private final List<GroupContext> groupPath =
+        new ArrayList<>();
 
+    private List<ScenarioStep> activeSteps;
     private int selectedIndex;
 
     private ScenarioEditorState(
@@ -43,7 +48,8 @@ public final class ScenarioEditorState {
     ) {
         this.scenarioIndex = scenarioIndex;
         this.initialName = initialName;
-        this.steps = steps;
+        this.rootSteps = steps;
+        this.activeSteps = steps;
     }
 
     public static ScenarioEditorState create(
@@ -81,25 +87,25 @@ public final class ScenarioEditorState {
     }
 
     public List<ScenarioStep> steps() {
-        return steps;
+        return activeSteps;
     }
 
     public int size() {
-        return steps.size();
+        return activeSteps.size();
     }
 
     public int selectedIndex() {
         selectedIndex = Math.clamp(
             selectedIndex,
             0,
-            steps.size() - 1
+            activeSteps.size() - 1
         );
 
         return selectedIndex;
     }
 
     public ScenarioStep selectedStep() {
-        return steps.get(selectedIndex());
+        return activeSteps.get(selectedIndex());
     }
 
     public void select(
@@ -108,8 +114,22 @@ public final class ScenarioEditorState {
         selectedIndex = Math.clamp(
             index,
             0,
-            steps.size() - 1
+            activeSteps.size() - 1
         );
+    }
+
+    public boolean isInsideGroup() {
+        return !groupPath.isEmpty();
+    }
+
+    public int groupDepth() {
+        return groupPath.size();
+    }
+
+    public String workflowLabel() {
+        return isInsideGroup()
+            ? "Group L" + groupDepth()
+            : "Root";
     }
 
     public void insertMoveStep(
@@ -178,24 +198,232 @@ public final class ScenarioEditorState {
         );
     }
 
+    public void wrapSelectedInRepeatGroup() {
+        replaceSelected(
+            new RepeatStep(
+                RepeatMode.COUNT,
+                RepeatStep.DEFAULT_REPEAT_COUNT,
+                List.of(selectedStep())
+            )
+        );
+    }
+
+    public boolean enterSelectedGroup() {
+        if (!(selectedStep() instanceof RepeatStep repeatStep)) {
+            return false;
+        }
+
+        commitHierarchy();
+
+        groupPath.add(
+            new GroupContext(
+                activeSteps,
+                selectedIndex()
+            )
+        );
+
+        activeSteps =
+            new ArrayList<>(
+                repeatStep.steps()
+            );
+
+        selectedIndex = 0;
+        return true;
+    }
+
+    public boolean exitGroup() {
+        if (groupPath.isEmpty()) {
+            return false;
+        }
+
+        commitHierarchy();
+
+        GroupContext context =
+            groupPath.remove(
+                groupPath.size() - 1
+            );
+
+        activeSteps = context.parentSteps();
+        selectedIndex = context.groupIndex();
+        return true;
+    }
+
+    public boolean canMoveSelectedOutOfGroup() {
+        return isInsideGroup();
+    }
+
+    public boolean moveSelectedOutOfGroup() {
+        if (!isInsideGroup()) {
+            return false;
+        }
+
+        ScenarioStep movedStep =
+            activeSteps.remove(selectedIndex());
+
+        GroupContext context =
+            groupPath.remove(
+                groupPath.size() - 1
+            );
+
+        List<ScenarioStep> parentSteps =
+            context.parentSteps();
+
+        int groupIndex =
+            context.groupIndex();
+
+        if (activeSteps.isEmpty()) {
+            parentSteps.set(
+                groupIndex,
+                movedStep
+            );
+
+            activeSteps = parentSteps;
+            selectedIndex = groupIndex;
+        } else {
+            RepeatStep group =
+                (RepeatStep) parentSteps.get(
+                    groupIndex
+                );
+
+            parentSteps.set(
+                groupIndex,
+                group.withSteps(activeSteps)
+            );
+
+            parentSteps.add(
+                groupIndex + 1,
+                movedStep
+            );
+
+            activeSteps = parentSteps;
+            selectedIndex = groupIndex + 1;
+        }
+
+        commitHierarchy();
+        return true;
+    }
+
+    public boolean canIncludePreviousStep() {
+        if (!(selectedStep() instanceof RepeatStep group)) {
+            return false;
+        }
+
+        int index = selectedIndex();
+
+        if (index <= 0) {
+            return false;
+        }
+
+        ScenarioStep candidate =
+            activeSteps.get(index - 1);
+
+        return !candidate.isInfinite()
+            || group.steps().isEmpty();
+    }
+
+    public boolean includePreviousStep() {
+        if (!canIncludePreviousStep()) {
+            return false;
+        }
+
+        int groupIndex = selectedIndex();
+        ScenarioStep candidate =
+            activeSteps.remove(groupIndex - 1);
+
+        groupIndex--;
+
+        RepeatStep group =
+            (RepeatStep) activeSteps.get(
+                groupIndex
+            );
+
+        List<ScenarioStep> children =
+            new ArrayList<>();
+
+        children.add(candidate);
+        children.addAll(group.steps());
+
+        activeSteps.set(
+            groupIndex,
+            group.withSteps(children)
+        );
+
+        selectedIndex = groupIndex;
+        commitHierarchy();
+        return true;
+    }
+
+    public boolean canIncludeNextStep() {
+        if (!(selectedStep() instanceof RepeatStep group)) {
+            return false;
+        }
+
+        int index = selectedIndex();
+
+        if (index >= activeSteps.size() - 1) {
+            return false;
+        }
+
+        return !group.steps()
+            .getLast()
+            .isInfinite();
+    }
+
+    public boolean includeNextStep() {
+        if (!canIncludeNextStep()) {
+            return false;
+        }
+
+        int groupIndex = selectedIndex();
+        RepeatStep group =
+            (RepeatStep) activeSteps.get(
+                groupIndex
+            );
+
+        ScenarioStep candidate =
+            activeSteps.remove(
+                groupIndex + 1
+            );
+
+        List<ScenarioStep> children =
+            new ArrayList<>(
+                group.steps()
+            );
+
+        children.add(candidate);
+
+        activeSteps.set(
+            groupIndex,
+            group.withSteps(children)
+        );
+
+        commitHierarchy();
+        return true;
+    }
+
+    public void commitCanvasChanges() {
+        commitHierarchy();
+    }
+
     public void duplicateSelectedStep() {
         insertAfterSelected(selectedStep());
     }
 
     public boolean deleteSelectedStep() {
-        if (steps.size() <= 1) {
+        if (activeSteps.size() <= 1) {
             return false;
         }
 
-        steps.remove(selectedIndex());
+        activeSteps.remove(selectedIndex());
 
         select(
             Math.min(
                 selectedIndex,
-                steps.size() - 1
+                activeSteps.size() - 1
             )
         );
 
+        commitHierarchy();
         return true;
     }
 
@@ -243,6 +471,16 @@ public final class ScenarioEditorState {
         if (selectedStep() instanceof JumpStep step) {
             replaceSelected(
                 step.withStopMode(stopMode)
+            );
+        }
+    }
+
+    public void setRepeatMode(
+        RepeatMode mode
+    ) {
+        if (selectedStep() instanceof RepeatStep step) {
+            replaceSelected(
+                step.withMode(mode)
             );
         }
     }
@@ -357,6 +595,24 @@ public final class ScenarioEditorState {
         }
 
         if (
+            step instanceof RepeatStep repeatStep
+                && ScenarioStepRules.usesCount(step)
+        ) {
+            replaceSelected(
+                repeatStep.withRepeatCount(
+                    Math.clamp(
+                        repeatStep.repeatCount()
+                            + direction,
+                        RepeatStep.MIN_REPEAT_COUNT,
+                        RepeatStep.MAX_REPEAT_COUNT
+                    )
+                )
+            );
+
+            return;
+        }
+
+        if (
             step instanceof JumpStep jumpStep
                 && ScenarioStepRules.usesCount(step)
         ) {
@@ -432,6 +688,8 @@ public final class ScenarioEditorState {
                     mouseStep.withDurationTicks(
                         durationTicks
                     );
+                case RepeatStep repeatStep ->
+                    repeatStep;
                 case WaitStep waitStep ->
                     new WaitStep(durationTicks);
             }
@@ -451,6 +709,10 @@ public final class ScenarioEditorState {
             replaceSelected(
                 mouseStep.withClickCount(count)
             );
+        } else if (step instanceof RepeatStep repeatStep) {
+            replaceSelected(
+                repeatStep.withRepeatCount(count)
+            );
         }
     }
 
@@ -465,6 +727,69 @@ public final class ScenarioEditorState {
     }
 
     public boolean hasInfiniteStepBeforeEnd() {
+        commitHierarchy();
+        return hasInvalidInfiniteOrder(rootSteps);
+    }
+
+    public boolean selectedGroupHasInfiniteStepBeforeEnd() {
+        return selectedStep() instanceof RepeatStep repeatStep
+            && hasInvalidInfiniteOrder(
+                repeatStep.steps()
+            );
+    }
+
+    public Scenario toScenario(
+        String name
+    ) {
+        commitHierarchy();
+        return new Scenario(name, rootSteps);
+    }
+
+    private void insertAfterSelected(
+        ScenarioStep step
+    ) {
+        int insertIndex = selectedIndex() + 1;
+
+        activeSteps.add(insertIndex, step);
+        selectedIndex = insertIndex;
+        commitHierarchy();
+    }
+
+    private void replaceSelected(
+        ScenarioStep step
+    ) {
+        activeSteps.set(selectedIndex(), step);
+        commitHierarchy();
+    }
+
+    private void commitHierarchy() {
+        List<ScenarioStep> children =
+            activeSteps;
+
+        for (
+            int index = groupPath.size() - 1;
+            index >= 0;
+            index--
+        ) {
+            GroupContext context =
+                groupPath.get(index);
+
+            RepeatStep group =
+                (RepeatStep) context.parentSteps()
+                    .get(context.groupIndex());
+
+            context.parentSteps().set(
+                context.groupIndex(),
+                group.withSteps(children)
+            );
+
+            children = context.parentSteps();
+        }
+    }
+
+    private boolean hasInvalidInfiniteOrder(
+        List<ScenarioStep> steps
+    ) {
         for (
             int index = 0;
             index < steps.size() - 1;
@@ -475,27 +800,23 @@ public final class ScenarioEditorState {
             }
         }
 
+        for (ScenarioStep step : steps) {
+            if (
+                step instanceof RepeatStep repeatStep
+                    && hasInvalidInfiniteOrder(
+                        repeatStep.steps()
+                    )
+            ) {
+                return true;
+            }
+        }
+
         return false;
     }
 
-    public Scenario toScenario(
-        String name
+    private record GroupContext(
+        List<ScenarioStep> parentSteps,
+        int groupIndex
     ) {
-        return new Scenario(name, steps);
-    }
-
-    private void insertAfterSelected(
-        ScenarioStep step
-    ) {
-        int insertIndex = selectedIndex() + 1;
-
-        steps.add(insertIndex, step);
-        selectedIndex = insertIndex;
-    }
-
-    private void replaceSelected(
-        ScenarioStep step
-    ) {
-        steps.set(selectedIndex(), step);
     }
 }

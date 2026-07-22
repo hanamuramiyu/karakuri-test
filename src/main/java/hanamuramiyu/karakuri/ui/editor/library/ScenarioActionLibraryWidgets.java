@@ -110,6 +110,7 @@ final class ScenarioActionLibraryWidgets {
         createActionButton(Action.LEFT, x, actionY + 26, halfWidth, "Left", () -> actions.moveAction().accept(MoveDirection.LEFT));
         createActionButton(Action.RIGHT, x + halfWidth + ScenarioActionLibraryLayout.BUTTON_GAP, actionY + 26, halfWidth, "Right", () -> actions.moveAction().accept(MoveDirection.RIGHT));
         createActionButton(Action.WAIT, x, actionY, width, "Wait", actions.waitAction());
+        createActionButton(Action.REPEAT, x, actionY + 26, width, "Repeat Group", actions.repeatAction());
         createActionButton(Action.LEFT_CLICK, x, actionY, halfWidth, "Left Click", () -> actions.mouseAction().accept(MouseAction.LEFT_CLICK));
         createActionButton(Action.RIGHT_CLICK, x + halfWidth + ScenarioActionLibraryLayout.BUTTON_GAP, actionY, halfWidth, "Right Click", () -> actions.mouseAction().accept(MouseAction.RIGHT_CLICK));
         createActionButton(Action.CAMERA_LEFT, x, actionY, halfWidth, "Turn Left", () -> actions.cameraAction().accept(CameraDirection.LEFT));
@@ -146,9 +147,10 @@ final class ScenarioActionLibraryWidgets {
         createActionButton(Action.LEFT, x + (movementWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 2, actionY, movementWidth, "Left", () -> actions.moveAction().accept(MoveDirection.LEFT));
         createActionButton(Action.RIGHT, x + (movementWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 3, actionY, movementWidth, "Right", () -> actions.moveAction().accept(MoveDirection.RIGHT));
         createActionButton(Action.JUMP, x + (movementWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 4, actionY, movementWidth, "Jump", actions.jumpAction());
-        createActionButton(Action.WAIT, x, actionY, width, "Wait", actions.waitAction());
-
         int halfWidth = (width - ScenarioActionLibraryLayout.BUTTON_GAP) / 2;
+        createActionButton(Action.WAIT, x, actionY, halfWidth, "Wait", actions.waitAction());
+        createActionButton(Action.REPEAT, x + halfWidth + ScenarioActionLibraryLayout.BUTTON_GAP, actionY, halfWidth, "Repeat Group", actions.repeatAction());
+
         createActionButton(Action.LEFT_CLICK, x, actionY, halfWidth, "Left Click", () -> actions.mouseAction().accept(MouseAction.LEFT_CLICK));
         createActionButton(Action.RIGHT_CLICK, x + halfWidth + ScenarioActionLibraryLayout.BUTTON_GAP, actionY, halfWidth, "Right Click", () -> actions.mouseAction().accept(MouseAction.RIGHT_CLICK));
 
@@ -230,6 +232,7 @@ final class ScenarioActionLibraryWidgets {
         RIGHT(ScenarioActionLibrary.Category.MOVEMENT),
         JUMP(ScenarioActionLibrary.Category.MOVEMENT),
         WAIT(ScenarioActionLibrary.Category.TIMING),
+        REPEAT(ScenarioActionLibrary.Category.TIMING),
         LEFT_CLICK(ScenarioActionLibrary.Category.MOUSE),
         RIGHT_CLICK(ScenarioActionLibrary.Category.MOUSE),
         CAMERA_LEFT(ScenarioActionLibrary.Category.CAMERA),

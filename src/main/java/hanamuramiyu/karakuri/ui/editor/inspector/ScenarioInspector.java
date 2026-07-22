@@ -14,6 +14,8 @@ import hanamuramiyu.karakuri.scenario.model.MouseStopMode;
 import hanamuramiyu.karakuri.scenario.model.MoveDirection;
 import hanamuramiyu.karakuri.scenario.model.MoveMode;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
+import hanamuramiyu.karakuri.scenario.model.RepeatMode;
+import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioFormat;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
@@ -160,9 +162,15 @@ public final class ScenarioInspector
             ScenarioStepRules.usesCount(step)
                 && !countFieldValid
         ) {
-            return step instanceof JumpStep
-                ? "Jump count must be between 1 and 100000"
-                : "Click count must be between 1 and 100000";
+            if (step instanceof JumpStep) {
+                return "Jump count must be between 1 and 100000";
+            }
+
+            if (step instanceof RepeatStep) {
+                return "Repeat count must be between 1 and 100000";
+            }
+
+            return "Click count must be between 1 and 100000";
         }
 
         return null;
@@ -443,6 +451,48 @@ public final class ScenarioInspector
                 inspectorX + 10,
                 inspectorY + 216,
                 0xFF81798E,
+                false
+            );
+
+            return;
+        }
+
+        if (
+            step
+                instanceof
+                RepeatStep repeatStep
+        ) {
+            drawInspectorLabel(
+                graphics,
+                "Repeat mode",
+                46
+            );
+
+            if (
+                repeatStep.mode()
+                    == RepeatMode.COUNT
+            ) {
+                drawInspectorLabel(
+                    graphics,
+                    "Repeat count",
+                    150
+                );
+            }
+
+            graphics.drawString(
+                font,
+                Component.literal(
+                    ScenarioStepPresentation.repeatDescription(
+                        repeatStep
+                    )
+                ),
+                inspectorX + 10,
+                inspectorY + 216,
+                repeatStep.isInfinite()
+                    && state.selectedIndex()
+                        < state.size() - 1
+                        ? 0xFFE66777
+                        : 0xFF81798E,
                 false
             );
 
@@ -812,6 +862,14 @@ public final class ScenarioInspector
         syncValueFields();
         refreshEditor();
     }
+    public void setRepeatMode(
+        RepeatMode mode
+    ) {
+        stopRunningTest.run();
+        state.setRepeatMode(mode);
+        syncCountField();
+        refreshEditor();
+    }
     public void setCameraDirection(
         CameraDirection direction
     ) {
@@ -1040,6 +1098,12 @@ public final class ScenarioInspector
                     mouseStep.clickCount()
                 )
             );
+        } else if (step instanceof RepeatStep repeatStep) {
+            widgets.countField.setValue(
+                Integer.toString(
+                    repeatStep.repeatCount()
+                )
+            );
         }
 
         syncingCountField = false;
@@ -1081,6 +1145,11 @@ public final class ScenarioInspector
             step
                 instanceof
                 JumpStep;
+
+        boolean repeat =
+            step
+                instanceof
+                RepeatStep;
 
         boolean camera =
             step
@@ -1187,6 +1256,12 @@ public final class ScenarioInspector
             inspectorVisible
                 && jump
                 && !jumpSingleMode;
+
+        widgets.repeatCountModeButton.visible =
+            inspectorVisible && repeat;
+
+        widgets.repeatForeverModeButton.visible =
+            inspectorVisible && repeat;
 
         widgets.cameraLeftButton.visible =
             inspectorVisible && camera;
@@ -1384,6 +1459,24 @@ public final class ScenarioInspector
         if (
             step
                 instanceof
+                RepeatStep repeatStep
+        ) {
+            updateSelectorButton(
+                widgets.repeatCountModeButton,
+                repeatStep.mode()
+                    == RepeatMode.COUNT
+            );
+
+            updateSelectorButton(
+                widgets.repeatForeverModeButton,
+                repeatStep.mode()
+                    == RepeatMode.FOREVER
+            );
+        }
+
+        if (
+            step
+                instanceof
                 CameraStep cameraStep
         ) {
             updateSelectorButton(
@@ -1517,6 +1610,19 @@ public final class ScenarioInspector
         } else if (
             step
                 instanceof
+                RepeatStep repeatStep
+                && countUsed
+        ) {
+            widgets.primaryDecreaseButton.active =
+                repeatStep.repeatCount()
+                    > RepeatStep.MIN_REPEAT_COUNT;
+
+            widgets.primaryIncreaseButton.active =
+                repeatStep.repeatCount()
+                    < RepeatStep.MAX_REPEAT_COUNT;
+        } else if (
+            step
+                instanceof
                 JumpStep jumpStep
                 && countUsed
         ) {
@@ -1566,10 +1672,15 @@ public final class ScenarioInspector
         widgets.testButton.setMessage(
             Component.literal(
                 status == TaskStatus.IDLE
-                    ? layout.mode()
-                        == ScenarioInspectorLayout.Mode.WIDE
-                            ? "Test Step"
-                            : "Test"
+                    ? step instanceof RepeatStep
+                        ? layout.mode()
+                            == ScenarioInspectorLayout.Mode.WIDE
+                                ? "Test Group"
+                                : "Test"
+                        : layout.mode()
+                            == ScenarioInspectorLayout.Mode.WIDE
+                                ? "Test Step"
+                                : "Test"
                     : layout.mode()
                         == ScenarioInspectorLayout.Mode.WIDE
                             ? "Stop Test"
@@ -1582,6 +1693,10 @@ public final class ScenarioInspector
                 ? KarakuriButton.Style.SUCCESS
                 : KarakuriButton.Style.DANGER
         );
+
+        widgets.testButton.active =
+            status != TaskStatus.IDLE
+                || !state.selectedGroupHasInfiniteStepBeforeEnd();
 
         widgets.duplicateButton.active =
             status == TaskStatus.IDLE;

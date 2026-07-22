@@ -11,5 +11,7 @@ public interface ScenarioStepVisitor<T> {
 
     T visit(MouseStep step);
 
+    T visit(RepeatStep step);
+
     T visit(WaitStep step);
 }

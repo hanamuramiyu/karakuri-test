@@ -10,6 +10,8 @@ import hanamuramiyu.karakuri.scenario.model.MouseInputMode;
 import hanamuramiyu.karakuri.scenario.model.MouseStep;
 import hanamuramiyu.karakuri.scenario.model.MouseStopMode;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
+import hanamuramiyu.karakuri.scenario.model.RepeatMode;
+import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioFormat;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
@@ -45,6 +47,8 @@ public final class ScenarioStepPresentation {
                     case LEFT_CLICK -> 0xFFE66777;
                     case RIGHT_CLICK -> 0xFF67C7E8;
                 };
+            case RepeatStep repeatStep ->
+                0xFFE58AC8;
             case WaitStep waitStep ->
                 0xFFA49BAD;
         };
@@ -96,6 +100,8 @@ public final class ScenarioStepPresentation {
                         ? "Hold "
                             + mouseStep.action().label()
                         : mouseStep.action().label();
+            case RepeatStep repeatStep ->
+                "Repeat Group";
             case WaitStep waitStep ->
                 "Wait";
         };
@@ -115,6 +121,8 @@ public final class ScenarioStepPresentation {
                 "Direction / style / jumping";
             case MouseStep mouseStep ->
                 "Button / input / stop";
+            case RepeatStep repeatStep ->
+                "Mode / count / nested blocks";
             case WaitStep waitStep ->
                 "Timing action";
         };
@@ -149,6 +157,8 @@ public final class ScenarioStepPresentation {
                     case LEFT_CLICK -> "1";
                     case RIGHT_CLICK -> "2";
                 };
+            case RepeatStep repeatStep ->
+                "R";
             case WaitStep waitStep ->
                 "W";
         };
@@ -174,6 +184,8 @@ public final class ScenarioStepPresentation {
                     + moveStep.direction().label();
             case MouseStep mouseStep ->
                 mouseStep.action().label();
+            case RepeatStep repeatStep ->
+                "Repeat Group";
             case WaitStep waitStep ->
                 "Wait";
         };
@@ -207,6 +219,8 @@ public final class ScenarioStepPresentation {
                     );
             case MouseStep mouseStep ->
                 mouseSubtitle(mouseStep);
+            case RepeatStep repeatStep ->
+                repeatSubtitle(repeatStep);
             case WaitStep waitStep ->
                 ScenarioFormat.formatDuration(
                     waitStep.durationTicks()
@@ -307,9 +321,43 @@ public final class ScenarioStepPresentation {
                     : " clicks");
         }
 
+        if (step instanceof RepeatStep repeatStep) {
+            return repeatStep.repeatCount()
+                + (repeatStep.repeatCount() == 1
+                    ? " repeat"
+                    : " repeats");
+        }
+
         throw new IllegalArgumentException(
             "Step does not use a count value"
         );
+    }
+
+
+    public static String repeatDescription(
+        RepeatStep step
+    ) {
+        String blocks =
+            step.steps().size() == 1
+                ? "1 block"
+                : step.steps().size() + " blocks";
+
+        return step.mode() == RepeatMode.FOREVER
+            ? blocks + " · Runs until Stop"
+            : blocks + " · Double-click to open";
+    }
+
+    private static String repeatSubtitle(
+        RepeatStep step
+    ) {
+        String blocks =
+            step.steps().size() == 1
+                ? "1 block"
+                : step.steps().size() + " blocks";
+
+        return step.mode() == RepeatMode.FOREVER
+            ? "Forever · " + blocks
+            : step.repeatCount() + "x · " + blocks;
     }
 
     private static String jumpSubtitle(
