@@ -403,9 +403,27 @@ public final class ScenarioEditorScreen extends Screen {
         KeyEvent event
     ) {
         if (
-            event.hasControlDownWithQuirk()
-                && !hasFocusedTextField()
+            event.key() == GLFW.GLFW_KEY_ESCAPE
+                && closeTransientUi()
         ) {
+            return true;
+        }
+
+        if (hasFocusedTextField()) {
+            return super.keyPressed(event);
+        }
+
+        if (event.hasControlDownWithQuirk()) {
+            if (event.key() == GLFW.GLFW_KEY_S) {
+                saveScenario();
+                return true;
+            }
+
+            if (event.key() == GLFW.GLFW_KEY_D) {
+                duplicateSelectedStep();
+                return true;
+            }
+
             if (event.key() == GLFW.GLFW_KEY_C) {
                 copySelectedStep();
                 return true;
@@ -435,6 +453,36 @@ public final class ScenarioEditorScreen extends Screen {
                 redoEdit();
                 return true;
             }
+        }
+
+        if (minecraft.hasAltDown()) {
+            if (event.key() == GLFW.GLFW_KEY_LEFT) {
+                moveSelectedStep(-1);
+                return true;
+            }
+
+            if (event.key() == GLFW.GLFW_KEY_RIGHT) {
+                moveSelectedStep(1);
+                return true;
+            }
+        }
+
+        if (event.key() == GLFW.GLFW_KEY_DELETE) {
+            deleteSelectedStep();
+            return true;
+        }
+
+        if (
+            event.key() == GLFW.GLFW_KEY_ENTER
+                || event.key() == GLFW.GLFW_KEY_KP_ENTER
+        ) {
+            openSelectedGroup();
+            return true;
+        }
+
+        if (event.key() == GLFW.GLFW_KEY_BACKSPACE) {
+            exitCurrentGroup();
+            return true;
         }
 
         return super.keyPressed(event);
@@ -1211,9 +1259,23 @@ public final class ScenarioEditorScreen extends Screen {
     }
 
     private void duplicateSelectedStep() {
+        closeTransientUi();
         stopRunningTest();
         state.duplicateSelectedStep();
         syncSelectedStep();
+    }
+
+    private void moveSelectedStep(
+        int direction
+    ) {
+        closeTransientUi();
+        stopRunningTest();
+
+        if (state.moveSelectedStep(direction)) {
+            syncSelectedStep();
+        } else {
+            updateButtons();
+        }
     }
 
     private void copySelectedStep() {
@@ -1563,6 +1625,35 @@ public final class ScenarioEditorScreen extends Screen {
         clipboardMenuOpen = false;
         updateButtons();
         return false;
+    }
+
+    private boolean closeTransientUi() {
+        boolean closed = false;
+
+        if (inspector != null) {
+            closed = inspector.closeDropdowns();
+        }
+
+        if (actionLibrary != null) {
+            closed = actionLibrary.closeDrawerIfOpen()
+                || closed;
+        }
+
+        if (groupActionsOpen) {
+            groupActionsOpen = false;
+            closed = true;
+        }
+
+        if (clipboardMenuOpen) {
+            clipboardMenuOpen = false;
+            closed = true;
+        }
+
+        if (closed) {
+            updateButtons();
+        }
+
+        return closed;
     }
 
     private boolean hasFocusedTextField() {

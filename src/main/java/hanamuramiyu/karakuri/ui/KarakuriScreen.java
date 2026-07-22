@@ -39,6 +39,7 @@ public final class KarakuriScreen extends Screen {
     private KarakuriButton nextButton;
     private KarakuriButton reloadButton;
     private KarakuriButton newButton;
+    private KarakuriButton duplicateButton;
     private KarakuriButton editButton;
     private KarakuriButton deleteButton;
     private KarakuriButton modeButton;
@@ -239,7 +240,7 @@ public final class KarakuriScreen extends Screen {
         boolean hasScenario
     ) {
         int buttonWidth = hasScenario
-            ? (contentWidth - BUTTON_GAP * 2) / 3
+            ? (contentWidth - BUTTON_GAP * 3) / 4
             : contentWidth;
 
         newButton = addRenderableWidget(
@@ -253,9 +254,20 @@ public final class KarakuriScreen extends Screen {
             )
         );
 
-        editButton = addRenderableWidget(
+        duplicateButton = addRenderableWidget(
             createButton(
                 contentX + buttonWidth + BUTTON_GAP,
+                managementY,
+                buttonWidth,
+                compactLayout ? "Copy" : "Duplicate",
+                this::duplicateSelectedScenario,
+                KarakuriButton.Style.SECONDARY
+            )
+        );
+
+        editButton = addRenderableWidget(
+            createButton(
+                contentX + (buttonWidth + BUTTON_GAP) * 2,
                 managementY,
                 buttonWidth,
                 compactLayout ? "Edit" : "Edit Scenario",
@@ -266,7 +278,7 @@ public final class KarakuriScreen extends Screen {
 
         deleteButton = addRenderableWidget(
             createButton(
-                contentX + (buttonWidth + BUTTON_GAP) * 2,
+                contentX + (buttonWidth + BUTTON_GAP) * 3,
                 managementY,
                 buttonWidth,
                 compactLayout ? "Delete" : "Delete Scenario",
@@ -425,6 +437,22 @@ public final class KarakuriScreen extends Screen {
         minecraft.setScreen(new ScenarioEditorScreen(this, -1, null));
     }
 
+    private void duplicateSelectedScenario() {
+        if (
+            TaskManager.getStatus()
+                != TaskStatus.IDLE
+        ) {
+            return;
+        }
+
+        String duplicateName =
+            state.duplicateSelectedScenario();
+
+        if (duplicateName != null) {
+            updateButtons();
+        }
+    }
+
     private void openSelectedEditor() {
         Scenario scenario = state.selectedScenario();
         if (scenario == null) {
@@ -466,6 +494,7 @@ public final class KarakuriScreen extends Screen {
                 || nextButton == null
                 || reloadButton == null
                 || newButton == null
+                || duplicateButton == null
                 || editButton == null
                 || deleteButton == null
                 || modeButton == null
@@ -486,6 +515,8 @@ public final class KarakuriScreen extends Screen {
         nextButton.active = idle && state.hasMultipleScenarios();
         reloadButton.active = idle;
         newButton.active = idle;
+        duplicateButton.visible = hasScenario;
+        duplicateButton.active = idle && hasScenario;
         editButton.visible = hasScenario;
         deleteButton.visible = hasScenario;
         editButton.active = idle && hasScenario;

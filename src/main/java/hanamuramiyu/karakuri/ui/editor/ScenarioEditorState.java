@@ -512,6 +512,46 @@ public final class ScenarioEditorState {
         );
     }
 
+    public boolean canMoveSelectedStep(
+        int direction
+    ) {
+        if (direction == 0) {
+            return false;
+        }
+
+        int targetIndex =
+            selectedIndex()
+                + Integer.signum(direction);
+
+        return targetIndex >= 0
+            && targetIndex < activeSteps.size();
+    }
+
+    public boolean moveSelectedStep(
+        int direction
+    ) {
+        if (!canMoveSelectedStep(direction)) {
+            return false;
+        }
+
+        ScenarioEditorHistory.Snapshot before =
+            beginMutation();
+
+        int sourceIndex = selectedIndex();
+        int targetIndex =
+            sourceIndex
+                + Integer.signum(direction);
+
+        ScenarioStep step =
+            activeSteps.remove(sourceIndex);
+
+        activeSteps.add(targetIndex, step);
+        selectedIndex = targetIndex;
+
+        finishMutation(before);
+        return true;
+    }
+
     public boolean canRemoveSelectedStep() {
         return activeSteps.size() > 1;
     }

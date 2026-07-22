@@ -7,6 +7,8 @@ import hanamuramiyu.karakuri.task.composite.RepeatTask;
 import java.util.List;
 
 public final class KarakuriScreenState {
+    private static final int MAX_SCENARIO_NAME_LENGTH = 64;
+
     private List<Scenario> scenarios;
     private int selectedScenarioIndex;
     private ExecutionMode executionMode = ExecutionMode.ONCE;
@@ -66,6 +68,27 @@ public final class KarakuriScreenState {
         executionMode = executionMode.next();
     }
 
+    public String duplicateSelectedScenario() {
+        Scenario source = selectedScenario();
+
+        if (source == null) {
+            return null;
+        }
+
+        String duplicateName =
+            createDuplicateName(source.name());
+
+        ScenarioLibrary.add(
+            new Scenario(
+                duplicateName,
+                source.steps()
+            )
+        );
+
+        refreshSelected(duplicateName);
+        return duplicateName;
+    }
+
     public void reload() {
         Scenario selectedScenario = selectedScenario();
         String selectedName = selectedScenario == null
@@ -94,6 +117,42 @@ public final class KarakuriScreenState {
             deletedIndex,
             scenarios.size() - 1
         );
+    }
+
+    private String createDuplicateName(
+        String sourceName
+    ) {
+        int copyNumber = 1;
+
+        while (true) {
+            String suffix = copyNumber == 1
+                ? " Copy"
+                : " Copy " + copyNumber;
+
+            int maximumBaseLength =
+                MAX_SCENARIO_NAME_LENGTH
+                    - suffix.length();
+
+            String baseName = sourceName.length()
+                <= maximumBaseLength
+                    ? sourceName
+                    : sourceName
+                        .substring(0, maximumBaseLength)
+                        .stripTrailing();
+
+            String candidate = baseName + suffix;
+
+            if (
+                !ScenarioLibrary.containsName(
+                    candidate,
+                    -1
+                )
+            ) {
+                return candidate;
+            }
+
+            copyNumber++;
+        }
     }
 
     private int findScenarioIndex(String scenarioName) {

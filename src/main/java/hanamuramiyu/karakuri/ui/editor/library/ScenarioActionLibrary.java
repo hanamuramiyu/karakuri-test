@@ -45,6 +45,16 @@ public final class ScenarioActionLibrary {
         updateWidgets();
     }
 
+    public boolean closeDrawerIfOpen() {
+        if (!drawerOpen) {
+            return false;
+        }
+
+        drawerOpen = false;
+        updateWidgets();
+        return true;
+    }
+
     public void render(GuiGraphics graphics) {
         if (!visible) {
             return;

@@ -239,10 +239,14 @@ final class ScenarioInspectorWidgets {
             && expanded.mouseClicked(event, doubled);
     }
 
-    void collapseDropdowns() {
+    boolean collapseDropdowns() {
+        boolean collapsed = expandedDropdown() != null;
+
         for (KarakuriDropdown<?> dropdown : dropdowns) {
             dropdown.collapse();
         }
+
+        return collapsed;
     }
 
     void renderDropdownOverlay(

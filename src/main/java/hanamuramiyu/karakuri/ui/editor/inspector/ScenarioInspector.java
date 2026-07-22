@@ -135,6 +135,10 @@ public final class ScenarioInspector
         return widgets.hasFocusedTextField();
     }
 
+    public boolean closeDropdowns() {
+        return widgets.collapseDropdowns();
+    }
+
     public void setVisible(
         boolean visible
     ) {
