@@ -1,5 +1,6 @@
-package hanamuramiyu.karakuri.task;
+package hanamuramiyu.karakuri.task.action;
 
+import hanamuramiyu.karakuri.task.ClientTask;
 import net.minecraft.client.Minecraft;
 
 public final class WaitTask implements ClientTask {

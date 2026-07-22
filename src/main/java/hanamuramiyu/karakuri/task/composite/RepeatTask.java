@@ -1,5 +1,6 @@
-package hanamuramiyu.karakuri.task;
+package hanamuramiyu.karakuri.task.composite;
 
+import hanamuramiyu.karakuri.task.ClientTask;
 import net.minecraft.client.Minecraft;
 
 import java.util.function.Supplier;

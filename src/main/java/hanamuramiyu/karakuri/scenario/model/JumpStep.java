@@ -72,6 +72,13 @@ public record JumpStep(
         };
     }
 
+    @Override
+    public <T> T accept(
+        ScenarioStepVisitor<T> visitor
+    ) {
+        return visitor.visit(this);
+    }
+
     public JumpStep withMode(JumpMode updatedMode) {
         JumpStopMode updatedStopMode = stopMode;
 

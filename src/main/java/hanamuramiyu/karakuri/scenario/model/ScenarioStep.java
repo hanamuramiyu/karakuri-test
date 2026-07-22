@@ -11,6 +11,8 @@ public sealed interface ScenarioStep permits
 
     String label();
 
+    <T> T accept(ScenarioStepVisitor<T> visitor);
+
     default boolean isInfinite() {
         return false;
     }

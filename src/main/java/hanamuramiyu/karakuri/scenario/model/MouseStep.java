@@ -106,6 +106,13 @@ public record MouseStep(
         };
     }
 
+    @Override
+    public <T> T accept(
+        ScenarioStepVisitor<T> visitor
+    ) {
+        return visitor.visit(this);
+    }
+
     public double clicksPerSecond() {
         return clicksPerSecondHalfSteps / 2.0;
     }

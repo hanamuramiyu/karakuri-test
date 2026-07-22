@@ -23,6 +23,13 @@ public record HotbarStep(int slot) implements ScenarioStep {
         return "Select hotbar slot " + (slot + 1);
     }
 
+    @Override
+    public <T> T accept(
+        ScenarioStepVisitor<T> visitor
+    ) {
+        return visitor.visit(this);
+    }
+
     public HotbarStep withSlot(int updatedSlot) {
         return new HotbarStep(updatedSlot);
     }

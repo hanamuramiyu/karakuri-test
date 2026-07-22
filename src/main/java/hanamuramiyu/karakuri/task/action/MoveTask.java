@@ -1,7 +1,8 @@
-package hanamuramiyu.karakuri.task;
+package hanamuramiyu.karakuri.task.action;
 
 import hanamuramiyu.karakuri.scenario.model.MoveMode;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
+import hanamuramiyu.karakuri.task.ClientTask;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 

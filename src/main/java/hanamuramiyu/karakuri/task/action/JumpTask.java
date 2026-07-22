@@ -1,7 +1,8 @@
-package hanamuramiyu.karakuri.task;
+package hanamuramiyu.karakuri.task.action;
 
 import hanamuramiyu.karakuri.scenario.model.JumpStep;
 import hanamuramiyu.karakuri.scenario.model.JumpStopMode;
+import hanamuramiyu.karakuri.task.ClientTask;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 

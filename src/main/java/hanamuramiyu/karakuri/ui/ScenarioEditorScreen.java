@@ -5,7 +5,7 @@ import hanamuramiyu.karakuri.scenario.model.MouseAction;
 import hanamuramiyu.karakuri.scenario.model.MoveDirection;
 import hanamuramiyu.karakuri.scenario.model.Scenario;
 import hanamuramiyu.karakuri.scenario.ScenarioLibrary;
-import hanamuramiyu.karakuri.scenario.ScenarioTaskFactory;
+import hanamuramiyu.karakuri.task.factory.ScenarioTaskFactory;
 import hanamuramiyu.karakuri.task.TaskManager;
 import hanamuramiyu.karakuri.task.TaskStatus;
 import hanamuramiyu.karakuri.ui.editor.ScenarioEditorState;

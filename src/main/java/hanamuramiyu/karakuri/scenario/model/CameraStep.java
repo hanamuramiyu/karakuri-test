@@ -54,6 +54,13 @@ public record CameraStep(
             + ScenarioFormat.formatDuration(durationTicks);
     }
 
+    @Override
+    public <T> T accept(
+        ScenarioStepVisitor<T> visitor
+    ) {
+        return visitor.visit(this);
+    }
+
     public CameraStep withDirection(CameraDirection updatedDirection) {
         return new CameraStep(
             updatedDirection,

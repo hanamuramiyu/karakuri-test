@@ -1,8 +1,9 @@
-package hanamuramiyu.karakuri.task;
+package hanamuramiyu.karakuri.task.action;
 
 import hanamuramiyu.karakuri.scenario.model.MouseInputMode;
 import hanamuramiyu.karakuri.scenario.model.MouseStep;
 import hanamuramiyu.karakuri.scenario.model.MouseStopMode;
+import hanamuramiyu.karakuri.task.ClientTask;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 

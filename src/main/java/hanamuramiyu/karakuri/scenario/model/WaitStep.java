@@ -10,4 +10,11 @@ public record WaitStep(int durationTicks) implements ScenarioStep {
         return "Wait for "
             + ScenarioFormat.formatDuration(durationTicks);
     }
+
+    @Override
+    public <T> T accept(
+        ScenarioStepVisitor<T> visitor
+    ) {
+        return visitor.visit(this);
+    }
 }

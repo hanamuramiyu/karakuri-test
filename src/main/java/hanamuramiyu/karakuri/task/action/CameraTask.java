@@ -1,7 +1,8 @@
-package hanamuramiyu.karakuri.task;
+package hanamuramiyu.karakuri.task.action;
 
 import hanamuramiyu.karakuri.scenario.model.CameraMotion;
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
+import hanamuramiyu.karakuri.task.ClientTask;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 

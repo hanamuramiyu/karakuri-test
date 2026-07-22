@@ -51,6 +51,13 @@ public record MoveStep(
             + ScenarioFormat.formatDuration(durationTicks);
     }
 
+    @Override
+    public <T> T accept(
+        ScenarioStepVisitor<T> visitor
+    ) {
+        return visitor.visit(this);
+    }
+
     public MoveStep withDirection(MoveDirection updatedDirection) {
         return new MoveStep(
             updatedDirection,
