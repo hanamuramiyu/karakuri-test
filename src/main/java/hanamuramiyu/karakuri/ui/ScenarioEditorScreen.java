@@ -11,6 +11,7 @@ import hanamuramiyu.karakuri.task.TaskStatus;
 import hanamuramiyu.karakuri.ui.editor.ScenarioEditorState;
 import hanamuramiyu.karakuri.ui.editor.inspector.ScenarioInspector;
 import hanamuramiyu.karakuri.ui.editor.inspector.ScenarioInspectorLayout;
+import hanamuramiyu.karakuri.ui.editor.workflow.ScenarioWorkflowCanvas;
 import hanamuramiyu.karakuri.ui.widget.KarakuriButton;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
