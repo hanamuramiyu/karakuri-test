@@ -9,6 +9,9 @@ import hanamuramiyu.karakuri.task.factory.ScenarioTaskFactory;
 import hanamuramiyu.karakuri.task.TaskManager;
 import hanamuramiyu.karakuri.task.TaskStatus;
 import hanamuramiyu.karakuri.ui.editor.ScenarioEditorState;
+import hanamuramiyu.karakuri.ui.editor.library.ScenarioActionLibrary;
+import hanamuramiyu.karakuri.ui.editor.library.ScenarioActionLibraryActions;
+import hanamuramiyu.karakuri.ui.editor.library.ScenarioActionLibraryLayout;
 import hanamuramiyu.karakuri.ui.editor.inspector.ScenarioInspector;
 import hanamuramiyu.karakuri.ui.editor.inspector.ScenarioInspectorLayout;
 import hanamuramiyu.karakuri.ui.editor.workflow.ScenarioWorkflowCanvas;
@@ -122,25 +125,27 @@ public final class ScenarioEditorScreen extends Screen {
         actionLibrary =
             new ScenarioActionLibrary(
                 font,
-                bodyX,
-                bodyY,
-                layoutMode
-                    == LayoutMode.WIDE
-                        ? getWideLibraryWidth()
-                        : bodyWidth,
-                bodyHeight,
-                layoutMode
-                    == LayoutMode.WIDE
-                        ? ScenarioActionLibrary
-                            .Layout.SIDEBAR
-                        : ScenarioActionLibrary
-                            .Layout.HORIZONTAL,
-                this::insertMoveStep,
-                this::insertJumpStep,
-                this::insertWaitStep,
-                this::insertMouseStep,
-                this::insertCameraStep,
-                this::insertHotbarStep
+                new ScenarioActionLibraryLayout(
+                    bodyX,
+                    bodyY,
+                    layoutMode
+                        == LayoutMode.WIDE
+                            ? getWideLibraryWidth()
+                            : bodyWidth,
+                    bodyHeight,
+                    layoutMode
+                        == LayoutMode.WIDE
+                            ? ScenarioActionLibraryLayout.Mode.SIDEBAR
+                            : ScenarioActionLibraryLayout.Mode.HORIZONTAL
+                ),
+                new ScenarioActionLibraryActions(
+                    this::insertMoveStep,
+                    this::insertJumpStep,
+                    this::insertWaitStep,
+                    this::insertMouseStep,
+                    this::insertCameraStep,
+                    this::insertHotbarStep
+                )
             );
 
         for (
