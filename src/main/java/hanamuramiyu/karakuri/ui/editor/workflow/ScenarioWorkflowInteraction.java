@@ -12,6 +12,7 @@ final class ScenarioWorkflowInteraction {
     private List<ScenarioStep> steps;
     private final ScenarioWorkflowViewport viewport;
     private final IntConsumer selectionListener;
+    private final Runnable contentEditStartedListener;
     private final Runnable contentListener;
 
     private int selectedIndex;
@@ -20,19 +21,22 @@ final class ScenarioWorkflowInteraction {
     private double dragMouseX;
     private double dragOffsetX;
     private boolean dragging;
+    private boolean editStarted;
 
     ScenarioWorkflowInteraction(
         List<ScenarioStep> steps,
         ScenarioWorkflowViewport viewport,
         IntConsumer selectionListener,
+        Runnable contentEditStartedListener,
         Runnable contentListener
     ) {
         this.steps = steps;
         this.viewport = viewport;
         this.selectionListener = selectionListener;
+        this.contentEditStartedListener =
+            contentEditStartedListener;
         this.contentListener = contentListener;
     }
-
 
     void setSteps(
         List<ScenarioStep> steps
@@ -41,6 +45,7 @@ final class ScenarioWorkflowInteraction {
         selectedIndex = 0;
         pressedIndex = -1;
         dragging = false;
+        editStarted = false;
         viewport.resetScroll();
         ensureSelectedVisible();
     }
@@ -94,6 +99,7 @@ final class ScenarioWorkflowInteraction {
             event.x()
                 - viewport.cardX(index);
         dragging = false;
+        editStarted = false;
 
         return true;
     }
@@ -114,6 +120,11 @@ final class ScenarioWorkflowInteraction {
             dragging = Math.abs(
                 event.x() - dragStartX
             ) >= DRAG_THRESHOLD;
+
+            if (dragging) {
+                editStarted = true;
+                contentEditStartedListener.run();
+            }
         }
 
         if (!dragging) {
@@ -139,8 +150,6 @@ final class ScenarioWorkflowInteraction {
 
             pressedIndex = targetIndex;
             selectedIndex = targetIndex;
-
-            contentListener.run();
         }
 
         return true;
@@ -150,8 +159,16 @@ final class ScenarioWorkflowInteraction {
         boolean handled =
             pressedIndex >= 0;
 
+        boolean commitEdit =
+            editStarted;
+
         pressedIndex = -1;
         dragging = false;
+        editStarted = false;
+
+        if (commitEdit) {
+            contentListener.run();
+        }
 
         return handled;
     }
@@ -261,9 +278,11 @@ final class ScenarioWorkflowInteraction {
                     direction
                 );
 
-        if (updatedStep == step) {
+        if (updatedStep.equals(step)) {
             return;
         }
+
+        contentEditStartedListener.run();
 
         steps.set(
             selectedIndex,

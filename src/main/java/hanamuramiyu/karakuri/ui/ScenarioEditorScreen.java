@@ -22,8 +22,10 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import org.lwjgl.glfw.GLFW;
 
 public final class ScenarioEditorScreen extends Screen {
     private static final int WIDE_MIN_WIDTH = 900;
@@ -45,6 +47,8 @@ public final class ScenarioEditorScreen extends Screen {
     private static final int COMPACT_BACK_WIDTH = 68;
     private static final int WIDE_SAVE_WIDTH = 86;
     private static final int COMPACT_SAVE_WIDTH = 72;
+    private static final int WIDE_HISTORY_WIDTH = 50;
+    private static final int COMPACT_HISTORY_WIDTH = 42;
     private static final int WIDE_WORKFLOW_HEADER_HEIGHT = 28;
     private static final int COMPACT_WORKFLOW_HEADER_HEIGHT = 50;
 
@@ -96,6 +100,8 @@ public final class ScenarioEditorScreen extends Screen {
     private KarakuriButton actionsTabButton;
     private KarakuriButton inspectorTabButton;
     private KarakuriButton backButton;
+    private KarakuriButton undoButton;
+    private KarakuriButton redoButton;
     private KarakuriButton saveButton;
     private KarakuriButton groupBackButton;
     private KarakuriButton groupActionsButton;
@@ -176,6 +182,7 @@ public final class ScenarioEditorScreen extends Screen {
             font,
             state.steps(),
             this::onCanvasSelectionChanged,
+            this::onCanvasEditStarted,
             this::onCanvasContentChanged
         );
 
@@ -377,6 +384,30 @@ public final class ScenarioEditorScreen extends Screen {
     }
 
     @Override
+    public boolean keyPressed(
+        KeyEvent event
+    ) {
+        if (event.hasControlDownWithQuirk()) {
+            if (event.key() == GLFW.GLFW_KEY_Z) {
+                if (event.hasShiftDown()) {
+                    redoEdit();
+                } else {
+                    undoEdit();
+                }
+
+                return true;
+            }
+
+            if (event.key() == GLFW.GLFW_KEY_Y) {
+                redoEdit();
+                return true;
+            }
+        }
+
+        return super.keyPressed(event);
+    }
+
+    @Override
     public void onClose() {
         stopRunningTest();
         minecraft.setScreen(parent);
@@ -429,9 +460,19 @@ public final class ScenarioEditorScreen extends Screen {
         modeBadgeWidth = 52;
         modeBadgeHeight = BUTTON_HEIGHT;
 
-        nameFrameX =
+        int undoX =
             modeBadgeX
                 + modeBadgeWidth
+                + 8;
+
+        int redoX =
+            undoX
+                + WIDE_HISTORY_WIDTH
+                + BUTTON_GAP;
+
+        nameFrameX =
+            redoX
+                + WIDE_HISTORY_WIDTH
                 + 8;
         nameFrameY = panelY + 9;
         nameFrameWidth =
@@ -494,6 +535,25 @@ public final class ScenarioEditorScreen extends Screen {
             ? WIDE_SAVE_WIDTH
             : COMPACT_SAVE_WIDTH;
 
+        int historyWidth =
+            layoutMode == LayoutMode.WIDE
+                ? WIDE_HISTORY_WIDTH
+                : COMPACT_HISTORY_WIDTH;
+
+        int undoX =
+            modeBadgeX
+                + modeBadgeWidth
+                + (
+                    layoutMode == LayoutMode.WIDE
+                        ? 8
+                        : BUTTON_GAP
+                );
+
+        int redoX =
+            undoX
+                + historyWidth
+                + BUTTON_GAP;
+
         backButton = createButton(
             panelX + 8,
             modeBadgeY,
@@ -501,6 +561,24 @@ public final class ScenarioEditorScreen extends Screen {
             Component.literal("← Back"),
             this::cancelEditing,
             KarakuriButton.Style.SECONDARY
+        );
+
+        undoButton = createButton(
+            undoX,
+            modeBadgeY,
+            historyWidth,
+            Component.literal("Undo"),
+            this::undoEdit,
+            KarakuriButton.Style.GHOST
+        );
+
+        redoButton = createButton(
+            redoX,
+            modeBadgeY,
+            historyWidth,
+            Component.literal("Redo"),
+            this::redoEdit,
+            KarakuriButton.Style.GHOST
         );
 
         saveButton = createButton(
@@ -513,6 +591,8 @@ public final class ScenarioEditorScreen extends Screen {
         );
 
         addRenderableWidget(backButton);
+        addRenderableWidget(undoButton);
+        addRenderableWidget(redoButton);
         addRenderableWidget(saveButton);
     }
 
@@ -532,8 +612,11 @@ public final class ScenarioEditorScreen extends Screen {
         nameField.setTextShadow(false);
         nameField.setMaxLength(64);
         nameField.setHint(Component.literal("Scenario name"));
-        nameField.setValue(state.initialName());
-        nameField.setResponder(value -> updateButtons());
+        nameField.setValue(state.name());
+        nameField.setResponder(value -> {
+            state.updateName(value);
+            updateButtons();
+        });
         addRenderableWidget(nameField);
     }
 
@@ -834,6 +917,11 @@ public final class ScenarioEditorScreen extends Screen {
         updateButtons();
     }
 
+    private void onCanvasEditStarted() {
+        stopRunningTest();
+        state.beginCanvasEdit();
+    }
+
     private void onCanvasContentChanged() {
         stopRunningTest();
         state.select(
@@ -989,6 +1077,33 @@ public final class ScenarioEditorScreen extends Screen {
         }
     }
 
+    private void undoEdit() {
+        stopRunningTest();
+
+        if (state.undo()) {
+            restoreEditorFromHistory();
+        }
+    }
+
+    private void redoEdit() {
+        stopRunningTest();
+
+        if (state.redo()) {
+            restoreEditorFromHistory();
+        }
+    }
+
+    private void restoreEditorFromHistory() {
+        groupActionsOpen = false;
+        nameField.setValue(state.name());
+        workflowCanvas.setSteps(state.steps());
+        workflowCanvas.setSelectedIndex(
+            state.selectedIndex()
+        );
+        inspector.syncSelectedStep();
+        updateButtons();
+    }
+
     private void testSelectedStep() {
         if (
             TaskManager.getStatus()
@@ -1034,9 +1149,7 @@ public final class ScenarioEditorScreen extends Screen {
         stopRunningTest();
 
         Scenario scenario =
-            state.toScenario(
-                nameField.getValue()
-            );
+            state.toScenario();
 
         if (state.scenarioIndex() < 0) {
             ScenarioLibrary.add(
@@ -1065,6 +1178,8 @@ public final class ScenarioEditorScreen extends Screen {
         if (
             actionLibrary == null
                 || inspector == null
+                || undoButton == null
+                || redoButton == null
                 || saveButton == null
                 || groupBackButton == null
                 || groupActionsButton == null
@@ -1142,6 +1257,9 @@ public final class ScenarioEditorScreen extends Screen {
             idle
                 && state.canIncludeNextStep();
 
+        undoButton.active = state.canUndo();
+        redoButton.active = state.canRedo();
+
         saveButton.active =
             status == TaskStatus.IDLE
                 && getValidationMessage()
@@ -1198,7 +1316,7 @@ public final class ScenarioEditorScreen extends Screen {
         if (!isScenarioNameValid()) {
             String name =
                 nameField == null
-                    ? state.initialName()
+                    ? state.name()
                     : nameField
                         .getValue()
                         .trim();
@@ -1227,7 +1345,7 @@ public final class ScenarioEditorScreen extends Screen {
     private boolean isScenarioNameValid() {
         String name =
             nameField == null
-                ? state.initialName()
+                ? state.name()
                 : nameField
                     .getValue()
                     .trim();

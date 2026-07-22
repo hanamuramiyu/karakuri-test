@@ -33,21 +33,24 @@ public final class ScenarioEditorState {
     public static final int DEFAULT_MOUSE_DURATION_TICKS = 20;
 
     private final int scenarioIndex;
-    private final String initialName;
     private final List<ScenarioStep> rootSteps;
     private final List<GroupContext> groupPath =
         new ArrayList<>();
+    private final ScenarioEditorHistory history =
+        new ScenarioEditorHistory();
 
     private List<ScenarioStep> activeSteps;
+    private ScenarioEditorHistory.Snapshot pendingCanvasSnapshot;
+    private String name;
     private int selectedIndex;
 
     private ScenarioEditorState(
         int scenarioIndex,
-        String initialName,
+        String name,
         List<ScenarioStep> steps
     ) {
         this.scenarioIndex = scenarioIndex;
-        this.initialName = initialName;
+        this.name = name;
         this.rootSteps = steps;
         this.activeSteps = steps;
     }
@@ -82,8 +85,64 @@ public final class ScenarioEditorState {
         return scenarioIndex;
     }
 
-    public String initialName() {
-        return initialName;
+    public String name() {
+        return name;
+    }
+
+    public void updateName(
+        String updatedName
+    ) {
+        if (updatedName == null) {
+            throw new IllegalArgumentException(
+                "Scenario name must not be null"
+            );
+        }
+
+        if (name.equals(updatedName)) {
+            return;
+        }
+
+        ScenarioEditorHistory.Snapshot before =
+            beginMutation();
+
+        name = updatedName;
+        finishMutation(before);
+    }
+
+    public boolean canUndo() {
+        return history.canUndo();
+    }
+
+    public boolean canRedo() {
+        return history.canRedo();
+    }
+
+    public boolean undo() {
+        pendingCanvasSnapshot = null;
+
+        ScenarioEditorHistory.Snapshot target =
+            history.undo(captureSnapshot());
+
+        if (target == null) {
+            return false;
+        }
+
+        restoreSnapshot(target);
+        return true;
+    }
+
+    public boolean redo() {
+        pendingCanvasSnapshot = null;
+
+        ScenarioEditorHistory.Snapshot target =
+            history.redo(captureSnapshot());
+
+        if (target == null) {
+            return false;
+        }
+
+        restoreSnapshot(target);
+        return true;
     }
 
     public List<ScenarioStep> steps() {
@@ -263,6 +322,9 @@ public final class ScenarioEditorState {
             return false;
         }
 
+        ScenarioEditorHistory.Snapshot before =
+            beginMutation();
+
         ScenarioStep movedStep =
             activeSteps.remove(selectedIndex());
 
@@ -305,7 +367,7 @@ public final class ScenarioEditorState {
             selectedIndex = groupIndex + 1;
         }
 
-        commitHierarchy();
+        finishMutation(before);
         return true;
     }
 
@@ -332,6 +394,9 @@ public final class ScenarioEditorState {
             return false;
         }
 
+        ScenarioEditorHistory.Snapshot before =
+            beginMutation();
+
         int groupIndex = selectedIndex();
         ScenarioStep candidate =
             activeSteps.remove(groupIndex - 1);
@@ -355,7 +420,7 @@ public final class ScenarioEditorState {
         );
 
         selectedIndex = groupIndex;
-        commitHierarchy();
+        finishMutation(before);
         return true;
     }
 
@@ -380,6 +445,9 @@ public final class ScenarioEditorState {
             return false;
         }
 
+        ScenarioEditorHistory.Snapshot before =
+            beginMutation();
+
         int groupIndex = selectedIndex();
         RepeatStep group =
             (RepeatStep) activeSteps.get(
@@ -403,12 +471,29 @@ public final class ScenarioEditorState {
             group.withSteps(children)
         );
 
-        commitHierarchy();
+        finishMutation(before);
         return true;
+    }
+
+    public void beginCanvasEdit() {
+        if (pendingCanvasSnapshot == null) {
+            pendingCanvasSnapshot =
+                captureSnapshot();
+        }
     }
 
     public void commitCanvasChanges() {
         commitHierarchy();
+
+        if (pendingCanvasSnapshot == null) {
+            return;
+        }
+
+        ScenarioEditorHistory.Snapshot before =
+            pendingCanvasSnapshot;
+
+        pendingCanvasSnapshot = null;
+        finishMutation(before);
     }
 
     public void duplicateSelectedStep() {
@@ -420,6 +505,9 @@ public final class ScenarioEditorState {
             return false;
         }
 
+        ScenarioEditorHistory.Snapshot before =
+            beginMutation();
+
         activeSteps.remove(selectedIndex());
 
         select(
@@ -429,7 +517,7 @@ public final class ScenarioEditorState {
             )
         );
 
-        commitHierarchy();
+        finishMutation(before);
         return true;
     }
 
@@ -744,9 +832,7 @@ public final class ScenarioEditorState {
             );
     }
 
-    public Scenario toScenario(
-        String name
-    ) {
+    public Scenario toScenario() {
         commitHierarchy();
         return new Scenario(name, rootSteps);
     }
@@ -754,17 +840,106 @@ public final class ScenarioEditorState {
     private void insertAfterSelected(
         ScenarioStep step
     ) {
+        ScenarioEditorHistory.Snapshot before =
+            beginMutation();
+
         int insertIndex = selectedIndex() + 1;
 
         activeSteps.add(insertIndex, step);
         selectedIndex = insertIndex;
-        commitHierarchy();
+        finishMutation(before);
     }
 
     private void replaceSelected(
         ScenarioStep step
     ) {
+        if (selectedStep().equals(step)) {
+            return;
+        }
+
+        ScenarioEditorHistory.Snapshot before =
+            beginMutation();
+
         activeSteps.set(selectedIndex(), step);
+        finishMutation(before);
+    }
+
+    private ScenarioEditorHistory.Snapshot beginMutation() {
+        pendingCanvasSnapshot = null;
+        return captureSnapshot();
+    }
+
+    private void finishMutation(
+        ScenarioEditorHistory.Snapshot before
+    ) {
+        commitHierarchy();
+
+        ScenarioEditorHistory.Snapshot after =
+            captureSnapshot();
+
+        if (!before.sameDocument(after)) {
+            history.record(before);
+        }
+    }
+
+    private ScenarioEditorHistory.Snapshot captureSnapshot() {
+        commitHierarchy();
+
+        List<Integer> path =
+            groupPath.stream()
+                .map(GroupContext::groupIndex)
+                .toList();
+
+        return new ScenarioEditorHistory.Snapshot(
+            name,
+            rootSteps,
+            path,
+            selectedIndex()
+        );
+    }
+
+    private void restoreSnapshot(
+        ScenarioEditorHistory.Snapshot snapshot
+    ) {
+        name = snapshot.name();
+
+        rootSteps.clear();
+        rootSteps.addAll(snapshot.rootSteps());
+
+        groupPath.clear();
+        activeSteps = rootSteps;
+
+        for (int groupIndex : snapshot.groupPath()) {
+            if (
+                groupIndex < 0
+                    || groupIndex >= activeSteps.size()
+                    || !(
+                        activeSteps.get(groupIndex)
+                            instanceof RepeatStep repeatStep
+                    )
+            ) {
+                break;
+            }
+
+            groupPath.add(
+                new GroupContext(
+                    activeSteps,
+                    groupIndex
+                )
+            );
+
+            activeSteps =
+                new ArrayList<>(
+                    repeatStep.steps()
+                );
+        }
+
+        selectedIndex = Math.clamp(
+            snapshot.selectedIndex(),
+            0,
+            activeSteps.size() - 1
+        );
+
         commitHierarchy();
     }
 

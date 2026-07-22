@@ -230,6 +230,12 @@ final class ScenarioInspectorWidgets {
             && expanded.mouseClicked(event, doubled);
     }
 
+    void collapseDropdowns() {
+        for (KarakuriDropdown<?> dropdown : dropdowns) {
+            dropdown.collapse();
+        }
+    }
+
     void renderDropdownOverlay(
         GuiGraphics graphics,
         int mouseX,

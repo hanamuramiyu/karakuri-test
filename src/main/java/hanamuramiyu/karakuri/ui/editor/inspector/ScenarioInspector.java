@@ -736,6 +736,7 @@ public final class ScenarioInspector
     }
 
     public void syncSelectedStep() {
+        widgets.collapseDropdowns();
         syncValueFields();
         update();
     }

@@ -21,6 +21,7 @@ public final class ScenarioWorkflowCanvas {
         Font font,
         List<ScenarioStep> steps,
         IntConsumer selectionListener,
+        Runnable contentEditStartedListener,
         Runnable contentListener
     ) {
         this.font = font;
@@ -32,6 +33,7 @@ public final class ScenarioWorkflowCanvas {
                 steps,
                 viewport,
                 selectionListener,
+                contentEditStartedListener,
                 contentListener
             );
     }
