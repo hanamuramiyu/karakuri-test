@@ -132,6 +132,12 @@ public final class KarakuriButton extends AbstractWidget {
         defaultButtonNarrationText(output);
     }
 
+    public void setHeight(
+        int height
+    ) {
+        this.height = height;
+    }
+
     public void setStyle(Style style) {
         this.style = Objects.requireNonNull(
             style,

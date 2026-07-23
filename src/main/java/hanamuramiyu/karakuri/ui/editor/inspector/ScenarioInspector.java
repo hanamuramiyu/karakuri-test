@@ -50,6 +50,9 @@ public final class ScenarioInspector
     private final int inspectorWidth;
     private final int inspectorHeight;
     private final Runnable testSelectedStep;
+    private final Runnable resetSelectedStep;
+    private final Runnable moveSelectedLeft;
+    private final Runnable moveSelectedRight;
     private final Runnable duplicateSelectedStep;
     private final Runnable deleteSelectedStep;
     private final Runnable editorChanged;
@@ -68,6 +71,9 @@ public final class ScenarioInspector
         ScenarioInspectorLayout layout,
         Runnable stopRunningTest,
         Runnable testSelectedStep,
+        Runnable resetSelectedStep,
+        Runnable moveSelectedLeft,
+        Runnable moveSelectedRight,
         Runnable duplicateSelectedStep,
         Runnable deleteSelectedStep,
         Runnable editorChanged
@@ -100,6 +106,21 @@ public final class ScenarioInspector
         this.testSelectedStep = Objects.requireNonNull(
             testSelectedStep,
             "Test-step action must not be null"
+        );
+
+        this.resetSelectedStep = Objects.requireNonNull(
+            resetSelectedStep,
+            "Reset action must not be null"
+        );
+
+        this.moveSelectedLeft = Objects.requireNonNull(
+            moveSelectedLeft,
+            "Move-left action must not be null"
+        );
+
+        this.moveSelectedRight = Objects.requireNonNull(
+            moveSelectedRight,
+            "Move-right action must not be null"
         );
 
         this.duplicateSelectedStep = Objects.requireNonNull(
@@ -734,6 +755,21 @@ public final class ScenarioInspector
     }
 
     @Override
+    public void resetSelectedStep() {
+        resetSelectedStep.run();
+    }
+
+    @Override
+    public void moveSelectedLeft() {
+        moveSelectedLeft.run();
+    }
+
+    @Override
+    public void moveSelectedRight() {
+        moveSelectedRight.run();
+    }
+
+    @Override
     public void duplicateSelectedStep() {
         duplicateSelectedStep.run();
     }
@@ -858,6 +894,18 @@ public final class ScenarioInspector
         widgets.testButton.active =
             status != TaskStatus.IDLE
                 || !state.selectedGroupHasInfiniteStepBeforeEnd();
+
+        widgets.resetButton.active =
+            status == TaskStatus.IDLE
+                && !state.isSelectedStepDefault();
+
+        widgets.moveLeftButton.active =
+            status == TaskStatus.IDLE
+                && state.canMoveSelectedStep(-1);
+
+        widgets.moveRightButton.active =
+            status == TaskStatus.IDLE
+                && state.canMoveSelectedStep(1);
 
         widgets.duplicateButton.active =
             status == TaskStatus.IDLE;

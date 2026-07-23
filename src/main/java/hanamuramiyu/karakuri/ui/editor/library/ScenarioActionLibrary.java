@@ -8,23 +8,32 @@ import net.minecraft.network.chat.Component;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 public final class ScenarioActionLibrary {
     private final Font font;
     private final ScenarioActionLibraryLayout layout;
     private final ScenarioActionLibraryWidgets widgets;
+    private final Consumer<String> categoryChanged;
 
-    private Category selectedCategory = Category.MOVEMENT;
+    private Category selectedCategory;
     private boolean drawerOpen;
     private boolean visible = true;
 
     public ScenarioActionLibrary(
         Font font,
         ScenarioActionLibraryLayout layout,
-        ScenarioActionLibraryActions actions
+        ScenarioActionLibraryActions actions,
+        String initialCategory,
+        Consumer<String> categoryChanged
     ) {
         this.font = Objects.requireNonNull(font, "Font must not be null");
         this.layout = Objects.requireNonNull(layout, "Layout must not be null");
+        this.selectedCategory = Category.fromId(initialCategory);
+        this.categoryChanged = Objects.requireNonNull(
+            categoryChanged,
+            "Category listener must not be null"
+        );
 
         widgets = new ScenarioActionLibraryWidgets(
             font,
@@ -212,6 +221,7 @@ public final class ScenarioActionLibrary {
             drawerOpen = false;
         } else {
             selectedCategory = category;
+            categoryChanged.accept(category.id);
             drawerOpen = true;
         }
 
@@ -236,25 +246,40 @@ public final class ScenarioActionLibrary {
     }
 
     enum Category {
-        MOVEMENT("Movement", "Move", "Direction actions"),
-        TIMING("Timing", "Time", "Flow controls"),
-        MOUSE("Mouse", "Mouse", "Mouse input"),
-        CAMERA("Camera", "Camera", "Camera direction"),
-        BLOCKS("Blocks", "Blocks", "Block actions"),
-        INVENTORY("Inventory", "Items", "Inventory actions");
+        MOVEMENT("movement", "Movement", "Move", "Direction actions"),
+        TIMING("timing", "Timing", "Time", "Flow controls"),
+        MOUSE("mouse", "Mouse", "Mouse", "Mouse input"),
+        CAMERA("camera", "Camera", "Camera", "Camera direction"),
+        BLOCKS("blocks", "Blocks", "Blocks", "Block actions"),
+        INVENTORY("inventory", "Inventory", "Items", "Inventory actions");
 
+        final String id;
         final String panelLabel;
         final String toolbarLabel;
         final String sectionLabel;
 
         Category(
+            String id,
             String panelLabel,
             String toolbarLabel,
             String sectionLabel
         ) {
+            this.id = id;
             this.panelLabel = panelLabel;
             this.toolbarLabel = toolbarLabel;
             this.sectionLabel = sectionLabel;
+        }
+
+        static Category fromId(
+            String id
+        ) {
+            for (Category category : values()) {
+                if (category.id.equals(id)) {
+                    return category;
+                }
+            }
+
+            return MOVEMENT;
         }
     }
 }

@@ -11,6 +11,7 @@ import hanamuramiyu.karakuri.task.TaskManager;
 import hanamuramiyu.karakuri.task.TaskStatus;
 import hanamuramiyu.karakuri.task.factory.ScenarioTaskFactory;
 import hanamuramiyu.karakuri.ui.editor.ScenarioEditorClipboard;
+import hanamuramiyu.karakuri.ui.editor.ScenarioEditorPreferences;
 import hanamuramiyu.karakuri.ui.editor.ScenarioEditorState;
 import hanamuramiyu.karakuri.ui.editor.ScenarioEditorTheme;
 import hanamuramiyu.karakuri.ui.editor.inspector.ScenarioInspector;
@@ -63,7 +64,7 @@ public final class ScenarioEditorScreen extends Screen {
     private final ScenarioEditorState state;
 
     private LayoutMode layoutMode;
-    private CompactTab compactTab = CompactTab.WORKFLOW;
+    private CompactTab compactTab;
 
     private int panelX;
     private int panelY;
@@ -115,6 +116,7 @@ public final class ScenarioEditorScreen extends Screen {
     private KarakuriButton clipboardMenuButton;
     private KarakuriButton saveAsButton;
     private KarakuriButton saveButton;
+    private KarakuriButton shortcutsButton;
     private KarakuriButton groupBackButton;
     private KarakuriButton groupActionsButton;
     private KarakuriButton moveOutButton;
@@ -142,6 +144,9 @@ public final class ScenarioEditorScreen extends Screen {
         this.state = ScenarioEditorState.create(
             scenarioIndex,
             scenario
+        );
+        this.compactTab = CompactTab.fromId(
+            ScenarioEditorPreferences.compactTab()
         );
     }
 
@@ -185,7 +190,9 @@ public final class ScenarioEditorScreen extends Screen {
                 this::insertMouseStep,
                 this::insertCameraStep,
                 this::insertHotbarStep
-            )
+            ),
+            ScenarioEditorPreferences.actionCategory(),
+            ScenarioEditorPreferences::setActionCategory
         );
 
         for (KarakuriButton widget : actionLibrary.widgets()) {
@@ -224,6 +231,9 @@ public final class ScenarioEditorScreen extends Screen {
             ),
             this::stopRunningTest,
             this::testSelectedStep,
+            this::resetSelectedStep,
+            () -> moveSelectedStep(-1),
+            () -> moveSelectedStep(1),
             this::duplicateSelectedStep,
             this::deleteSelectedStep,
             this::updateButtons
@@ -829,6 +839,24 @@ public final class ScenarioEditorScreen extends Screen {
             KarakuriButton.Style.SUCCESS
         );
 
+        int shortcutsWidth =
+            layoutMode == LayoutMode.WIDE
+                ? 76
+                : 22;
+
+        shortcutsButton = createButton(
+            panelX + panelWidth - shortcutsWidth - 6,
+            footerY + 1,
+            shortcutsWidth,
+            Component.literal(
+                layoutMode == LayoutMode.WIDE
+                    ? "Shortcuts"
+                    : "?"
+            ),
+            this::openShortcuts,
+            KarakuriButton.Style.GHOST
+        );
+
         addRenderableWidget(backButton);
         addRenderableWidget(undoButton);
         addRenderableWidget(redoButton);
@@ -842,6 +870,7 @@ public final class ScenarioEditorScreen extends Screen {
         addRenderableWidget(pasteButton);
         addRenderableWidget(saveAsButton);
         addRenderableWidget(saveButton);
+        addRenderableWidget(shortcutsButton);
     }
 
     private void createNameField() {
@@ -1160,17 +1189,19 @@ public final class ScenarioEditorScreen extends Screen {
         );
 
         String validationMessage = getValidationMessage();
+        String statusMessage = validationMessage == null
+            ? state.isUnsaved()
+                ? layoutMode == LayoutMode.WIDE
+                    ? "Unsaved changes  ·  Ctrl+S to save"
+                    : "Unsaved  ·  Ctrl+S"
+                : layoutMode == LayoutMode.WIDE
+                    ? "Ready  ·  Stored as a .karakuri file"
+                    : "Ready"
+            : validationMessage;
+
         graphics.drawString(
             font,
-            Component.literal(
-                validationMessage == null
-                    ? (
-                        state.isUnsaved()
-                            ? "Unsaved changes  ·  Ctrl+S to save"
-                            : "Ready  ·  Stored as a .karakuri file"
-                    )
-                    : validationMessage
-            ),
+            Component.literal(statusMessage),
             panelX + CONTENT_MARGIN,
             footerY + 8,
             validationMessage == null
@@ -1189,6 +1220,14 @@ public final class ScenarioEditorScreen extends Screen {
     ) {
         clipboardMenuOpen = false;
         compactTab = updatedTab;
+        ScenarioEditorPreferences.setCompactTab(
+            updatedTab.id
+        );
+
+        if (updatedTab == CompactTab.WORKFLOW) {
+            workflowCanvas.ensureSelectedVisible();
+        }
+
         updateButtons();
     }
 
@@ -1283,6 +1322,7 @@ public final class ScenarioEditorScreen extends Screen {
         workflowCanvas.setSelectedIndex(
             state.selectedIndex()
         );
+        workflowCanvas.ensureSelectedVisible();
 
         inspector.syncSelectedStep();
         updateButtons();
@@ -1352,6 +1392,17 @@ public final class ScenarioEditorScreen extends Screen {
         stopRunningTest();
         state.duplicateSelectedStep();
         syncSelectedStep();
+    }
+
+    private void resetSelectedStep() {
+        closeTransientUi();
+        stopRunningTest();
+
+        if (state.resetSelectedStep()) {
+            syncSelectedStep();
+        } else {
+            updateButtons();
+        }
     }
 
     private void moveSelectedStep(
@@ -1581,6 +1632,13 @@ public final class ScenarioEditorScreen extends Screen {
         minecraft.setScreen(parent);
     }
 
+    private void openShortcuts() {
+        closeTransientUi();
+        minecraft.setScreen(
+            new ScenarioShortcutsScreen(this)
+        );
+    }
+
     private void requestClose() {
         closeTransientUi();
         stopRunningTest();
@@ -1615,6 +1673,7 @@ public final class ScenarioEditorScreen extends Screen {
                 || pasteButton == null
                 || saveAsButton == null
                 || saveButton == null
+                || shortcutsButton == null
                 || groupBackButton == null
                 || groupActionsButton == null
         ) {
@@ -1994,8 +2053,28 @@ public final class ScenarioEditorScreen extends Screen {
     }
 
     private enum CompactTab {
-        WORKFLOW,
-        ACTIONS,
-        INSPECTOR
+        WORKFLOW("workflow"),
+        ACTIONS("actions"),
+        INSPECTOR("inspector");
+
+        private final String id;
+
+        CompactTab(
+            String id
+        ) {
+            this.id = id;
+        }
+
+        private static CompactTab fromId(
+            String id
+        ) {
+            for (CompactTab tab : values()) {
+                if (tab.id.equals(id)) {
+                    return tab;
+                }
+            }
+
+            return WORKFLOW;
+        }
     }
 }

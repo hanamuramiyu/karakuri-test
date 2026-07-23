@@ -292,7 +292,7 @@ final class ScenarioWorkflowInteraction {
         contentListener.run();
     }
 
-    private void ensureSelectedVisible() {
+    void ensureSelectedVisible() {
         viewport.ensureIndexVisible(
             selectedIndex,
             steps.size()

@@ -31,6 +31,7 @@ public final class ScenarioEditorState {
     public static final int DEFAULT_MOVE_DURATION_TICKS = 40;
     public static final int DEFAULT_WAIT_DURATION_TICKS = 20;
     public static final int DEFAULT_MOUSE_DURATION_TICKS = 20;
+    public static final int DEFAULT_RESET_DURATION_TICKS = 20;
 
     private final int scenarioIndex;
     private final List<ScenarioStep> rootSteps;
@@ -577,6 +578,24 @@ public final class ScenarioEditorState {
         return true;
     }
 
+    public boolean isSelectedStepDefault() {
+        return selectedStep().equals(
+            defaultStepFor(selectedStep())
+        );
+    }
+
+    public boolean resetSelectedStep() {
+        ScenarioStep defaultStep =
+            defaultStepFor(selectedStep());
+
+        if (selectedStep().equals(defaultStep)) {
+            return false;
+        }
+
+        replaceSelected(defaultStep);
+        return true;
+    }
+
     public boolean canRemoveSelectedStep() {
         return activeSteps.size() > 1;
     }
@@ -925,6 +944,57 @@ public final class ScenarioEditorState {
             scenarioName,
             rootSteps
         );
+    }
+
+    private ScenarioStep defaultStepFor(
+        ScenarioStep step
+    ) {
+        return switch (step) {
+            case CameraStep cameraStep ->
+                new CameraStep(
+                    CameraDirection.RIGHT,
+                    CameraMotion.SMOOTH,
+                    CameraStep.DEFAULT_ANGLE_DEGREES,
+                    CameraStep.DEFAULT_DURATION_TICKS
+                );
+            case HotbarStep hotbarStep ->
+                new HotbarStep(
+                    HotbarStep.DEFAULT_SLOT
+                );
+            case JumpStep jumpStep ->
+                new JumpStep(
+                    JumpMode.SINGLE,
+                    JumpStopMode.DURATION,
+                    JumpStep.DEFAULT_DURATION_TICKS,
+                    JumpStep.DEFAULT_JUMP_COUNT
+                );
+            case MoveStep moveStep ->
+                new MoveStep(
+                    MoveDirection.FORWARD,
+                    MoveMode.WALK,
+                    false,
+                    DEFAULT_RESET_DURATION_TICKS
+                );
+            case MouseStep mouseStep ->
+                new MouseStep(
+                    MouseAction.LEFT_CLICK,
+                    MouseInputMode.CLICK,
+                    MouseStopMode.DURATION,
+                    DEFAULT_RESET_DURATION_TICKS,
+                    MouseStep.DEFAULT_CPS_HALF_STEPS,
+                    MouseStep.DEFAULT_CLICK_COUNT
+                );
+            case RepeatStep repeatStep ->
+                new RepeatStep(
+                    RepeatMode.COUNT,
+                    RepeatStep.DEFAULT_REPEAT_COUNT,
+                    repeatStep.steps()
+                );
+            case WaitStep waitStep ->
+                new WaitStep(
+                    DEFAULT_RESET_DURATION_TICKS
+                );
+        };
     }
 
     private void insertAfterSelected(

@@ -150,6 +150,10 @@ public final class ScenarioWorkflowCanvas {
         return interaction.selectedIndex();
     }
 
+    public void ensureSelectedVisible() {
+        interaction.ensureSelectedVisible();
+    }
+
     private void renderConnections(
         GuiGraphics graphics
     ) {

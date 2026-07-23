@@ -38,7 +38,7 @@ final class ScenarioInspectorWidgets {
     private static final int BUTTON_GAP = 6;
     private static final int BUTTON_HEIGHT = 20;
     private static final int WIDE_ROW_STRIDE = 40;
-    private static final int COMPACT_ROW_STRIDE = 24;
+    private static final int COMPACT_ROW_STRIDE = 22;
 
     private final Font font;
     private final ScenarioInspectorLayout.Mode layoutMode;
@@ -87,6 +87,9 @@ final class ScenarioInspectorWidgets {
     KarakuriButton primaryDecreaseButton;
     KarakuriButton primaryIncreaseButton;
     KarakuriButton testButton;
+    KarakuriButton resetButton;
+    KarakuriButton moveLeftButton;
+    KarakuriButton moveRightButton;
     KarakuriButton duplicateButton;
     KarakuriButton deleteButton;
 
@@ -407,7 +410,7 @@ final class ScenarioInspectorWidgets {
             }
 
             int descriptionY = Math.min(
-                inspectorY + inspectorHeight - 48,
+                inspectorY + inspectorHeight - 76,
                 row5 + 26
             );
             setDescription(
@@ -426,6 +429,14 @@ final class ScenarioInspectorWidgets {
             placeWidePrimary("Duration in seconds", row1);
         }
 
+        placeUtilityButtons(
+            contentX,
+            inspectorY
+                + inspectorHeight
+                - BUTTON_HEIGHT * 2
+                - 12,
+            contentWidth
+        );
         placeActionButtons(
             contentX,
             inspectorY + inspectorHeight - BUTTON_HEIGHT - 8,
@@ -436,7 +447,7 @@ final class ScenarioInspectorWidgets {
     private void layoutCompact(
         ScenarioStep step
     ) {
-        int top = inspectorY + 40;
+        int top = inspectorY + 36;
         int row1 = top;
         int row2 = row1 + COMPACT_ROW_STRIDE;
         int row3 = row2 + COMPACT_ROW_STRIDE;
@@ -491,20 +502,18 @@ final class ScenarioInspectorWidgets {
             placePrimary(contentX, row1, contentWidth, "Value");
         }
 
-        int actionX = step instanceof MouseStep
-            && ScenarioStepRules.usesPrimaryValue(step)
-                ? rightX
-                : contentX;
-        int actionWidth = step instanceof MouseStep
-            && ScenarioStepRules.usesPrimaryValue(step)
-                ? halfWidth
-                : contentWidth;
-        int actionY = step instanceof MouseStep
-            && ScenarioStepRules.usesPrimaryValue(step)
-                ? row3
-                : row3;
+        boolean compactMouseValue =
+            step instanceof MouseStep
+                && ScenarioStepRules.usesPrimaryValue(step);
 
-        placeActionButtons(actionX, actionY, actionWidth);
+        placeCompactActionButtons(
+            contentX,
+            compactMouseValue
+                ? inspectorY + inspectorHeight - 12
+                : row3,
+            contentWidth,
+            compactMouseValue ? 12 : BUTTON_HEIGHT
+        );
     }
 
     private void updateValues(
@@ -593,6 +602,9 @@ final class ScenarioInspectorWidgets {
         angleField = createField("Camera angle", 3, "[0-9]{0,3}", actions::onAngleFieldChanged);
 
         testButton = createButton(contentX, inspectorY, 80, "Test Step", actions::testSelectedStep, KarakuriButton.Style.SUCCESS);
+        resetButton = createButton(contentX, inspectorY, 80, "Reset", actions::resetSelectedStep, KarakuriButton.Style.SECONDARY);
+        moveLeftButton = createButton(contentX, inspectorY, 80, "Move Left", actions::moveSelectedLeft, KarakuriButton.Style.GHOST);
+        moveRightButton = createButton(contentX, inspectorY, 80, "Move Right", actions::moveSelectedRight, KarakuriButton.Style.GHOST);
         duplicateButton = createButton(contentX, inspectorY, 80, "Duplicate", actions::duplicateSelectedStep, KarakuriButton.Style.SECONDARY);
         deleteButton = createButton(contentX, inspectorY, 80, "Delete", actions::deleteSelectedStep, KarakuriButton.Style.DANGER);
 
@@ -607,6 +619,9 @@ final class ScenarioInspectorWidgets {
         regularWidgets.add(countField);
         regularWidgets.add(primaryIncreaseButton);
         regularWidgets.add(testButton);
+        regularWidgets.add(resetButton);
+        regularWidgets.add(moveLeftButton);
+        regularWidgets.add(moveRightButton);
         regularWidgets.add(duplicateButton);
         regularWidgets.add(deleteButton);
     }
@@ -715,12 +730,95 @@ final class ScenarioInspectorWidgets {
         primaryIncreaseButton.visible = true;
     }
 
+    private void placeUtilityButtons(
+        int x,
+        int y,
+        int width
+    ) {
+        int actionWidth = (width - BUTTON_GAP * 2) / 3;
+
+        resetButton.setMessage(
+            Component.literal("Reset")
+        );
+        moveLeftButton.setMessage(
+            Component.literal("Move Left")
+        );
+        moveRightButton.setMessage(
+            Component.literal("Move Right")
+        );
+
+        positionButton(resetButton, x, y, actionWidth);
+        positionButton(
+            moveLeftButton,
+            x + actionWidth + BUTTON_GAP,
+            y,
+            actionWidth
+        );
+        positionButton(
+            moveRightButton,
+            x + (actionWidth + BUTTON_GAP) * 2,
+            y,
+            actionWidth
+        );
+
+        resetButton.setHeight(BUTTON_HEIGHT);
+        moveLeftButton.setHeight(BUTTON_HEIGHT);
+        moveRightButton.setHeight(BUTTON_HEIGHT);
+        resetButton.visible = true;
+        moveLeftButton.visible = true;
+        moveRightButton.visible = true;
+    }
+
+    private void placeCompactActionButtons(
+        int x,
+        int y,
+        int width,
+        int height
+    ) {
+        int gap = 3;
+        int actionWidth = (width - gap * 5) / 6;
+        KarakuriButton[] buttons = {
+            testButton,
+            resetButton,
+            moveLeftButton,
+            moveRightButton,
+            duplicateButton,
+            deleteButton
+        };
+        String[] labels = {
+            "Test",
+            "Reset",
+            "←",
+            "→",
+            "Dup",
+            "Del"
+        };
+
+        for (int index = 0; index < buttons.length; index++) {
+            KarakuriButton button = buttons[index];
+            button.setMessage(
+                Component.literal(labels[index])
+            );
+            positionButton(
+                button,
+                x + index * (actionWidth + gap),
+                y,
+                actionWidth
+            );
+            button.setHeight(height);
+            button.visible = true;
+        }
+    }
+
     private void placeActionButtons(
         int x,
         int y,
         int width
     ) {
         int actionWidth = (width - BUTTON_GAP * 2) / 3;
+        testButton.setHeight(BUTTON_HEIGHT);
+        duplicateButton.setHeight(BUTTON_HEIGHT);
+        deleteButton.setHeight(BUTTON_HEIGHT);
         positionButton(testButton, x, y, actionWidth);
         positionButton(duplicateButton, x + actionWidth + BUTTON_GAP, y, actionWidth);
         positionButton(deleteButton, x + (actionWidth + BUTTON_GAP) * 2, y, actionWidth);
@@ -955,6 +1053,12 @@ final class ScenarioInspectorWidgets {
         void changePrimaryValue(int direction);
 
         void testSelectedStep();
+
+        void resetSelectedStep();
+
+        void moveSelectedLeft();
+
+        void moveSelectedRight();
 
         void duplicateSelectedStep();
 
