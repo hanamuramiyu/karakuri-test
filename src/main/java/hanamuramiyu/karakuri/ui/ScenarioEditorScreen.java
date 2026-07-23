@@ -49,6 +49,8 @@ public final class ScenarioEditorScreen extends Screen {
     private static final int COMPACT_BACK_WIDTH = 54;
     private static final int WIDE_SAVE_WIDTH = 86;
     private static final int COMPACT_SAVE_WIDTH = 54;
+    private static final int WIDE_SAVE_AS_WIDTH = 68;
+    private static final int UNSAVED_LABEL_WIDTH = 66;
     private static final int WIDE_HISTORY_WIDTH = 50;
     private static final int COMPACT_HISTORY_WIDTH = 36;
     private static final int WIDE_CLIPBOARD_WIDTH = 48;
@@ -111,6 +113,7 @@ public final class ScenarioEditorScreen extends Screen {
     private KarakuriButton cutButton;
     private KarakuriButton pasteButton;
     private KarakuriButton clipboardMenuButton;
+    private KarakuriButton saveAsButton;
     private KarakuriButton saveButton;
     private KarakuriButton groupBackButton;
     private KarakuriButton groupActionsButton;
@@ -409,16 +412,24 @@ public final class ScenarioEditorScreen extends Screen {
             return true;
         }
 
+        if (
+            event.hasControlDownWithQuirk()
+                && event.key() == GLFW.GLFW_KEY_S
+        ) {
+            if (event.hasShiftDown()) {
+                openSaveAs();
+            } else {
+                saveScenario();
+            }
+
+            return true;
+        }
+
         if (hasFocusedTextField()) {
             return super.keyPressed(event);
         }
 
         if (event.hasControlDownWithQuirk()) {
-            if (event.key() == GLFW.GLFW_KEY_S) {
-                saveScenario();
-                return true;
-            }
-
             if (event.key() == GLFW.GLFW_KEY_D) {
                 duplicateSelectedStep();
                 return true;
@@ -490,8 +501,7 @@ public final class ScenarioEditorScreen extends Screen {
 
     @Override
     public void onClose() {
-        stopRunningTest();
-        minecraft.setScreen(parent);
+        requestClose();
     }
 
     @Override
@@ -571,11 +581,19 @@ public final class ScenarioEditorScreen extends Screen {
                 + WIDE_CLIPBOARD_WIDTH
                 + 8;
         nameFrameY = panelY + 9;
-        nameFrameWidth =
+        int saveX =
             panelX
                 + panelWidth
-                - 8
                 - WIDE_SAVE_WIDTH
+                - 8;
+
+        int saveAsX =
+            saveX
+                - WIDE_SAVE_AS_WIDTH
+                - BUTTON_GAP;
+
+        nameFrameWidth =
+            saveAsX
                 - 8
                 - nameFrameX;
         nameFrameHeight = 24;
@@ -767,8 +785,43 @@ public final class ScenarioEditorScreen extends Screen {
             );
         }
 
+        int saveX =
+            panelX + panelWidth - saveWidth - 8;
+
+        if (layoutMode == LayoutMode.WIDE) {
+            saveAsButton = createButton(
+                saveX
+                    - WIDE_SAVE_AS_WIDTH
+                    - BUTTON_GAP,
+                modeBadgeY,
+                WIDE_SAVE_AS_WIDTH,
+                Component.literal("Save As"),
+                this::openSaveAs,
+                KarakuriButton.Style.SECONDARY
+            );
+        } else {
+            int menuX =
+                clipboardX
+                    + COMPACT_CLIPBOARD_WIDTH
+                    - COMPACT_CLIPBOARD_MENU_WIDTH;
+
+            int menuY =
+                modeBadgeY
+                    + BUTTON_HEIGHT
+                    + 2;
+
+            saveAsButton = createButton(
+                menuX,
+                menuY + BUTTON_HEIGHT * 3,
+                COMPACT_CLIPBOARD_MENU_WIDTH,
+                Component.literal("Save As"),
+                this::openSaveAs,
+                KarakuriButton.Style.SECONDARY
+            );
+        }
+
         saveButton = createButton(
-            panelX + panelWidth - saveWidth - 8,
+            saveX,
             modeBadgeY,
             saveWidth,
             Component.literal("Save"),
@@ -787,6 +840,7 @@ public final class ScenarioEditorScreen extends Screen {
         addRenderableWidget(copyButton);
         addRenderableWidget(cutButton);
         addRenderableWidget(pasteButton);
+        addRenderableWidget(saveAsButton);
         addRenderableWidget(saveButton);
     }
 
@@ -795,7 +849,12 @@ public final class ScenarioEditorScreen extends Screen {
             font,
             nameFrameX + 7,
             nameFrameY + (nameFrameHeight - 16) / 2 + 3,
-            nameFrameWidth - 14,
+            Math.max(
+                20,
+                nameFrameWidth
+                    - 14
+                    - UNSAVED_LABEL_WIDTH
+            ),
             16,
             Component.literal("Scenario name")
         );
@@ -991,6 +1050,28 @@ public final class ScenarioEditorScreen extends Screen {
                 ? ScenarioEditorTheme.OUTLINE
                 : ScenarioEditorTheme.ERROR
         );
+
+        if (state.isUnsaved()) {
+            Component unsaved =
+                Component.literal("• Unsaved");
+
+            graphics.drawString(
+                font,
+                unsaved,
+                nameFrameX
+                    + nameFrameWidth
+                    - font.width(unsaved)
+                    - 7,
+                nameFrameY
+                    + (
+                        nameFrameHeight
+                            - font.lineHeight
+                    ) / 2
+                    + 1,
+                ScenarioEditorTheme.WARNING,
+                false
+            );
+        }
     }
 
     private void renderModeBadge(GuiGraphics graphics) {
@@ -1083,13 +1164,21 @@ public final class ScenarioEditorScreen extends Screen {
             font,
             Component.literal(
                 validationMessage == null
-                    ? "Ready  ·  Stored as a .karakuri file"
+                    ? (
+                        state.isUnsaved()
+                            ? "Unsaved changes  ·  Ctrl+S to save"
+                            : "Ready  ·  Stored as a .karakuri file"
+                    )
                     : validationMessage
             ),
             panelX + CONTENT_MARGIN,
             footerY + 8,
             validationMessage == null
-                ? ScenarioEditorTheme.TEXT_MUTED
+                ? (
+                    state.isUnsaved()
+                        ? ScenarioEditorTheme.WARNING
+                        : ScenarioEditorTheme.TEXT_MUTED
+                )
                 : ScenarioEditorTheme.ERROR,
             false
         );
@@ -1393,10 +1482,11 @@ public final class ScenarioEditorScreen extends Screen {
     }
 
     private void saveScenario() {
-        if (
-            getValidationMessage()
-                != null
-        ) {
+        saveAndCloseFromPrompt();
+    }
+
+    void saveAndCloseFromPrompt() {
+        if (!canSaveFromPrompt()) {
             return;
         }
 
@@ -1416,6 +1506,8 @@ public final class ScenarioEditorScreen extends Screen {
             );
         }
 
+        state.markSaved();
+
         parent.refreshScenarios(
             scenario.name()
         );
@@ -1423,9 +1515,93 @@ public final class ScenarioEditorScreen extends Screen {
         minecraft.setScreen(parent);
     }
 
-    private void cancelEditing() {
+    boolean canSaveFromPrompt() {
+        return TaskManager.getStatus()
+                == TaskStatus.IDLE
+            && getValidationMessage()
+                == null;
+    }
+
+    void discardAndClose() {
         stopRunningTest();
         minecraft.setScreen(parent);
+    }
+
+    private void openSaveAs() {
+        closeTransientUi();
+
+        if (
+            TaskManager.getStatus()
+                != TaskStatus.IDLE
+            || getStructuralValidationMessage()
+                != null
+        ) {
+            updateButtons();
+            return;
+        }
+
+        minecraft.setScreen(
+            new SaveScenarioAsScreen(
+                this,
+                createSaveAsName(),
+                this::saveScenarioAs
+            )
+        );
+    }
+
+    private void saveScenarioAs(
+        String scenarioName
+    ) {
+        if (
+            getStructuralValidationMessage()
+                != null
+            || scenarioName == null
+            || scenarioName.isBlank()
+            || ScenarioLibrary.containsName(
+                scenarioName,
+                -1
+            )
+        ) {
+            return;
+        }
+
+        stopRunningTest();
+
+        Scenario scenario =
+            state.toScenario(
+                scenarioName
+            );
+
+        ScenarioLibrary.add(scenario);
+
+        parent.refreshScenarios(
+            scenario.name()
+        );
+
+        minecraft.setScreen(parent);
+    }
+
+    private void requestClose() {
+        closeTransientUi();
+        stopRunningTest();
+
+        if (!state.isUnsaved()) {
+            minecraft.setScreen(parent);
+            return;
+        }
+
+        minecraft.setScreen(
+            new UnsavedChangesScreen(
+                this,
+                state.name().isBlank()
+                    ? "Untitled Scenario"
+                    : state.name().trim()
+            )
+        );
+    }
+
+    private void cancelEditing() {
+        requestClose();
     }
 
     private void updateButtons() {
@@ -1437,6 +1613,7 @@ public final class ScenarioEditorScreen extends Screen {
                 || copyButton == null
                 || cutButton == null
                 || pasteButton == null
+                || saveAsButton == null
                 || saveButton == null
                 || groupBackButton == null
                 || groupActionsButton == null
@@ -1535,17 +1712,22 @@ public final class ScenarioEditorScreen extends Screen {
             !compactClipboard || clipboardMenuOpen;
         pasteButton.visible =
             !compactClipboard || clipboardMenuOpen;
+        saveAsButton.visible =
+            !compactClipboard || clipboardMenuOpen;
 
         copyButton.active = true;
         cutButton.active =
             idle && state.canRemoveSelectedStep();
         pasteButton.active =
             idle && ScenarioEditorClipboard.hasContents();
+        saveAsButton.active =
+            idle
+                && getStructuralValidationMessage()
+                    == null;
 
         saveButton.active =
-            status == TaskStatus.IDLE
-                && getValidationMessage()
-                    == null;
+            canSaveFromPrompt()
+                && state.isUnsaved();
 
         if (
             layoutMode
@@ -1609,6 +1791,11 @@ public final class ScenarioEditorScreen extends Screen {
 
         if (pasteButton.isMouseOver(event.x(), event.y())) {
             pasteButton.onClick(event, doubled);
+            return true;
+        }
+
+        if (saveAsButton.isMouseOver(event.x(), event.y())) {
+            saveAsButton.onClick(event, doubled);
             return true;
         }
 
@@ -1691,6 +1878,10 @@ public final class ScenarioEditorScreen extends Screen {
                 : "A scenario with this name already exists";
         }
 
+        return getStructuralValidationMessage();
+    }
+
+    private String getStructuralValidationMessage() {
         String inspectorMessage =
             inspector == null
                 ? null
@@ -1721,6 +1912,51 @@ public final class ScenarioEditorScreen extends Screen {
                     name,
                     state.scenarioIndex()
                 );
+    }
+
+    private String createSaveAsName() {
+        String sourceName =
+            state.name().trim();
+
+        if (sourceName.isBlank()) {
+            sourceName = "New Scenario";
+        }
+
+        int copyNumber = 1;
+
+        while (true) {
+            String suffix = copyNumber == 1
+                ? " Copy"
+                : " Copy " + copyNumber;
+
+            int maximumBaseLength =
+                64 - suffix.length();
+
+            String baseName =
+                sourceName.length()
+                    <= maximumBaseLength
+                    ? sourceName
+                    : sourceName
+                        .substring(
+                            0,
+                            maximumBaseLength
+                        )
+                        .stripTrailing();
+
+            String candidate =
+                baseName + suffix;
+
+            if (
+                !ScenarioLibrary.containsName(
+                    candidate,
+                    -1
+                )
+            ) {
+                return candidate;
+            }
+
+            copyNumber++;
+        }
     }
 
     private boolean isWideScreen() {

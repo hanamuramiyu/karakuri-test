@@ -41,6 +41,7 @@ public final class ScenarioEditorState {
 
     private List<ScenarioStep> activeSteps;
     private ScenarioEditorHistory.Snapshot pendingCanvasSnapshot;
+    private SavedDocument savedDocument;
     private String name;
     private int selectedIndex;
 
@@ -53,6 +54,12 @@ public final class ScenarioEditorState {
         this.name = name;
         this.rootSteps = steps;
         this.activeSteps = steps;
+        this.savedDocument = scenarioIndex < 0
+            ? null
+            : new SavedDocument(
+                name,
+                steps
+            );
     }
 
     public static ScenarioEditorState create(
@@ -115,6 +122,24 @@ public final class ScenarioEditorState {
 
     public boolean canRedo() {
         return history.canRedo();
+    }
+
+    public boolean isUnsaved() {
+        commitHierarchy();
+
+        return savedDocument == null
+            || !savedDocument.matches(
+                name,
+                rootSteps
+            );
+    }
+
+    public void markSaved() {
+        commitHierarchy();
+        savedDocument = new SavedDocument(
+            name,
+            rootSteps
+        );
     }
 
     public boolean undo() {
@@ -889,8 +914,17 @@ public final class ScenarioEditorState {
     }
 
     public Scenario toScenario() {
+        return toScenario(name);
+    }
+
+    public Scenario toScenario(
+        String scenarioName
+    ) {
         commitHierarchy();
-        return new Scenario(name, rootSteps);
+        return new Scenario(
+            scenarioName,
+            rootSteps
+        );
     }
 
     private void insertAfterSelected(
@@ -1049,6 +1083,23 @@ public final class ScenarioEditorState {
         }
 
         return false;
+    }
+
+    private record SavedDocument(
+        String name,
+        List<ScenarioStep> rootSteps
+    ) {
+        private SavedDocument {
+            rootSteps = List.copyOf(rootSteps);
+        }
+
+        private boolean matches(
+            String currentName,
+            List<ScenarioStep> currentSteps
+        ) {
+            return name.equals(currentName)
+                && rootSteps.equals(currentSteps);
+        }
     }
 
     private record GroupContext(

@@ -16,6 +16,7 @@ public final class ScenarioEditorTheme {
     public static final int TEXT_MUTED = 0xFF81798E;
     public static final int ERROR = 0xFFE66777;
     public static final int SUCCESS = 0xFF61D394;
+    public static final int WARNING = 0xFFE3B865;
 
     private ScenarioEditorTheme() {
     }
