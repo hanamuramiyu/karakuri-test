@@ -87,13 +87,17 @@ public final class ScenarioFileStore {
             List<Scenario> scenarios =
                 new ArrayList<>();
 
+            Set<String> usedScenarioIds =
+                new HashSet<>();
+
             for (
                 Path scenarioFile :
                 scenarioFiles
             ) {
                 loadScenarioFile(
                     scenarioFile,
-                    scenarios
+                    scenarios,
+                    usedScenarioIds
                 );
             }
 
@@ -123,14 +127,48 @@ public final class ScenarioFileStore {
 
     private void loadScenarioFile(
         Path scenarioFile,
-        List<Scenario> scenarios
+        List<Scenario> scenarios,
+        Set<String> usedScenarioIds
     ) {
         try {
-            scenarios.add(
+            ScenarioJsonCodec.ScenarioDocument document =
                 readScenarioFile(
                     scenarioFile
-                )
-            );
+                );
+
+            Scenario scenario =
+                document.scenario();
+
+            boolean duplicateId =
+                !usedScenarioIds.add(
+                    scenario.id()
+                );
+
+            if (duplicateId) {
+                scenario =
+                    scenario.copyWithNewIdentity();
+
+                usedScenarioIds.add(
+                    scenario.id()
+                );
+            }
+
+            scenarios.add(scenario);
+
+            if (
+                document.generatedId()
+                    || duplicateId
+            ) {
+                writeScenarioFile(
+                    scenarioFile,
+                    scenario
+                );
+
+                Karakuri.LOGGER.info(
+                    "Assigned a persistent ID to scenario {}",
+                    scenarioFile
+                );
+            }
         } catch (
             IOException
                 | RuntimeException exception
@@ -257,7 +295,8 @@ public final class ScenarioFileStore {
         }
     }
 
-    private Scenario readScenarioFile(
+    private ScenarioJsonCodec.ScenarioDocument
+    readScenarioFile(
         Path path
     ) throws IOException {
         try (
@@ -267,7 +306,7 @@ public final class ScenarioFileStore {
                     StandardCharsets.UTF_8
                 )
         ) {
-            return jsonCodec.readScenario(
+            return jsonCodec.readScenarioDocument(
                 reader
             );
         }

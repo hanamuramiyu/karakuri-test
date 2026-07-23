@@ -39,7 +39,7 @@ public final class ScenarioShortcutsScreen extends Screen {
                 new Shortcut("Ctrl+F", "Search", "Search"),
                 new Shortcut("Ctrl+N", "New scenario", "New"),
                 new Shortcut("↑ / ↓", "Select scenario", "Select"),
-                new Shortcut("Enter", "Start / resume", "Start"),
+                new Shortcut("Enter", "Start selected", "Start"),
                 new Shortcut("F5", "Reload", "Reload")
             )
         ),
@@ -50,8 +50,44 @@ public final class ScenarioShortcutsScreen extends Screen {
             List.of(
                 new Shortcut("2× Click", "Edit scenario", "Edit"),
                 new Shortcut("More", "Copy, export, delete", "Scenario"),
-                new Shortcut("Tools", "Import, folder, reload", "Tools"),
+                new Shortcut("Tools", "Running, import, folders", "Tools"),
                 new Shortcut("Mode", "Once or loop", "Run mode")
+            )
+        )
+    );
+
+
+    private static final List<ShortcutGroup> QUICK_LAUNCH_GROUPS = List.of(
+        new ShortcutGroup(
+            "SETUP",
+            "SETUP",
+            ScenarioEditorTheme.ACCENT,
+            List.of(
+                new Shortcut("Tools", "Open Quick Launch", "Open"),
+                new Shortcut("Click", "Select a slot", "Select"),
+                new Shortcut("Configure", "Choose scenarios", "Assign"),
+                new Shortcut("Controls", "Bind slot keys", "Bind")
+            )
+        ),
+        new ShortcutGroup(
+            "GLOBAL CONTROLS",
+            "KEYS",
+            0xFF67C7E8,
+            List.of(
+                new Shortcut("Slot 1–6", "Run assigned group", "Run"),
+                new Shortcut("Pause / Resume", "Control last group", "Pause"),
+                new Shortcut("Stop Last", "Stop last group", "Stop"),
+                new Shortcut("Sessions", "Open running sessions", "Sessions")
+            )
+        ),
+        new ShortcutGroup(
+            "SAFETY",
+            "SAFE",
+            ScenarioEditorTheme.WARNING,
+            List.of(
+                new Shortcut("Conflict", "Choose how to start", "Resolve"),
+                new Shortcut("Compatible", "Skip blocked scenarios", "Compatible"),
+                new Shortcut("Emergency", "Stop every scenario", "Stop all")
             )
         )
     );
@@ -96,6 +132,7 @@ public final class ScenarioShortcutsScreen extends Screen {
     private final Screen parent;
     private Page page;
     private KarakuriButton browserTab;
+    private KarakuriButton quickLaunchTab;
     private KarakuriButton editorTab;
 
     public ScenarioShortcutsScreen(Screen parent) {
@@ -111,7 +148,10 @@ public final class ScenarioShortcutsScreen extends Screen {
         int panelX = panelX();
         int panelY = panelY();
         int panelWidth = panelWidth();
-        int tabWidth = Math.min(118, (panelWidth - CONTENT_MARGIN * 2 - 6) / 2);
+        int tabWidth = Math.min(
+            118,
+            (panelWidth - CONTENT_MARGIN * 2 - 12) / 3
+        );
         int tabY = panelY + HEADER_HEIGHT + 2;
 
         browserTab = addRenderableWidget(
@@ -126,10 +166,26 @@ public final class ScenarioShortcutsScreen extends Screen {
                 KarakuriButton.Style.SECONDARY
             )
         );
-        editorTab = addRenderableWidget(
+        quickLaunchTab = addRenderableWidget(
             new KarakuriButton(
                 font,
                 panelX + CONTENT_MARGIN + tabWidth + 6,
+                tabY,
+                tabWidth,
+                TAB_HEIGHT,
+                Component.literal(
+                    panelWidth < 430
+                        ? "Quick"
+                        : "Quick Launch"
+                ),
+                () -> setPage(Page.QUICK_LAUNCH),
+                KarakuriButton.Style.SECONDARY
+            )
+        );
+        editorTab = addRenderableWidget(
+            new KarakuriButton(
+                font,
+                panelX + CONTENT_MARGIN + (tabWidth + 6) * 2,
                 tabY,
                 tabWidth,
                 TAB_HEIGHT,
@@ -232,12 +288,21 @@ public final class ScenarioShortcutsScreen extends Screen {
     }
 
     private void updateTabs() {
-        if (browserTab == null || editorTab == null) {
+        if (
+            browserTab == null
+                || quickLaunchTab == null
+                || editorTab == null
+        ) {
             return;
         }
 
         browserTab.setStyle(
             page == Page.BROWSER
+                ? KarakuriButton.Style.PRIMARY
+                : KarakuriButton.Style.SECONDARY
+        );
+        quickLaunchTab.setStyle(
+            page == Page.QUICK_LAUNCH
                 ? KarakuriButton.Style.PRIMARY
                 : KarakuriButton.Style.SECONDARY
         );
@@ -631,6 +696,10 @@ public final class ScenarioShortcutsScreen extends Screen {
         BROWSER(
             "Scenario browser navigation and actions",
             BROWSER_GROUPS
+        ),
+        QUICK_LAUNCH(
+            "Global bindings and parallel scenario groups",
+            QUICK_LAUNCH_GROUPS
         ),
         EDITOR(
             "Scenario editor keyboard commands",

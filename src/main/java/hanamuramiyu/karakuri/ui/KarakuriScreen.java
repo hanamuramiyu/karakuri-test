@@ -2,10 +2,10 @@ package hanamuramiyu.karakuri.ui;
 
 import hanamuramiyu.karakuri.scenario.model.Scenario;
 import hanamuramiyu.karakuri.scenario.persistence.ScenarioTransferService;
+import hanamuramiyu.karakuri.task.ScenarioStartResult;
 import hanamuramiyu.karakuri.task.TaskManager;
+import hanamuramiyu.karakuri.task.TaskSessionSnapshot;
 import hanamuramiyu.karakuri.task.TaskStatus;
-import hanamuramiyu.karakuri.task.composite.RepeatTask;
-import hanamuramiyu.karakuri.task.factory.ScenarioTaskFactory;
 import hanamuramiyu.karakuri.ui.main.KarakuriScreenState;
 import hanamuramiyu.karakuri.ui.main.ScenarioBrowserList;
 import hanamuramiyu.karakuri.ui.main.ScenarioDetailsRenderer;
@@ -415,7 +415,7 @@ public final class KarakuriScreen extends Screen {
     private void createHeaderActions() {
         int helpWidth = compactLayout ? 28 : 56;
         int toolsWidth = compactLayout ? 64 : 82;
-        int statusWidth = 58;
+        int statusWidth = compactLayout ? 76 : 94;
         int actionsY = panelY + HEADER_ACTION_Y_OFFSET;
         int toolsX = panelX + panelWidth - CONTENT_MARGIN - toolsWidth;
         int helpX = toolsX - BUTTON_GAP - helpWidth;
@@ -448,6 +448,21 @@ public final class KarakuriScreen extends Screen {
                 Component.literal("Tools"),
                 List.of(
                     new KarakuriMenuButton.Item(
+                        "Quick Launch",
+                        this::openQuickLaunch,
+                        0xFFB38AE8
+                    ),
+                    new KarakuriMenuButton.Item(
+                        "Running Sessions",
+                        this::openRunningManager,
+                        0xFF67C7E8
+                    ),
+                    new KarakuriMenuButton.Item(
+                        "Emergency Stop All",
+                        this::emergencyStopAll,
+                        0xFFE66777
+                    ),
+                    new KarakuriMenuButton.Item(
                         "Import Scenarios",
                         this::openImportScreen,
                         0xFFE8E2ED,
@@ -475,7 +490,7 @@ public final class KarakuriScreen extends Screen {
                 KarakuriMenuButton.Direction.DOWN
             )
         );
-        globalToolsMenu.setOptionWidth(compactLayout ? 158 : 184);
+        globalToolsMenu.setOptionWidth(compactLayout ? 166 : 192);
         globalToolsMenu.setAlignOptionsRight(true);
     }
 
@@ -519,7 +534,7 @@ public final class KarakuriScreen extends Screen {
                         "Export",
                         this::exportSelectedScenario,
                         0xFF67C7E8,
-                        this::canManageSelectedScenario
+                        this::canExportSelectedScenario
                     ),
                     new KarakuriMenuButton.Item(
                         "Delete",
@@ -571,7 +586,7 @@ public final class KarakuriScreen extends Screen {
                 executionY,
                 buttonWidth,
                 "Pause",
-                () -> TaskManager.pause(minecraft),
+                this::pauseRunningScenarios,
                 KarakuriButton.Style.SECONDARY
             )
         );
@@ -581,7 +596,7 @@ public final class KarakuriScreen extends Screen {
                 executionY,
                 buttonWidth,
                 "Stop",
-                () -> TaskManager.stop(minecraft),
+                this::stopRunningScenarios,
                 KarakuriButton.Style.DANGER
             )
         );
@@ -698,7 +713,9 @@ public final class KarakuriScreen extends Screen {
         GuiGraphics graphics,
         TaskStatus status
     ) {
-        Component statusText = Component.literal(status.label());
+        Component statusText = Component.literal(
+            statusLabel(status)
+        );
         int minimumX = panelX
             + CONTENT_MARGIN
             + font.width(title)
@@ -744,44 +761,205 @@ public final class KarakuriScreen extends Screen {
     }
 
     private void startOrResume() {
-        if (TaskManager.getStatus() == TaskStatus.PAUSED) {
-            TaskManager.resume(minecraft);
-            return;
-        }
-
         Scenario scenario = state.selectedScenario();
 
-        if (scenario == null || TaskManager.getStatus() == TaskStatus.RUNNING) {
+        if (scenario == null) {
             return;
         }
 
-        TaskManager.start(
-            new RepeatTask(
-                () -> ScenarioTaskFactory.create(scenario),
-                state.repeatCount()
-            ),
-            minecraft
-        );
+        TaskSessionSnapshot existing =
+            TaskManager.findScenarioSessionById(
+                scenario.id()
+            );
+
+        if (existing != null) {
+            if (
+                existing.status()
+                    == TaskStatus.PAUSED
+            ) {
+                TaskManager.resumeSession(
+                    existing.id(),
+                    minecraft
+                );
+
+                showFeedback(
+                    "Resumed \"" + scenario.name() + "\"",
+                    true
+                );
+            }
+
+            return;
+        }
+
+        ScenarioStartResult result =
+            TaskManager.startScenario(
+                scenario,
+                state.repeatCount(),
+                minecraft
+            );
+
+        switch (result.status()) {
+            case STARTED -> showFeedback(
+                "Started \"" + scenario.name() + "\"",
+                true
+            );
+
+            case CONFLICT -> minecraft.setScreen(
+                new ScenarioConflictScreen(
+                    this,
+                    scenario,
+                    state.repeatCount(),
+                    result
+                )
+            );
+
+            case ALREADY_RUNNING -> showFeedback(
+                "\"" + scenario.name()
+                    + "\" is already active",
+                false
+            );
+
+            case UNAVAILABLE -> showFeedback(
+                "A world must be open to start a scenario",
+                false
+            );
+        }
     }
 
     private void selectScenarioIndex(int libraryIndex) {
-        if (!isIdle()) {
-            return;
-        }
-
         state.selectScenarioIndex(libraryIndex);
         scenarioBrowser.ensureSelectedVisible();
         updateButtons();
     }
 
     private void selectVisibleOffset(int offset) {
-        if (!isIdle() || !state.hasVisibleScenario()) {
+        if (!state.hasVisibleScenario()) {
             return;
         }
 
         state.selectVisibleOffset(offset);
         scenarioBrowser.ensureSelectedVisible();
         updateButtons();
+    }
+
+    private void pauseRunningScenarios() {
+        List<TaskSessionSnapshot> sessions =
+            TaskManager.sessions();
+
+        if (sessions.isEmpty()) {
+            return;
+        }
+
+        if (sessions.size() > 1) {
+            minecraft.setScreen(
+                new RunningScenariosScreen(
+                    this,
+                    RunningScenariosScreen
+                        .OpenMode.PAUSE
+                )
+            );
+            return;
+        }
+
+        TaskSessionSnapshot session =
+            sessions.getFirst();
+
+        if (
+            session.status()
+                == TaskStatus.RUNNING
+        ) {
+            TaskManager.pauseSession(
+                session.id(),
+                minecraft
+            );
+
+            showFeedback(
+                "Paused \"" + session.name() + "\"",
+                true
+            );
+        } else {
+            TaskManager.resumeSession(
+                session.id(),
+                minecraft
+            );
+
+            showFeedback(
+                "Resumed \"" + session.name() + "\"",
+                true
+            );
+        }
+    }
+
+    private void stopRunningScenarios() {
+        List<TaskSessionSnapshot> sessions =
+            TaskManager.sessions();
+
+        if (sessions.isEmpty()) {
+            return;
+        }
+
+        if (sessions.size() > 1) {
+            minecraft.setScreen(
+                new RunningScenariosScreen(
+                    this,
+                    RunningScenariosScreen
+                        .OpenMode.STOP
+                )
+            );
+            return;
+        }
+
+        TaskSessionSnapshot session =
+            sessions.getFirst();
+
+        TaskManager.stopSession(
+            session.id(),
+            minecraft
+        );
+
+        showFeedback(
+            "Stopped \"" + session.name() + "\"",
+            true
+        );
+    }
+
+    private void openQuickLaunch() {
+        minecraft.setScreen(
+            new QuickLaunchScreen(this)
+        );
+    }
+
+    private void openRunningManager() {
+        minecraft.setScreen(
+            new RunningScenariosScreen(
+                this,
+                RunningScenariosScreen
+                    .OpenMode.MANAGE
+            )
+        );
+    }
+
+    private void emergencyStopAll() {
+        int count = TaskManager.activeCount();
+
+        if (count == 0) {
+            showFeedback(
+                "No scenarios are running",
+                false
+            );
+            return;
+        }
+
+        TaskManager.stop(minecraft);
+
+        showFeedback(
+            count == 1
+                ? "Stopped 1 scenario"
+                : "Stopped "
+                    + count
+                    + " scenarios",
+            true
+        );
     }
 
     private void updateSearchQuery(String query) {
@@ -830,7 +1008,7 @@ public final class KarakuriScreen extends Screen {
     }
 
     private void exportSelectedScenario() {
-        if (!canManageSelectedScenario()) {
+        if (!canExportSelectedScenario()) {
             return;
         }
 
@@ -985,10 +1163,13 @@ public final class KarakuriScreen extends Screen {
 
         TaskStatus status = TaskManager.getStatus();
         boolean idle = status == TaskStatus.IDLE;
-        boolean hasSelection = state.selectedScenario() != null;
+        boolean hasSelection =
+            state.selectedScenario() != null;
+        int activeCount =
+            TaskManager.activeCount();
 
-        searchField.setEditable(idle);
-        sortDropdown.active = idle;
+        searchField.setEditable(true);
+        sortDropdown.active = true;
         helpButton.active = true;
         globalToolsMenu.active = true;
         newButton.active = idle;
@@ -1000,30 +1181,57 @@ public final class KarakuriScreen extends Screen {
         editButton.active = idle && hasSelection;
         scenarioMoreMenu.active = hasSelection;
 
-        modeButton.visible = hasSelection;
-        startButton.visible = hasSelection;
-        pauseButton.visible = hasSelection;
-        stopButton.visible = hasSelection;
+        boolean showExecution =
+            hasSelection || activeCount > 0;
+
+        modeButton.visible = showExecution;
+        startButton.visible = showExecution;
+        pauseButton.visible = showExecution;
+        stopButton.visible = showExecution;
 
         modeButton.setMessage(
             Component.literal(
                 compactLayout
                     ? state.executionModeLabel()
-                    : "Mode: " + state.executionModeLabel()
+                    : "Mode: "
+                        + state.executionModeLabel()
             )
         );
-        modeButton.active = idle && hasSelection;
+        modeButton.active = hasSelection;
+
+        TaskSessionSnapshot selectedSession =
+            hasSelection
+                ? TaskManager.findScenarioSessionById(
+                    state.selectedScenario().id()
+                )
+                : null;
 
         startButton.setMessage(
             Component.literal(
-                status == TaskStatus.PAUSED ? "Resume" : "Start"
+                selectedSession == null
+                    ? "Start"
+                    : selectedSession.status()
+                        == TaskStatus.PAUSED
+                            ? "Resume"
+                            : "Running"
             )
         );
+
         startButton.active = hasSelection
-            && status != TaskStatus.RUNNING;
-        pauseButton.active = hasSelection
-            && status == TaskStatus.RUNNING;
-        stopButton.active = hasSelection && !idle;
+            && (
+                selectedSession == null
+                    || selectedSession.status()
+                        == TaskStatus.PAUSED
+            );
+
+        pauseButton.setMessage(
+            Component.literal(
+                pauseButtonLabel(activeCount)
+            )
+        );
+
+        pauseButton.active = activeCount > 0;
+        stopButton.active = activeCount > 0;
     }
 
     private void layoutManagementButtons(boolean hasSelection) {
@@ -1056,6 +1264,60 @@ public final class KarakuriScreen extends Screen {
 
     private boolean canManageSelectedScenario() {
         return isIdle() && state.selectedScenario() != null;
+    }
+
+    private boolean canExportSelectedScenario() {
+        return state.selectedScenario() != null;
+    }
+
+    private String statusLabel(
+        TaskStatus status
+    ) {
+        int activeCount =
+            TaskManager.activeCount();
+
+        if (activeCount == 0) {
+            return status.label();
+        }
+
+        if (activeCount == 1) {
+            return status.label();
+        }
+
+        int runningCount =
+            TaskManager.runningCount();
+
+        if (runningCount == 0) {
+            return activeCount + " Paused";
+        }
+
+        if (
+            runningCount
+                == activeCount
+        ) {
+            return activeCount + " Running";
+        }
+
+        return activeCount + " Active";
+    }
+
+    private String pauseButtonLabel(
+        int activeCount
+    ) {
+        if (activeCount == 0) {
+            return "Pause";
+        }
+
+        if (activeCount > 1) {
+            return compactLayout
+                ? "Manage"
+                : "Pause / Resume";
+        }
+
+        return TaskManager.getStatus()
+                == TaskStatus.PAUSED
+            ? "Resume"
+            : "Pause";
     }
 
     private int getStatusColor(TaskStatus status) {

@@ -1,6 +1,9 @@
 package hanamuramiyu.karakuri.ui.main;
 
 import hanamuramiyu.karakuri.scenario.model.Scenario;
+import hanamuramiyu.karakuri.task.TaskManager;
+import hanamuramiyu.karakuri.task.TaskSessionSnapshot;
+import hanamuramiyu.karakuri.task.TaskStatus;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -251,6 +254,12 @@ public final class ScenarioBrowserList {
         Scenario scenario = entry.scenario();
         boolean selected = entry.libraryIndex()
             == state.selectedScenarioIndex();
+
+        TaskSessionSnapshot activeSession =
+            TaskManager.findScenarioSessionById(
+                scenario.id()
+            );
+
         boolean hovered = contains(
             mouseX,
             mouseY,
@@ -262,14 +271,22 @@ public final class ScenarioBrowserList {
 
         int background = selected
             ? 0xFF2A2237
-            : hovered
-                ? 0xFF201C29
-                : 0xFF15121B;
+            : activeSession != null
+                ? 0xFF18231F
+                : hovered
+                    ? 0xFF201C29
+                    : 0xFF15121B;
+
         int outline = selected
             ? 0xFF9B79D1
-            : hovered
-                ? 0xFF51465D
-                : 0xFF27222F;
+            : activeSession != null
+                ? activeSession.status()
+                    == TaskStatus.RUNNING
+                        ? 0xFF3F8D68
+                        : 0xFF96763C
+                : hovered
+                    ? 0xFF51465D
+                    : 0xFF27222F;
 
         graphics.fill(
             x + 2,
@@ -286,13 +303,24 @@ public final class ScenarioBrowserList {
             outline
         );
 
-        if (selected) {
+        if (
+            selected
+                || activeSession != null
+        ) {
+            int markerColor =
+                activeSession == null
+                    ? 0xFFB38AE8
+                    : activeSession.status()
+                        == TaskStatus.RUNNING
+                            ? 0xFF61D394
+                            : 0xFFF1C36E;
+
             graphics.fill(
                 x + 2,
                 rowY,
                 x + 5,
                 rowY + ROW_HEIGHT - 1,
-                0xFFB38AE8
+                markerColor
             );
         }
 
@@ -324,16 +352,32 @@ public final class ScenarioBrowserList {
             false
         );
 
-        graphics.drawString(
-            font,
-            Component.literal(
-                selected
+        String stateLabel =
+            activeSession == null
+                ? selected
                     ? "Selected"
                     : "Click to select"
-            ),
+                : activeSession.status()
+                    == TaskStatus.RUNNING
+                        ? "Running"
+                        : "Paused";
+
+        int stateColor =
+            activeSession == null
+                ? selected
+                    ? 0xFFB38AE8
+                    : 0xFF716879
+                : activeSession.status()
+                    == TaskStatus.RUNNING
+                        ? 0xFF61D394
+                        : 0xFFF1C36E;
+
+        graphics.drawString(
+            font,
+            Component.literal(stateLabel),
             x + 11,
             rowY + 18,
-            selected ? 0xFFB38AE8 : 0xFF716879,
+            stateColor,
             false
         );
     }

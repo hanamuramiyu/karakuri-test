@@ -3,6 +3,8 @@ package hanamuramiyu.karakuri.task.action;
 import hanamuramiyu.karakuri.scenario.model.JumpStep;
 import hanamuramiyu.karakuri.scenario.model.JumpStopMode;
 import hanamuramiyu.karakuri.task.ClientTask;
+import hanamuramiyu.karakuri.task.input.InputControl;
+import hanamuramiyu.karakuri.task.input.InputOwnershipManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 
@@ -335,9 +337,11 @@ public final class JumpTask implements ClientTask {
         Minecraft client,
         boolean down
     ) {
-        client.options
-            .keyJump
-            .setDown(down);
+        InputOwnershipManager.setDown(
+            InputControl.JUMP,
+            client,
+            down
+        );
 
         jumpKeyDown = down;
     }

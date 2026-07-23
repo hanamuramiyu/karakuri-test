@@ -41,6 +41,13 @@ final class ScenarioJsonCodec {
     Scenario readScenario(
         Reader reader
     ) {
+        return readScenarioDocument(reader)
+            .scenario();
+    }
+
+    ScenarioDocument readScenarioDocument(
+        Reader reader
+    ) {
         JsonObject root =
             readVersionedRoot(
                 reader,
@@ -74,7 +81,7 @@ final class ScenarioJsonCodec {
             scenarios.add(
                 readScenarioElement(
                     scenarioElement
-                )
+                ).scenario()
             );
         }
 
@@ -140,7 +147,7 @@ final class ScenarioJsonCodec {
         return root.object();
     }
 
-    private Scenario readScenarioElement(
+    private ScenarioDocument readScenarioElement(
         JsonElement element
     ) {
         JsonObjectReader scenarioObject =
@@ -154,7 +161,7 @@ final class ScenarioJsonCodec {
         );
     }
 
-    private Scenario readScenarioObject(
+    private ScenarioDocument readScenarioObject(
         JsonObject object
     ) {
         JsonObjectReader values =
@@ -180,7 +187,22 @@ final class ScenarioJsonCodec {
             );
         }
 
-        return new Scenario(name, steps);
+        boolean generatedId =
+            !object.has("id")
+                || object.get("id").isJsonNull();
+
+        Scenario scenario = generatedId
+            ? new Scenario(name, steps)
+            : new Scenario(
+                values.requiredString("id"),
+                name,
+                steps
+            );
+
+        return new ScenarioDocument(
+            scenario,
+            generatedId
+        );
     }
 
     private JsonObject writeScenarioObject(
@@ -192,6 +214,11 @@ final class ScenarioJsonCodec {
         object.addProperty(
             "schemaVersion",
             SCHEMA_VERSION
+        );
+
+        object.addProperty(
+            "id",
+            scenario.id()
         );
 
         object.addProperty(
@@ -217,5 +244,11 @@ final class ScenarioJsonCodec {
         );
 
         return object;
+    }
+
+    record ScenarioDocument(
+        Scenario scenario,
+        boolean generatedId
+    ) {
     }
 }

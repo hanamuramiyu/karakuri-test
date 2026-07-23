@@ -124,7 +124,12 @@ public final class ScenarioTransferService {
             usedFileNames
         );
         Path destination = exportDirectory.resolve(fileName);
-        writeScenarioFile(destination, scenario);
+
+        writeScenarioFile(
+            destination,
+            scenario.copyWithNewIdentity()
+        );
+
         return destination;
     }
 

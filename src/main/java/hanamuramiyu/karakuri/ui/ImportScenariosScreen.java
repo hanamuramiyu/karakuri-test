@@ -820,9 +820,24 @@ public final class ImportScenariosScreen extends Screen {
 
             if (row.conflict() && row.conflictMode() == ConflictMode.REPLACE) {
                 if (existingIndex >= 0) {
-                    updated.set(existingIndex, source);
+                    Scenario existing =
+                        updated.get(existingIndex);
+
+                    updated.set(
+                        existingIndex,
+                        new Scenario(
+                            existing.id(),
+                            source.name(),
+                            source.steps()
+                        )
+                    );
                 } else {
-                    updated.add(source);
+                    updated.add(
+                        new Scenario(
+                            source.name(),
+                            source.steps()
+                        )
+                    );
                 }
             } else {
                 if (existingIndex >= 0) {

@@ -1,10 +1,12 @@
 package hanamuramiyu.karakuri.task.action;
 
+import hanamuramiyu.karakuri.scenario.model.MouseAction;
 import hanamuramiyu.karakuri.scenario.model.MouseInputMode;
 import hanamuramiyu.karakuri.scenario.model.MouseStep;
 import hanamuramiyu.karakuri.scenario.model.MouseStopMode;
 import hanamuramiyu.karakuri.task.ClientTask;
-import net.minecraft.client.KeyMapping;
+import hanamuramiyu.karakuri.task.input.InputControl;
+import hanamuramiyu.karakuri.task.input.InputOwnershipManager;
 import net.minecraft.client.Minecraft;
 
 public final class MouseButtonTask implements ClientTask {
@@ -148,13 +150,14 @@ public final class MouseButtonTask implements ClientTask {
         boolean value
     ) {
         pressed = value;
-        getKey(client).setDown(value);
-    }
 
-    private KeyMapping getKey(Minecraft client) {
-        return switch (step.action()) {
-            case LEFT_CLICK -> client.options.keyAttack;
-            case RIGHT_CLICK -> client.options.keyUse;
-        };
+        InputOwnershipManager.setDown(
+            step.action()
+                == MouseAction.LEFT_CLICK
+                    ? InputControl.ATTACK
+                    : InputControl.USE,
+            client,
+            value
+        );
     }
 }

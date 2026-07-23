@@ -3,7 +3,8 @@ package hanamuramiyu.karakuri.task.action;
 import hanamuramiyu.karakuri.scenario.model.MoveMode;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
 import hanamuramiyu.karakuri.task.ClientTask;
-import net.minecraft.client.KeyMapping;
+import hanamuramiyu.karakuri.task.input.InputControl;
+import hanamuramiyu.karakuri.task.input.InputOwnershipManager;
 import net.minecraft.client.Minecraft;
 
 public final class MoveTask implements ClientTask {
@@ -89,49 +90,49 @@ public final class MoveTask implements ClientTask {
         Minecraft client,
         boolean pressed
     ) {
-        getDirectionKey(client)
-            .setDown(pressed);
+        InputOwnershipManager.setDown(
+            directionControl(),
+            client,
+            pressed
+        );
 
         if (
             step.mode()
                 == MoveMode.SPRINT
         ) {
-            client.options
-                .keySprint
-                .setDown(pressed);
+            InputOwnershipManager.setDown(
+                InputControl.SPRINT,
+                client,
+                pressed
+            );
         }
 
         if (
             step.mode()
                 == MoveMode.SNEAK
         ) {
-            client.options
-                .keyShift
-                .setDown(pressed);
+            InputOwnershipManager.setDown(
+                InputControl.SNEAK,
+                client,
+                pressed
+            );
         }
 
         if (step.jumping()) {
-            client.options
-                .keyJump
-                .setDown(pressed);
+            InputOwnershipManager.setDown(
+                InputControl.JUMP,
+                client,
+                pressed
+            );
         }
     }
 
-    private KeyMapping getDirectionKey(
-        Minecraft client
-    ) {
+    private InputControl directionControl() {
         return switch (step.direction()) {
-            case FORWARD ->
-                client.options.keyUp;
-
-            case BACKWARD ->
-                client.options.keyDown;
-
-            case LEFT ->
-                client.options.keyLeft;
-
-            case RIGHT ->
-                client.options.keyRight;
+            case FORWARD -> InputControl.FORWARD;
+            case BACKWARD -> InputControl.BACKWARD;
+            case LEFT -> InputControl.LEFT;
+            case RIGHT -> InputControl.RIGHT;
         };
     }
 }

@@ -1,4 +1,14 @@
 {
   "key.category.karakuri.general": "Karakuri",
-  "key.karakuri.open_menu": "Open Karakuri Menu"
+  "key.karakuri.open_menu": "Open Karakuri Menu",
+  "key.karakuri.quick_slot_1": "Run Quick Slot 1",
+  "key.karakuri.quick_slot_2": "Run Quick Slot 2",
+  "key.karakuri.quick_slot_3": "Run Quick Slot 3",
+  "key.karakuri.quick_slot_4": "Run Quick Slot 4",
+  "key.karakuri.quick_slot_5": "Run Quick Slot 5",
+  "key.karakuri.quick_slot_6": "Run Quick Slot 6",
+  "key.karakuri.pause_resume_last": "Pause / Resume Last Group",
+  "key.karakuri.stop_last": "Stop Last Group",
+  "key.karakuri.open_running_sessions": "Open Running Sessions",
+  "key.karakuri.emergency_stop_all": "Emergency Stop All"
 }
