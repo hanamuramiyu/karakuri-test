@@ -10,7 +10,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -882,46 +881,35 @@ public final class RunningScenariosScreen extends Screen {
     }
 
     private void pauseSelected() {
-        List<Long> affectedIds = sessions.stream()
-            .filter(
-                session ->
-                    selectedIds.contains(
-                        session.id()
-                    )
-                        && session.status()
-                            == TaskStatus.RUNNING
-            )
-            .map(TaskSessionSnapshot::id)
-            .toList();
-
-        TaskManager.pauseSessions(
-            affectedIds,
-            minecraft
+        List<Long> affectedIds = selectedSessionIds(
+            TaskStatus.RUNNING
         );
 
-        showFeedback(
-            pausedMessage(
+        if (affectedIds.isEmpty()) {
+            return;
+        }
+
+        if (affectedIds.size() > 1) {
+            openConfirmation(
+                SessionControlConfirmationScreen
+                    .Action.PAUSE_SELECTED,
+                affectedIds,
                 affectedIds.size()
-            ),
-            true
-        );
+            );
+            return;
+        }
 
-        refreshSessions();
-        updateButtons();
+        pauseSessions(affectedIds);
     }
 
     private void resumeSelected() {
-        List<Long> affectedIds = sessions.stream()
-            .filter(
-                session ->
-                    selectedIds.contains(
-                        session.id()
-                    )
-                        && session.status()
-                            == TaskStatus.PAUSED
-            )
-            .map(TaskSessionSnapshot::id)
-            .toList();
+        List<Long> affectedIds = selectedSessionIds(
+            TaskStatus.PAUSED
+        );
+
+        if (affectedIds.isEmpty()) {
+            return;
+        }
 
         TaskManager.resumeSessions(
             affectedIds,
@@ -940,31 +928,179 @@ public final class RunningScenariosScreen extends Screen {
     }
 
     private void stopSelected() {
-        int count = selectedIds.size();
+        List<Long> affectedIds = selectedSessionIds();
 
-        TaskManager.stopSessions(
-            new ArrayList<>(selectedIds),
-            minecraft
-        );
+        if (affectedIds.isEmpty()) {
+            return;
+        }
 
-        showFeedback(
-            stoppedMessage(count),
-            true
-        );
+        if (affectedIds.size() > 1) {
+            openConfirmation(
+                SessionControlConfirmationScreen
+                    .Action.STOP_SELECTED,
+                affectedIds,
+                affectedIds.size()
+            );
+            return;
+        }
 
-        selectedIds.clear();
-        refreshSessions();
-        updateButtons();
+        stopSessions(affectedIds);
     }
 
     private void emergencyStopAll() {
         int count = TaskManager.activeCount();
+
+        if (count == 0) {
+            return;
+        }
+
+        openConfirmation(
+            SessionControlConfirmationScreen
+                .Action.EMERGENCY_STOP_ALL,
+            List.of(),
+            count
+        );
+    }
+
+    void confirmBulkAction(
+        SessionControlConfirmationScreen.Action action,
+        List<Long> sessionIds
+    ) {
+        switch (action) {
+            case PAUSE_SELECTED ->
+                pauseSessions(sessionIds);
+            case STOP_SELECTED ->
+                stopSessions(sessionIds);
+            case EMERGENCY_STOP_ALL ->
+                stopAllSessions();
+        }
+
+        minecraft.setScreen(this);
+    }
+
+    private void openConfirmation(
+        SessionControlConfirmationScreen.Action action,
+        List<Long> sessionIds,
+        int count
+    ) {
+        List<Long> requestedIds =
+            List.copyOf(sessionIds);
+
+        minecraft.setScreen(
+            new SessionControlConfirmationScreen(
+                this,
+                action,
+                count,
+                "",
+                () -> confirmBulkAction(
+                    action,
+                    requestedIds
+                )
+            )
+        );
+    }
+
+    private List<Long> selectedSessionIds() {
+        refreshSessions();
+
+        return sessions.stream()
+            .filter(
+                session -> selectedIds.contains(
+                    session.id()
+                )
+            )
+            .map(TaskSessionSnapshot::id)
+            .toList();
+    }
+
+    private List<Long> selectedSessionIds(
+        TaskStatus status
+    ) {
+        refreshSessions();
+
+        return sessions.stream()
+            .filter(
+                session ->
+                    selectedIds.contains(
+                        session.id()
+                    )
+                        && session.status() == status
+            )
+            .map(TaskSessionSnapshot::id)
+            .toList();
+    }
+
+    private void pauseSessions(
+        List<Long> sessionIds
+    ) {
+        Set<Long> requestedIds = Set.copyOf(sessionIds);
+
+        refreshSessions();
+
+        List<Long> affectedIds = sessions.stream()
+            .filter(
+                session ->
+                    requestedIds.contains(
+                        session.id()
+                    )
+                        && session.status()
+                            == TaskStatus.RUNNING
+            )
+            .map(TaskSessionSnapshot::id)
+            .toList();
+
+        TaskManager.pauseSessions(
+            affectedIds,
+            minecraft
+        );
+
+        showFeedback(
+            pausedMessage(affectedIds.size()),
+            true
+        );
+
+        refreshSessions();
+        updateButtons();
+    }
+
+    private void stopSessions(
+        List<Long> sessionIds
+    ) {
+        Set<Long> requestedIds = Set.copyOf(sessionIds);
+
+        refreshSessions();
+
+        List<Long> affectedIds = sessions.stream()
+            .filter(
+                session -> requestedIds.contains(
+                    session.id()
+                )
+            )
+            .map(TaskSessionSnapshot::id)
+            .toList();
+
+        TaskManager.stopSessions(
+            affectedIds,
+            minecraft
+        );
+
+        showFeedback(
+            stoppedMessage(affectedIds.size()),
+            true
+        );
+
+        selectedIds.removeAll(requestedIds);
+        refreshSessions();
+        updateButtons();
+    }
+
+    private void stopAllSessions() {
+        int count = TaskManager.activeCount();
+
         TaskManager.stop(minecraft);
 
         showFeedback(
-            count == 1
-                ? "Stopped 1 scenario"
-                : "Stopped " + count + " scenarios",
+            stoppedMessage(count),
             true
         );
 
@@ -994,18 +1130,30 @@ public final class RunningScenariosScreen extends Screen {
     }
 
     private String pausedMessage(int count) {
+        if (count == 0) {
+            return "No scenarios were paused";
+        }
+
         return count == 1
             ? "Paused 1 scenario"
             : "Paused " + count + " scenarios";
     }
 
     private String resumedMessage(int count) {
+        if (count == 0) {
+            return "No scenarios were resumed";
+        }
+
         return count == 1
             ? "Resumed 1 scenario"
             : "Resumed " + count + " scenarios";
     }
 
     private String stoppedMessage(int count) {
+        if (count == 0) {
+            return "No scenarios were stopped";
+        }
+
         return count == 1
             ? "Stopped 1 scenario"
             : "Stopped " + count + " scenarios";

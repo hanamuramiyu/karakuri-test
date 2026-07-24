@@ -6,6 +6,8 @@ import hanamuramiyu.karakuri.task.ScenarioGroupStartResult;
 import hanamuramiyu.karakuri.task.TaskChannel;
 import hanamuramiyu.karakuri.task.TaskGroupControlResult;
 import hanamuramiyu.karakuri.task.TaskManager;
+import hanamuramiyu.karakuri.task.TaskSessionSnapshot;
+import hanamuramiyu.karakuri.task.TaskStatus;
 import hanamuramiyu.karakuri.ui.QuickLaunchConflictScreen;
 import hanamuramiyu.karakuri.ui.RunningScenariosScreen;
 import net.minecraft.client.Minecraft;
@@ -22,6 +24,18 @@ public final class QuickLaunchController {
     }
 
     public static void launchSlot(
+        int slotNumber,
+        Minecraft client
+    ) {
+        launchSlot(
+            null,
+            slotNumber,
+            client
+        );
+    }
+
+    public static void launchSlot(
+        Screen parent,
         int slotNumber,
         Minecraft client
     ) {
@@ -88,7 +102,7 @@ public final class QuickLaunchController {
             );
 
         handleStartResult(
-            null,
+            parent,
             slotNumber,
             scenarios,
             result,
@@ -178,6 +192,107 @@ public final class QuickLaunchController {
         }
 
         return List.copyOf(compatible);
+    }
+
+    public static List<TaskSessionSnapshot>
+    sessionsForSlot(
+        int slotNumber
+    ) {
+        String groupName =
+            QuickLaunchRegistry
+                .slot(slotNumber)
+                .label();
+
+        return TaskManager.sessions()
+            .stream()
+            .filter(
+                session ->
+                    !session.preview()
+                        && session.groupName()
+                            .equals(groupName)
+            )
+            .toList();
+    }
+
+    public static int pauseSlot(
+        int slotNumber,
+        Minecraft client
+    ) {
+        List<Long> sessionIds =
+            sessionIdsForSlot(
+                slotNumber,
+                TaskStatus.RUNNING
+            );
+
+        TaskManager.pauseSessions(
+            sessionIds,
+            client
+        );
+
+        notify(
+            client,
+            controlMessage(
+                "Paused",
+                slotNumber,
+                sessionIds.size()
+            )
+        );
+
+        return sessionIds.size();
+    }
+
+    public static int resumeSlot(
+        int slotNumber,
+        Minecraft client
+    ) {
+        List<Long> sessionIds =
+            sessionIdsForSlot(
+                slotNumber,
+                TaskStatus.PAUSED
+            );
+
+        TaskManager.resumeSessions(
+            sessionIds,
+            client
+        );
+
+        notify(
+            client,
+            controlMessage(
+                "Resumed",
+                slotNumber,
+                sessionIds.size()
+            )
+        );
+
+        return sessionIds.size();
+    }
+
+    public static int stopSlot(
+        int slotNumber,
+        Minecraft client
+    ) {
+        List<Long> sessionIds =
+            sessionsForSlot(slotNumber)
+                .stream()
+                .map(TaskSessionSnapshot::id)
+                .toList();
+
+        TaskManager.stopSessions(
+            sessionIds,
+            client
+        );
+
+        notify(
+            client,
+            controlMessage(
+                "Stopped",
+                slotNumber,
+                sessionIds.size()
+            )
+        );
+
+        return sessionIds.size();
     }
 
     public static void pauseResumeLast(
@@ -275,5 +390,38 @@ public final class QuickLaunchController {
                 + " · "
                 + scenarioCount
                 + " scenarios";
+    }
+
+    private static List<Long> sessionIdsForSlot(
+        int slotNumber,
+        TaskStatus status
+    ) {
+        return sessionsForSlot(slotNumber)
+            .stream()
+            .filter(
+                session -> session.status() == status
+            )
+            .map(TaskSessionSnapshot::id)
+            .toList();
+    }
+
+    private static String controlMessage(
+        String action,
+        int slotNumber,
+        int scenarioCount
+    ) {
+        if (scenarioCount == 0) {
+            return "No matching scenarios in Quick Slot "
+                + slotNumber;
+        }
+
+        return action
+            + " Quick Slot "
+            + slotNumber
+            + " · "
+            + scenarioCount
+            + (scenarioCount == 1
+                ? " scenario"
+                : " scenarios");
     }
 }

@@ -1,10 +1,13 @@
 package hanamuramiyu.karakuri.ui;
 
 import hanamuramiyu.karakuri.KarakuriClient;
+import hanamuramiyu.karakuri.quicklaunch.QuickLaunchController;
 import hanamuramiyu.karakuri.quicklaunch.QuickLaunchRegistry;
 import hanamuramiyu.karakuri.quicklaunch.QuickLaunchSlot;
 import hanamuramiyu.karakuri.quicklaunch.QuickLaunchValidation;
 import hanamuramiyu.karakuri.scenario.model.Scenario;
+import hanamuramiyu.karakuri.task.TaskSessionSnapshot;
+import hanamuramiyu.karakuri.task.TaskStatus;
 import hanamuramiyu.karakuri.ui.widget.KarakuriButton;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -19,7 +22,7 @@ public final class QuickLaunchScreen extends Screen {
     private static final int PANEL_MARGIN = 8;
     private static final int CONTENT_MARGIN = 14;
     private static final int HEADER_HEIGHT = 58;
-    private static final int FOOTER_HEIGHT = 42;
+    private static final int FOOTER_HEIGHT = 72;
     private static final int ROW_HEIGHT = 46;
     private static final int BUTTON_HEIGHT = 24;
     private static final int BUTTON_GAP = 7;
@@ -30,6 +33,10 @@ public final class QuickLaunchScreen extends Screen {
     private int selectedSlot = 1;
     private int scrollOffset;
 
+    private KarakuriButton runButton;
+    private KarakuriButton pauseButton;
+    private KarakuriButton resumeButton;
+    private KarakuriButton stopButton;
     private KarakuriButton clearButton;
     private KarakuriButton configureButton;
 
@@ -52,35 +59,26 @@ public final class QuickLaunchScreen extends Screen {
             panelWidth - CONTENT_MARGIN * 2;
         int footerY =
             panelY + panelHeight - FOOTER_HEIGHT;
-        int buttonWidth =
+        int managementButtonWidth =
             (contentWidth - BUTTON_GAP * 2) / 3;
+        int controlButtonWidth =
+            (contentWidth - BUTTON_GAP * 3) / 4;
+        int managementY = footerY + 7;
+        int controlY =
+            managementY
+                + BUTTON_HEIGHT
+                + BUTTON_GAP;
 
         addRenderableWidget(
             new KarakuriButton(
                 font,
                 panelX + CONTENT_MARGIN,
-                footerY + 9,
-                buttonWidth,
+                managementY,
+                managementButtonWidth,
                 BUTTON_HEIGHT,
                 Component.literal("Back"),
                 () -> minecraft.setScreen(parent),
                 KarakuriButton.Style.SECONDARY
-            )
-        );
-
-        clearButton = addRenderableWidget(
-            new KarakuriButton(
-                font,
-                panelX
-                    + CONTENT_MARGIN
-                    + buttonWidth
-                    + BUTTON_GAP,
-                footerY + 9,
-                buttonWidth,
-                BUTTON_HEIGHT,
-                Component.literal("Clear Slot"),
-                this::clearSelectedSlot,
-                KarakuriButton.Style.DANGER
             )
         );
 
@@ -89,9 +87,10 @@ public final class QuickLaunchScreen extends Screen {
                 font,
                 panelX
                     + CONTENT_MARGIN
-                    + (buttonWidth + BUTTON_GAP) * 2,
-                footerY + 9,
-                buttonWidth,
+                    + managementButtonWidth
+                    + BUTTON_GAP,
+                managementY,
+                managementButtonWidth,
                 BUTTON_HEIGHT,
                 Component.literal("Configure"),
                 this::configureSelectedSlot,
@@ -99,7 +98,89 @@ public final class QuickLaunchScreen extends Screen {
             )
         );
 
+        clearButton = addRenderableWidget(
+            new KarakuriButton(
+                font,
+                panelX
+                    + CONTENT_MARGIN
+                    + (managementButtonWidth
+                        + BUTTON_GAP) * 2,
+                managementY,
+                managementButtonWidth,
+                BUTTON_HEIGHT,
+                Component.literal("Clear Slot"),
+                this::clearSelectedSlot,
+                KarakuriButton.Style.DANGER
+            )
+        );
+
+        runButton = addRenderableWidget(
+            new KarakuriButton(
+                font,
+                panelX + CONTENT_MARGIN,
+                controlY,
+                controlButtonWidth,
+                BUTTON_HEIGHT,
+                Component.literal("Run"),
+                this::runSelectedSlot,
+                KarakuriButton.Style.SUCCESS
+            )
+        );
+
+        pauseButton = addRenderableWidget(
+            new KarakuriButton(
+                font,
+                panelX
+                    + CONTENT_MARGIN
+                    + controlButtonWidth
+                    + BUTTON_GAP,
+                controlY,
+                controlButtonWidth,
+                BUTTON_HEIGHT,
+                Component.literal("Pause"),
+                this::pauseSelectedSlot,
+                KarakuriButton.Style.SECONDARY
+            )
+        );
+
+        resumeButton = addRenderableWidget(
+            new KarakuriButton(
+                font,
+                panelX
+                    + CONTENT_MARGIN
+                    + (controlButtonWidth
+                        + BUTTON_GAP) * 2,
+                controlY,
+                controlButtonWidth,
+                BUTTON_HEIGHT,
+                Component.literal("Resume"),
+                this::resumeSelectedSlot,
+                KarakuriButton.Style.SUCCESS
+            )
+        );
+
+        stopButton = addRenderableWidget(
+            new KarakuriButton(
+                font,
+                panelX
+                    + CONTENT_MARGIN
+                    + (controlButtonWidth
+                        + BUTTON_GAP) * 3,
+                controlY,
+                controlButtonWidth,
+                BUTTON_HEIGHT,
+                Component.literal("Stop"),
+                this::stopSelectedSlot,
+                KarakuriButton.Style.DANGER
+            )
+        );
+
         clampScroll();
+        updateButtons();
+    }
+
+    @Override
+    public void tick() {
         updateButtons();
     }
 
@@ -120,11 +201,7 @@ public final class QuickLaunchScreen extends Screen {
         int listY = panelY + HEADER_HEIGHT;
         int listWidth =
             panelWidth - CONTENT_MARGIN * 2;
-        int listHeight =
-            panelHeight
-                - HEADER_HEIGHT
-                - FOOTER_HEIGHT
-                - 5;
+        int listHeight = listHeight();
 
         graphics.fill(
             0,
@@ -174,9 +251,9 @@ public final class QuickLaunchScreen extends Screen {
         graphics.drawString(
             font,
             Component.literal(
-                panelWidth < 430
-                    ? "Assign scenarios, then bind keys in Controls"
-                    : "Assign scenarios here, then bind slots in Minecraft Controls"
+                panelWidth < 470
+                    ? "Use buttons below or bind keys in Controls"
+                    : "Run and control slots here, or bind them in Minecraft Controls"
             ),
             panelX + CONTENT_MARGIN,
             panelY + 29,
@@ -249,11 +326,7 @@ public final class QuickLaunchScreen extends Screen {
         int listY = panelY() + HEADER_HEIGHT;
         int listWidth =
             panelWidth() - CONTENT_MARGIN * 2;
-        int listHeight =
-            panelHeight()
-                - HEADER_HEIGHT
-                - FOOTER_HEIGHT
-                - 5;
+        int listHeight = listHeight();
 
         if (
             !contains(
@@ -285,7 +358,10 @@ public final class QuickLaunchScreen extends Screen {
         selectedSlot = index + 1;
         updateButtons();
 
-        if (doubled) {
+        if (
+            doubled
+                && configureButton.active
+        ) {
             configureSelectedSlot();
         }
 
@@ -303,11 +379,7 @@ public final class QuickLaunchScreen extends Screen {
         int listY = panelY() + HEADER_HEIGHT;
         int listWidth =
             panelWidth() - CONTENT_MARGIN * 2;
-        int listHeight =
-            panelHeight()
-                - HEADER_HEIGHT
-                - FOOTER_HEIGHT
-                - 5;
+        int listHeight = listHeight();
 
         if (
             !contains(
@@ -462,10 +534,36 @@ public final class QuickLaunchScreen extends Screen {
                 scenarios
             );
 
+        List<TaskSessionSnapshot> sessions =
+            QuickLaunchController.sessionsForSlot(
+                slot.number()
+            );
+
+        boolean hasRunning = sessions.stream()
+            .anyMatch(
+                session -> session.status()
+                    == TaskStatus.RUNNING
+            );
+
+        boolean hasPaused = sessions.stream()
+            .anyMatch(
+                session -> session.status()
+                    == TaskStatus.PAUSED
+            );
+
         String status;
         int statusColor;
 
-        if (slot.empty()) {
+        if (hasRunning && hasPaused) {
+            status = "Mixed";
+            statusColor = 0xFF67C7E8;
+        } else if (hasRunning) {
+            status = "Running";
+            statusColor = 0xFF61D394;
+        } else if (hasPaused) {
+            status = "Paused";
+            statusColor = 0xFFF1C36E;
+        } else if (slot.empty()) {
             status = "Empty";
             statusColor = 0xFF716879;
         } else if (missingCount > 0) {
@@ -537,6 +635,120 @@ public final class QuickLaunchScreen extends Screen {
         );
     }
 
+    private void runSelectedSlot() {
+        QuickLaunchController.launchSlot(
+            this,
+            selectedSlot,
+            minecraft
+        );
+
+        updateButtons();
+    }
+
+    private void pauseSelectedSlot() {
+        int slotNumber = selectedSlot;
+        int count = (int) QuickLaunchController
+            .sessionsForSlot(slotNumber)
+            .stream()
+            .filter(
+                session -> session.status()
+                    == TaskStatus.RUNNING
+            )
+            .count();
+
+        if (count == 0) {
+            return;
+        }
+
+        if (count > 1) {
+            openSlotConfirmation(
+                SessionControlConfirmationScreen
+                    .Action.PAUSE_QUICK_SLOT,
+                slotNumber,
+                count,
+                () -> finishPause(slotNumber)
+            );
+            return;
+        }
+
+        QuickLaunchController.pauseSlot(
+            slotNumber,
+            minecraft
+        );
+        updateButtons();
+    }
+
+    private void resumeSelectedSlot() {
+        QuickLaunchController.resumeSlot(
+            selectedSlot,
+            minecraft
+        );
+        updateButtons();
+    }
+
+    private void stopSelectedSlot() {
+        int slotNumber = selectedSlot;
+        int count = QuickLaunchController
+            .sessionsForSlot(slotNumber)
+            .size();
+
+        if (count == 0) {
+            return;
+        }
+
+        if (count > 1) {
+            openSlotConfirmation(
+                SessionControlConfirmationScreen
+                    .Action.STOP_QUICK_SLOT,
+                slotNumber,
+                count,
+                () -> finishStop(slotNumber)
+            );
+            return;
+        }
+
+        QuickLaunchController.stopSlot(
+            slotNumber,
+            minecraft
+        );
+        updateButtons();
+    }
+
+    private void finishPause(int slotNumber) {
+        QuickLaunchController.pauseSlot(
+            slotNumber,
+            minecraft
+        );
+        minecraft.setScreen(this);
+    }
+
+    private void finishStop(int slotNumber) {
+        QuickLaunchController.stopSlot(
+            slotNumber,
+            minecraft
+        );
+        minecraft.setScreen(this);
+    }
+
+    private void openSlotConfirmation(
+        SessionControlConfirmationScreen.Action action,
+        int slotNumber,
+        int count,
+        Runnable confirmAction
+    ) {
+        minecraft.setScreen(
+            new SessionControlConfirmationScreen(
+                this,
+                action,
+                count,
+                QuickLaunchRegistry
+                    .slot(slotNumber)
+                    .label(),
+                confirmAction
+            )
+        );
+    }
+
     private void configureSelectedSlot() {
         minecraft.setScreen(
             new QuickLaunchSlotScreen(
@@ -555,29 +767,62 @@ public final class QuickLaunchScreen extends Screen {
 
     private void updateButtons() {
         if (
-            clearButton == null
+            runButton == null
+                || pauseButton == null
+                || resumeButton == null
+                || stopButton == null
+                || clearButton == null
                 || configureButton == null
         ) {
             return;
         }
 
-        clearButton.active =
-            !QuickLaunchRegistry
-                .slot(selectedSlot)
-                .empty();
+        QuickLaunchSlot slot =
+            QuickLaunchRegistry.slot(selectedSlot);
 
-        configureButton.active = true;
+        List<Scenario> scenarios =
+            QuickLaunchRegistry.resolveScenarios(slot);
+
+        boolean valid =
+            !slot.empty()
+                && QuickLaunchRegistry
+                    .missingScenarioIds(slot)
+                    .isEmpty()
+                && QuickLaunchValidation
+                    .analyze(scenarios)
+                    .valid();
+
+        List<TaskSessionSnapshot> sessions =
+            QuickLaunchController.sessionsForSlot(
+                selectedSlot
+            );
+
+        boolean hasRunning = sessions.stream()
+            .anyMatch(
+                session -> session.status()
+                    == TaskStatus.RUNNING
+            );
+
+        boolean hasPaused = sessions.stream()
+            .anyMatch(
+                session -> session.status()
+                    == TaskStatus.PAUSED
+            );
+
+        boolean active = !sessions.isEmpty();
+
+        runButton.active = valid && !active;
+        pauseButton.active = hasRunning;
+        resumeButton.active = hasPaused;
+        stopButton.active = active;
+        configureButton.active = !active;
+        clearButton.active =
+            !slot.empty() && !active;
     }
 
     private void clampScroll() {
-        int listHeight =
-            panelHeight()
-                - HEADER_HEIGHT
-                - FOOTER_HEIGHT
-                - 5;
-
         int visibleRows =
-            Math.max(1, listHeight / ROW_HEIGHT);
+            Math.max(1, listHeight() / ROW_HEIGHT);
 
         scrollOffset = Math.clamp(
             scrollOffset,
@@ -588,6 +833,13 @@ public final class QuickLaunchScreen extends Screen {
                     - visibleRows
             )
         );
+    }
+
+    private int listHeight() {
+        return panelHeight()
+            - HEADER_HEIGHT
+            - FOOTER_HEIGHT
+            - 5;
     }
 
     private int panelX() {
