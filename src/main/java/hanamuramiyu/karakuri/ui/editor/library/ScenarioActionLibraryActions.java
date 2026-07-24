@@ -15,7 +15,8 @@ public record ScenarioActionLibraryActions(
     Consumer<MouseAction> mouseAction,
     Consumer<CameraDirection> cameraAction,
     Runnable hotbarAction,
-    Runnable inventorySlotAction
+    Runnable inventorySlotAction,
+    Runnable depositItemsAction
 ) {
     public ScenarioActionLibraryActions {
         Objects.requireNonNull(moveAction, "Move action must not be null");
@@ -26,5 +27,6 @@ public record ScenarioActionLibraryActions(
         Objects.requireNonNull(cameraAction, "Camera action must not be null");
         Objects.requireNonNull(hotbarAction, "Hotbar action must not be null");
         Objects.requireNonNull(inventorySlotAction, "Inventory slot action must not be null");
+        Objects.requireNonNull(depositItemsAction, "Deposit items action must not be null");
     }
 }

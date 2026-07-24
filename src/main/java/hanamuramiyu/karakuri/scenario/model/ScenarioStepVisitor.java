@@ -3,6 +3,8 @@ package hanamuramiyu.karakuri.scenario.model;
 public interface ScenarioStepVisitor<T> {
     T visit(CameraStep step);
 
+    T visit(DepositItemsStep step);
+
     T visit(HotbarStep step);
 
     T visit(InventorySlotStep step);

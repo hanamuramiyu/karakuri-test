@@ -3,6 +3,7 @@ package hanamuramiyu.karakuri.ui.editor;
 import hanamuramiyu.karakuri.scenario.model.CameraDirection;
 import hanamuramiyu.karakuri.scenario.model.CameraMotion;
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
+import hanamuramiyu.karakuri.scenario.model.DepositItemsStep;
 import hanamuramiyu.karakuri.scenario.model.HotbarStep;
 import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.JumpMode;
@@ -278,6 +279,17 @@ public final class ScenarioEditorState {
                 CameraMotion.SMOOTH,
                 CameraStep.DEFAULT_ANGLE_DEGREES,
                 CameraStep.DEFAULT_DURATION_TICKS
+            )
+        );
+    }
+
+    public void insertDepositItemsStep(
+        String storageGroupId
+    ) {
+        insertAfterSelected(
+            new DepositItemsStep(
+                storageGroupId,
+                DepositItemsStep.DEFAULT_INCLUDE_HOTBAR
             )
         );
     }
@@ -709,6 +721,23 @@ public final class ScenarioEditorState {
         }
     }
 
+    public void setDepositItemsSelection(
+        String storageGroupId,
+        boolean includeHotbar
+    ) {
+        if (
+            selectedStep()
+                instanceof DepositItemsStep step
+        ) {
+            replaceSelected(
+                step.withSelection(
+                    storageGroupId,
+                    includeHotbar
+                )
+            );
+        }
+    }
+
     public void setInventorySlotSelection(
         int inventorySlot,
         int hotbarSlot
@@ -895,6 +924,8 @@ public final class ScenarioEditorState {
                     cameraStep.withDurationTicks(
                         durationTicks
                     );
+                case DepositItemsStep depositItemsStep ->
+                    depositItemsStep;
                 case HotbarStep hotbarStep ->
                     hotbarStep;
                 case InventorySlotStep inventorySlotStep ->
@@ -985,6 +1016,11 @@ public final class ScenarioEditorState {
                     CameraMotion.SMOOTH,
                     CameraStep.DEFAULT_ANGLE_DEGREES,
                     CameraStep.DEFAULT_DURATION_TICKS
+                );
+            case DepositItemsStep depositItemsStep ->
+                new DepositItemsStep(
+                    depositItemsStep.storageGroupId(),
+                    DepositItemsStep.DEFAULT_INCLUDE_HOTBAR
                 );
             case HotbarStep hotbarStep ->
                 new HotbarStep(

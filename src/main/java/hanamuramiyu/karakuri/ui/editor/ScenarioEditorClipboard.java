@@ -1,6 +1,7 @@
 package hanamuramiyu.karakuri.ui.editor;
 
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
+import hanamuramiyu.karakuri.scenario.model.DepositItemsStep;
 import hanamuramiyu.karakuri.scenario.model.HotbarStep;
 import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.JumpStep;
@@ -52,6 +53,11 @@ public final class ScenarioEditorClipboard {
                     cameraStep.motion(),
                     cameraStep.angleDegrees(),
                     cameraStep.durationTicks()
+                );
+            case DepositItemsStep depositItemsStep ->
+                new DepositItemsStep(
+                    depositItemsStep.storageGroupId(),
+                    depositItemsStep.includeHotbar()
                 );
             case HotbarStep hotbarStep ->
                 new HotbarStep(

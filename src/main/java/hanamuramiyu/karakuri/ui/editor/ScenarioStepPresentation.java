@@ -2,6 +2,7 @@ package hanamuramiyu.karakuri.ui.editor;
 
 import hanamuramiyu.karakuri.scenario.model.CameraMotion;
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
+import hanamuramiyu.karakuri.scenario.model.DepositItemsStep;
 import hanamuramiyu.karakuri.scenario.model.HotbarStep;
 import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.JumpMode;
@@ -16,6 +17,8 @@ import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioFormat;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
+import hanamuramiyu.karakuri.storage.StorageGroup;
+import hanamuramiyu.karakuri.storage.StorageRegistry;
 
 public final class ScenarioStepPresentation {
     private ScenarioStepPresentation() {
@@ -32,6 +35,8 @@ public final class ScenarioStepPresentation {
                     case UP -> 0xFF61D394;
                     case DOWN -> 0xFFF0A765;
                 };
+            case DepositItemsStep depositItemsStep ->
+                0xFFF0B96A;
             case HotbarStep hotbarStep ->
                 0xFFE8D26A;
             case InventorySlotStep inventorySlotStep ->
@@ -78,6 +83,9 @@ public final class ScenarioStepPresentation {
         return switch (step) {
             case CameraStep cameraStep ->
                 cameraStep.direction().label();
+            case DepositItemsStep depositItemsStep ->
+                "Deposit to "
+                    + depositGroupName(depositItemsStep);
             case HotbarStep hotbarStep ->
                 "Select Hotbar Slot "
                     + (hotbarStep.slot() + 1);
@@ -121,6 +129,8 @@ public final class ScenarioStepPresentation {
         return switch (step) {
             case CameraStep cameraStep ->
                 "Direction / motion";
+            case DepositItemsStep depositItemsStep ->
+                "Storage group / inventory source";
             case HotbarStep hotbarStep ->
                 "Select active hotbar slot";
             case InventorySlotStep inventorySlotStep ->
@@ -149,6 +159,8 @@ public final class ScenarioStepPresentation {
                     case UP -> "^";
                     case DOWN -> "v";
                 };
+            case DepositItemsStep depositItemsStep ->
+                "D";
             case HotbarStep hotbarStep ->
                 Integer.toString(
                     hotbarStep.slot() + 1
@@ -182,6 +194,8 @@ public final class ScenarioStepPresentation {
         return switch (step) {
             case CameraStep cameraStep ->
                 cameraStep.direction().label();
+            case DepositItemsStep depositItemsStep ->
+                "Deposit Items";
             case HotbarStep hotbarStep ->
                 "Select Slot";
             case InventorySlotStep inventorySlotStep ->
@@ -219,6 +233,14 @@ public final class ScenarioStepPresentation {
                             + ScenarioFormat.formatDuration(
                                 cameraStep.durationTicks()
                             );
+            case DepositItemsStep depositItemsStep ->
+                depositGroupName(depositItemsStep)
+                    + " · "
+                    + (
+                        depositItemsStep.includeHotbar()
+                            ? "Inventory + hotbar"
+                            : "Main inventory"
+                    );
             case HotbarStep hotbarStep ->
                 "Hotbar "
                     + (hotbarStep.slot() + 1);
@@ -246,6 +268,22 @@ public final class ScenarioStepPresentation {
                     waitStep.durationTicks()
                 );
         };
+    }
+
+    public static String depositGroupName(
+        DepositItemsStep step
+    ) {
+        if (!step.hasAssignedGroup()) {
+            return "Unassigned Storage";
+        }
+
+        StorageGroup group = StorageRegistry.findGroup(
+            step.storageGroupId()
+        );
+
+        return group == null
+            ? "Missing Storage Group"
+            : group.name();
     }
 
     public static String jumpPrimaryValueLabel(

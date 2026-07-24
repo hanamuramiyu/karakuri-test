@@ -1,6 +1,7 @@
 package hanamuramiyu.karakuri.ui.editor.workflow;
 
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
+import hanamuramiyu.karakuri.scenario.model.DepositItemsStep;
 import hanamuramiyu.karakuri.scenario.model.HotbarStep;
 import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.JumpMode;
@@ -39,6 +40,9 @@ final class ScenarioStepValueAdjuster {
                         CameraStep.MAX_ANGLE_DEGREES
                     )
                 );
+
+            case DepositItemsStep depositItemsStep ->
+                depositItemsStep;
 
             case HotbarStep hotbarStep ->
                 hotbarStep.withSlot(

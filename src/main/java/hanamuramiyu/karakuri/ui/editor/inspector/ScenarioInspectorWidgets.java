@@ -3,6 +3,7 @@ package hanamuramiyu.karakuri.ui.editor.inspector;
 import hanamuramiyu.karakuri.scenario.model.CameraDirection;
 import hanamuramiyu.karakuri.scenario.model.CameraMotion;
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
+import hanamuramiyu.karakuri.scenario.model.DepositItemsStep;
 import hanamuramiyu.karakuri.scenario.model.HotbarStep;
 import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.JumpMode;
@@ -81,6 +82,7 @@ final class ScenarioInspectorWidgets {
     final KarakuriDropdown<MouseStopMode> mouseStopDropdown;
 
     KarakuriButton jumpToggleButton;
+    KarakuriButton depositItemsButton;
     KarakuriButton inventorySlotButton;
     KarakuriButton cpsDecreaseButton;
     KarakuriButton cpsIncreaseButton;
@@ -420,6 +422,21 @@ final class ScenarioInspectorWidgets {
                 descriptionY,
                 warningColor(mouseStep.isInfinite())
             );
+        } else if (step instanceof DepositItemsStep depositItemsStep) {
+            placeWideButton(
+                depositItemsButton,
+                "Storage group",
+                row1
+            );
+            setDescription(
+                depositItemsStep.includeHotbar()
+                    ? "Deposits matching items from main inventory and hotbar"
+                    : "Deposits matching items from main inventory only",
+                row3 - 10,
+                depositItemsStep.includeHotbar()
+                    ? ScenarioEditorTheme.WARNING
+                    : ScenarioEditorTheme.TEXT_MUTED
+            );
         } else if (step instanceof HotbarStep) {
             placeWidePrimary("Hotbar slot", row1);
             setDescription(
@@ -515,6 +532,13 @@ final class ScenarioInspectorWidgets {
             if (ScenarioStepRules.usesPrimaryValue(step)) {
                 placePrimary(contentX, row3, halfWidth, "Value");
             }
+        } else if (step instanceof DepositItemsStep) {
+            placeButton(
+                depositItemsButton,
+                contentX,
+                row1,
+                contentWidth
+            );
         } else if (step instanceof InventorySlotStep) {
             placeButton(
                 inventorySlotButton,
@@ -546,6 +570,21 @@ final class ScenarioInspectorWidgets {
         durationField.visible = ScenarioStepRules.usesDuration(step);
         countField.visible = ScenarioStepRules.usesCount(step);
         angleField.visible = ScenarioStepRules.usesAngle(step);
+
+        if (step instanceof DepositItemsStep depositItemsStep) {
+            depositItemsButton.setMessage(
+                Component.literal(
+                    ScenarioStepPresentation.depositGroupName(
+                        depositItemsStep
+                    )
+                        + (
+                            depositItemsStep.includeHotbar()
+                                ? " · Inventory + hotbar"
+                                : " · Main inventory"
+                        )
+                )
+            );
+        }
 
         if (step instanceof InventorySlotStep inventorySlotStep) {
             inventorySlotButton.setMessage(
@@ -621,6 +660,14 @@ final class ScenarioInspectorWidgets {
     }
 
     private void createRegularWidgets() {
+        depositItemsButton = createButton(
+            contentX,
+            inspectorY,
+            contentWidth,
+            "Choose Storage Group",
+            actions::openDepositItemsSelection,
+            KarakuriButton.Style.SECONDARY
+        );
         inventorySlotButton = createButton(
             contentX,
             inspectorY,
@@ -655,6 +702,7 @@ final class ScenarioInspectorWidgets {
         duplicateButton = createButton(contentX, inspectorY, 80, "Duplicate", actions::duplicateSelectedStep, KarakuriButton.Style.SECONDARY);
         deleteButton = createButton(contentX, inspectorY, 80, "Delete", actions::deleteSelectedStep, KarakuriButton.Style.DANGER);
 
+        regularWidgets.add(depositItemsButton);
         regularWidgets.add(inventorySlotButton);
         regularWidgets.add(jumpToggleButton);
         regularWidgets.add(cpsDecreaseButton);
@@ -1101,6 +1149,8 @@ final class ScenarioInspectorWidgets {
         void changePrimaryValue(int direction);
 
         void openInventorySlotSelection();
+
+        void openDepositItemsSelection();
 
         void testSelectedStep();
 

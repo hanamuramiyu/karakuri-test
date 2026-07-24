@@ -1,6 +1,7 @@
 package hanamuramiyu.karakuri.task;
 
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
+import hanamuramiyu.karakuri.scenario.model.DepositItemsStep;
 import hanamuramiyu.karakuri.scenario.model.HotbarStep;
 import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.JumpStep;
@@ -78,11 +79,18 @@ public final class ScenarioConflictAnalyzer {
                             : TaskChannel.RIGHT_MOUSE
                 );
 
+            case DepositItemsStep ignored ->
+                channels.addAll(
+                    EnumSet.allOf(TaskChannel.class)
+                );
+
             case HotbarStep ignored ->
                 channels.add(TaskChannel.HOTBAR);
 
-            case InventorySlotStep ignored ->
+            case InventorySlotStep ignored -> {
                 channels.add(TaskChannel.HOTBAR);
+                channels.add(TaskChannel.INVENTORY);
+            }
 
             case RepeatStep repeatStep -> {
                 for (

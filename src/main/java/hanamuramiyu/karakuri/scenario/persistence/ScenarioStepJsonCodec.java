@@ -7,6 +7,7 @@ import com.google.gson.JsonParseException;
 import hanamuramiyu.karakuri.scenario.model.CameraDirection;
 import hanamuramiyu.karakuri.scenario.model.CameraMotion;
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
+import hanamuramiyu.karakuri.scenario.model.DepositItemsStep;
 import hanamuramiyu.karakuri.scenario.model.HotbarStep;
 import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.JumpMode;
@@ -48,6 +49,9 @@ final class ScenarioStepJsonCodec {
                         "durationTicks"
                     )
                 );
+
+            case "deposit_items" ->
+                readDepositItemsStep(values);
 
             case "hotbar" ->
                 readHotbarStep(values);
@@ -118,6 +122,9 @@ final class ScenarioStepJsonCodec {
             case CameraStep cameraStep ->
                 writeCameraStep(cameraStep);
 
+            case DepositItemsStep depositItemsStep ->
+                writeDepositItemsStep(depositItemsStep);
+
             case HotbarStep hotbarStep ->
                 writeHotbarStep(hotbarStep);
 
@@ -162,6 +169,21 @@ final class ScenarioStepJsonCodec {
                 CameraStep.DEFAULT_ANGLE_DEGREES
             ),
             durationTicks
+        );
+    }
+
+    private DepositItemsStep readDepositItemsStep(
+        JsonObjectReader values
+    ) {
+        return new DepositItemsStep(
+            values.optionalString(
+                "storageGroupId",
+                DepositItemsStep.UNASSIGNED_GROUP_ID
+            ),
+            values.optionalBoolean(
+                "includeHotbar",
+                DepositItemsStep.DEFAULT_INCLUDE_HOTBAR
+            )
         );
     }
 
@@ -324,6 +346,27 @@ final class ScenarioStepJsonCodec {
         object.addProperty(
             "angleDegrees",
             step.angleDegrees()
+        );
+
+        return object;
+    }
+
+    private JsonObject writeDepositItemsStep(
+        DepositItemsStep step
+    ) {
+        JsonObject object =
+            createTimedStepObject(
+                "deposit_items",
+                step.durationTicks()
+            );
+
+        object.addProperty(
+            "storageGroupId",
+            step.storageGroupId()
+        );
+        object.addProperty(
+            "includeHotbar",
+            step.includeHotbar()
         );
 
         return object;

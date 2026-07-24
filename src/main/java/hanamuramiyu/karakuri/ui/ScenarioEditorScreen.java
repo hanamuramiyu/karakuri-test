@@ -2,12 +2,14 @@ package hanamuramiyu.karakuri.ui;
 
 import hanamuramiyu.karakuri.scenario.ScenarioLibrary;
 import hanamuramiyu.karakuri.scenario.model.CameraDirection;
+import hanamuramiyu.karakuri.scenario.model.DepositItemsStep;
 import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.MouseAction;
 import hanamuramiyu.karakuri.scenario.model.MoveDirection;
 import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.Scenario;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
+import hanamuramiyu.karakuri.storage.StorageRegistry;
 import hanamuramiyu.karakuri.task.TaskManager;
 import hanamuramiyu.karakuri.task.TaskStatus;
 import hanamuramiyu.karakuri.task.factory.ScenarioTaskFactory;
@@ -191,7 +193,8 @@ public final class ScenarioEditorScreen extends Screen {
                 this::insertMouseStep,
                 this::insertCameraStep,
                 this::insertHotbarStep,
-                this::insertInventorySlotStep
+                this::insertInventorySlotStep,
+                this::insertDepositItemsStep
             ),
             ScenarioEditorPreferences.actionCategory(),
             ScenarioEditorPreferences::setActionCategory
@@ -234,6 +237,7 @@ public final class ScenarioEditorScreen extends Screen {
             this::stopRunningTest,
             this::testSelectedStep,
             this::openSelectedInventorySlot,
+            this::openSelectedDepositItems,
             this::resetSelectedStep,
             () -> moveSelectedStep(-1),
             () -> moveSelectedStep(1),
@@ -359,6 +363,11 @@ public final class ScenarioEditorScreen extends Screen {
                     instanceof InventorySlotStep
             ) {
                 openSelectedInventorySlot();
+            } else if (
+                state.selectedStep()
+                    instanceof DepositItemsStep
+            ) {
+                openSelectedDepositItems();
             }
         }
 
@@ -508,6 +517,11 @@ public final class ScenarioEditorScreen extends Screen {
                     instanceof InventorySlotStep
             ) {
                 openSelectedInventorySlot();
+            } else if (
+                state.selectedStep()
+                    instanceof DepositItemsStep
+            ) {
+                openSelectedDepositItems();
             } else {
                 openSelectedGroup();
             }
@@ -1316,6 +1330,24 @@ public final class ScenarioEditorScreen extends Screen {
         returnToWorkflow();
     }
 
+    private void insertDepositItemsStep() {
+        stopRunningTest();
+
+        String defaultGroupId =
+            StorageRegistry.groups().isEmpty()
+                ? DepositItemsStep.UNASSIGNED_GROUP_ID
+                : StorageRegistry.groups()
+                    .getFirst()
+                    .id();
+
+        state.insertDepositItemsStep(
+            defaultGroupId
+        );
+        syncSelectedStep();
+        returnToWorkflow();
+        openSelectedDepositItems();
+    }
+
     private void insertHotbarStep() {
         stopRunningTest();
         state.insertHotbarStep();
@@ -1329,6 +1361,26 @@ public final class ScenarioEditorScreen extends Screen {
         syncSelectedStep();
         returnToWorkflow();
         openSelectedInventorySlot();
+    }
+
+    private void openSelectedDepositItems() {
+        closeTransientUi();
+
+        if (
+            !(state.selectedStep()
+                instanceof DepositItemsStep step)
+        ) {
+            return;
+        }
+
+        minecraft.setScreen(
+            new DepositItemsSelectionScreen(
+                this,
+                step.storageGroupId(),
+                step.includeHotbar(),
+                state::setDepositItemsSelection
+            )
+        );
     }
 
     private void openSelectedInventorySlot() {

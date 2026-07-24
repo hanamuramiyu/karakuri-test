@@ -1,6 +1,7 @@
 package hanamuramiyu.karakuri.task.factory;
 
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
+import hanamuramiyu.karakuri.scenario.model.DepositItemsStep;
 import hanamuramiyu.karakuri.scenario.model.HotbarStep;
 import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.JumpStep;
@@ -13,6 +14,7 @@ import hanamuramiyu.karakuri.scenario.model.ScenarioStepVisitor;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
 import hanamuramiyu.karakuri.task.ClientTask;
 import hanamuramiyu.karakuri.task.action.CameraTask;
+import hanamuramiyu.karakuri.task.action.DepositItemsTask;
 import hanamuramiyu.karakuri.task.action.HotbarTask;
 import hanamuramiyu.karakuri.task.action.InventorySlotTask;
 import hanamuramiyu.karakuri.task.action.JumpTask;
@@ -37,6 +39,13 @@ final class ScenarioStepTaskCreator
         CameraStep step
     ) {
         return new CameraTask(step);
+    }
+
+    @Override
+    public ClientTask visit(
+        DepositItemsStep step
+    ) {
+        return new DepositItemsTask(step);
     }
 
     @Override

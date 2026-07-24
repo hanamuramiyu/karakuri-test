@@ -216,8 +216,42 @@ final class ScenarioActionLibraryWidgets {
         createActionButton(Action.CAMERA_RIGHT, x + cameraWidth + ScenarioActionLibraryLayout.BUTTON_GAP, y, cameraWidth, "Right", () -> actions.cameraAction().accept(CameraDirection.RIGHT));
         createActionButton(Action.CAMERA_UP, x + (cameraWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 2, y, cameraWidth, "Up", () -> actions.cameraAction().accept(CameraDirection.UP));
         createActionButton(Action.CAMERA_DOWN, x + (cameraWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 3, y, cameraWidth, "Down", () -> actions.cameraAction().accept(CameraDirection.DOWN));
-        createActionButton(Action.HOTBAR, x, y, halfWidth, "Hotbar Slot", actions.hotbarAction());
-        createActionButton(Action.INVENTORY_SLOT, x + halfWidth + ScenarioActionLibraryLayout.BUTTON_GAP, y, halfWidth, "Inventory Slot", actions.inventorySlotAction());
+        int inventoryWidth =
+            (
+                width
+                    - ScenarioActionLibraryLayout.BUTTON_GAP * 2
+            ) / 3;
+
+        createActionButton(
+            Action.HOTBAR,
+            x,
+            y,
+            inventoryWidth,
+            "Hotbar Slot",
+            actions.hotbarAction()
+        );
+        createActionButton(
+            Action.INVENTORY_SLOT,
+            x
+                + inventoryWidth
+                + ScenarioActionLibraryLayout.BUTTON_GAP,
+            y,
+            inventoryWidth,
+            "Inventory Slot",
+            actions.inventorySlotAction()
+        );
+        createActionButton(
+            Action.DEPOSIT_ITEMS,
+            x
+                + (
+                    inventoryWidth
+                        + ScenarioActionLibraryLayout.BUTTON_GAP
+                ) * 2,
+            y,
+            inventoryWidth,
+            "Deposit Items",
+            actions.depositItemsAction()
+        );
     }
 
     private void createCategoryButton(
@@ -311,7 +345,8 @@ final class ScenarioActionLibraryWidgets {
         CAMERA_UP(ScenarioActionLibrary.Category.CAMERA),
         CAMERA_DOWN(ScenarioActionLibrary.Category.CAMERA),
         HOTBAR(ScenarioActionLibrary.Category.INVENTORY),
-        INVENTORY_SLOT(ScenarioActionLibrary.Category.INVENTORY);
+        INVENTORY_SLOT(ScenarioActionLibrary.Category.INVENTORY),
+        DEPOSIT_ITEMS(ScenarioActionLibrary.Category.INVENTORY);
 
         private final ScenarioActionLibrary.Category category;
 

@@ -3,6 +3,7 @@ package hanamuramiyu.karakuri.ui.editor.inspector;
 import hanamuramiyu.karakuri.scenario.model.CameraDirection;
 import hanamuramiyu.karakuri.scenario.model.CameraMotion;
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
+import hanamuramiyu.karakuri.scenario.model.DepositItemsStep;
 import hanamuramiyu.karakuri.scenario.model.HotbarStep;
 import hanamuramiyu.karakuri.scenario.model.JumpMode;
 import hanamuramiyu.karakuri.scenario.model.JumpStep;
@@ -51,6 +52,7 @@ public final class ScenarioInspector
     private final int inspectorHeight;
     private final Runnable testSelectedStep;
     private final Runnable openInventorySlotSelection;
+    private final Runnable openDepositItemsSelection;
     private final Runnable resetSelectedStep;
     private final Runnable moveSelectedLeft;
     private final Runnable moveSelectedRight;
@@ -73,6 +75,7 @@ public final class ScenarioInspector
         Runnable stopRunningTest,
         Runnable testSelectedStep,
         Runnable openInventorySlotSelection,
+        Runnable openDepositItemsSelection,
         Runnable resetSelectedStep,
         Runnable moveSelectedLeft,
         Runnable moveSelectedRight,
@@ -113,6 +116,11 @@ public final class ScenarioInspector
         this.openInventorySlotSelection = Objects.requireNonNull(
             openInventorySlotSelection,
             "Inventory selection action must not be null"
+        );
+
+        this.openDepositItemsSelection = Objects.requireNonNull(
+            openDepositItemsSelection,
+            "Deposit selection action must not be null"
         );
 
         this.resetSelectedStep = Objects.requireNonNull(
@@ -207,6 +215,13 @@ public final class ScenarioInspector
     public String validationMessage() {
         ScenarioStep step =
             getSelectedStep();
+
+        if (
+            step instanceof DepositItemsStep depositItemsStep
+                && !depositItemsStep.hasAssignedGroup()
+        ) {
+            return "Select a storage group for Deposit Items";
+        }
 
         if (
             ScenarioStepRules.usesAngle(step)
@@ -654,6 +669,12 @@ public final class ScenarioInspector
     public void openInventorySlotSelection() {
         stopRunningTest.run();
         openInventorySlotSelection.run();
+    }
+
+    @Override
+    public void openDepositItemsSelection() {
+        stopRunningTest.run();
+        openDepositItemsSelection.run();
     }
 
     public void onDurationFieldChanged(

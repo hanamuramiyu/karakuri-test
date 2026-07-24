@@ -6,7 +6,8 @@ public enum TaskChannel {
     CAMERA("Camera"),
     LEFT_MOUSE("Left Mouse"),
     RIGHT_MOUSE("Right Mouse"),
-    HOTBAR("Hotbar");
+    HOTBAR("Hotbar"),
+    INVENTORY("Inventory");
 
     private final String label;
 
