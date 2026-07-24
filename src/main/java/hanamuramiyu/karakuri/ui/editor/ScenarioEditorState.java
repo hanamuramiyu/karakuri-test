@@ -18,6 +18,7 @@ import hanamuramiyu.karakuri.scenario.model.MoveMode;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
 import hanamuramiyu.karakuri.scenario.model.RepeatMode;
 import hanamuramiyu.karakuri.scenario.model.RepeatStep;
+import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
 import hanamuramiyu.karakuri.scenario.model.Scenario;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
@@ -290,6 +291,20 @@ public final class ScenarioEditorState {
             new DepositItemsStep(
                 storageGroupId,
                 DepositItemsStep.DEFAULT_INCLUDE_HOTBAR
+            )
+        );
+    }
+
+    public void insertRestockItemsStep(
+        String storageGroupId,
+        String itemId
+    ) {
+        insertAfterSelected(
+            new RestockItemsStep(
+                storageGroupId,
+                itemId,
+                RestockItemsStep.DEFAULT_TARGET_AMOUNT,
+                RestockItemsStep.DEFAULT_COUNT_HOTBAR
             )
         );
     }
@@ -738,6 +753,27 @@ public final class ScenarioEditorState {
         }
     }
 
+    public void setRestockItemsSelection(
+        String storageGroupId,
+        String itemId,
+        int targetAmount,
+        boolean countHotbar
+    ) {
+        if (
+            selectedStep()
+                instanceof RestockItemsStep step
+        ) {
+            replaceSelected(
+                step.withSelection(
+                    storageGroupId,
+                    itemId,
+                    targetAmount,
+                    countHotbar
+                )
+            );
+        }
+    }
+
     public void setInventorySlotSelection(
         int inventorySlot,
         int hotbarSlot
@@ -926,6 +962,8 @@ public final class ScenarioEditorState {
                     );
                 case DepositItemsStep depositItemsStep ->
                     depositItemsStep;
+                case RestockItemsStep restockItemsStep ->
+                    restockItemsStep;
                 case HotbarStep hotbarStep ->
                     hotbarStep;
                 case InventorySlotStep inventorySlotStep ->
@@ -1021,6 +1059,13 @@ public final class ScenarioEditorState {
                 new DepositItemsStep(
                     depositItemsStep.storageGroupId(),
                     DepositItemsStep.DEFAULT_INCLUDE_HOTBAR
+                );
+            case RestockItemsStep restockItemsStep ->
+                new RestockItemsStep(
+                    restockItemsStep.storageGroupId(),
+                    restockItemsStep.itemId(),
+                    RestockItemsStep.DEFAULT_TARGET_AMOUNT,
+                    RestockItemsStep.DEFAULT_COUNT_HOTBAR
                 );
             case HotbarStep hotbarStep ->
                 new HotbarStep(

@@ -14,11 +14,15 @@ import hanamuramiyu.karakuri.scenario.model.MouseStopMode;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
 import hanamuramiyu.karakuri.scenario.model.RepeatMode;
 import hanamuramiyu.karakuri.scenario.model.RepeatStep;
+import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioFormat;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
 import hanamuramiyu.karakuri.storage.StorageGroup;
 import hanamuramiyu.karakuri.storage.StorageRegistry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
 public final class ScenarioStepPresentation {
     private ScenarioStepPresentation() {
@@ -55,6 +59,8 @@ public final class ScenarioStepPresentation {
                     case LEFT_CLICK -> 0xFFE66777;
                     case RIGHT_CLICK -> 0xFF67C7E8;
                 };
+            case RestockItemsStep restockItemsStep ->
+                0xFF61D394;
             case RepeatStep repeatStep ->
                 0xFFE58AC8;
             case WaitStep waitStep ->
@@ -116,6 +122,8 @@ public final class ScenarioStepPresentation {
                         ? "Hold "
                             + mouseStep.action().label()
                         : mouseStep.action().label();
+            case RestockItemsStep restockItemsStep ->
+                "Restock " + restockItemName(restockItemsStep);
             case RepeatStep repeatStep ->
                 "Repeat Group";
             case WaitStep waitStep ->
@@ -141,6 +149,8 @@ public final class ScenarioStepPresentation {
                 "Direction / style / jumping";
             case MouseStep mouseStep ->
                 "Button / input / stop";
+            case RestockItemsStep restockItemsStep ->
+                "Storage group / item / target amount";
             case RepeatStep repeatStep ->
                 "Mode / count / nested blocks";
             case WaitStep waitStep ->
@@ -181,6 +191,8 @@ public final class ScenarioStepPresentation {
                     case LEFT_CLICK -> "1";
                     case RIGHT_CLICK -> "2";
                 };
+            case RestockItemsStep restockItemsStep ->
+                "S";
             case RepeatStep repeatStep ->
                 "R";
             case WaitStep waitStep ->
@@ -212,6 +224,8 @@ public final class ScenarioStepPresentation {
                     + moveStep.direction().label();
             case MouseStep mouseStep ->
                 mouseStep.action().label();
+            case RestockItemsStep restockItemsStep ->
+                "Restock Items";
             case RepeatStep repeatStep ->
                 "Repeat Group";
             case WaitStep waitStep ->
@@ -261,6 +275,14 @@ public final class ScenarioStepPresentation {
                     );
             case MouseStep mouseStep ->
                 mouseSubtitle(mouseStep);
+            case RestockItemsStep restockItemsStep ->
+                restockItemName(restockItemsStep)
+                    + " → "
+                    + restockItemsStep.targetAmount()
+                    + " · "
+                    + (restockItemsStep.countHotbar()
+                        ? "Inventory + hotbar"
+                        : "Main inventory");
             case RepeatStep repeatStep ->
                 repeatSubtitle(repeatStep);
             case WaitStep waitStep ->
@@ -284,6 +306,46 @@ public final class ScenarioStepPresentation {
         return group == null
             ? "Missing Storage Group"
             : group.name();
+    }
+
+    public static String restockGroupName(
+        RestockItemsStep step
+    ) {
+        if (!step.hasAssignedGroup()) {
+            return "Unassigned Storage";
+        }
+
+        StorageGroup group = StorageRegistry.findGroup(
+            step.storageGroupId()
+        );
+
+        return group == null
+            ? "Missing Storage Group"
+            : group.name();
+    }
+
+    public static String restockItemName(
+        RestockItemsStep step
+    ) {
+        if (!step.hasAssignedItem()) {
+            return "Unassigned Item";
+        }
+
+        for (Item item : BuiltInRegistries.ITEM) {
+            if (
+                BuiltInRegistries.ITEM
+                    .getKey(item)
+                    .toString()
+                    .equals(step.itemId())
+            ) {
+                ItemStack stack = item.getDefaultInstance();
+                return stack.isEmpty()
+                    ? step.itemId()
+                    : stack.getHoverName().getString();
+            }
+        }
+
+        return step.itemId();
     }
 
     public static String jumpPrimaryValueLabel(

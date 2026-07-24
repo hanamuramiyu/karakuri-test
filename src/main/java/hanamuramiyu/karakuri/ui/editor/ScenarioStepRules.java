@@ -13,6 +13,7 @@ import hanamuramiyu.karakuri.scenario.model.MouseStep;
 import hanamuramiyu.karakuri.scenario.model.MouseStopMode;
 import hanamuramiyu.karakuri.scenario.model.RepeatMode;
 import hanamuramiyu.karakuri.scenario.model.RepeatStep;
+import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 
 public final class ScenarioStepRules {
@@ -44,6 +45,7 @@ public final class ScenarioStepRules {
     ) {
         if (
             step instanceof DepositItemsStep
+                || step instanceof RestockItemsStep
                 || step instanceof HotbarStep
                 || step instanceof InventorySlotStep
                 || step instanceof RepeatStep

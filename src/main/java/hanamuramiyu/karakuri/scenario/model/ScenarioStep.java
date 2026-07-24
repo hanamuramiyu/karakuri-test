@@ -9,6 +9,7 @@ public sealed interface ScenarioStep permits
     MoveStep,
     MouseStep,
     RepeatStep,
+    RestockItemsStep,
     WaitStep {
     int durationTicks();
 

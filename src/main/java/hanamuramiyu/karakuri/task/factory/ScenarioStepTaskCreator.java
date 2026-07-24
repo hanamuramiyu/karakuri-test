@@ -9,6 +9,7 @@ import hanamuramiyu.karakuri.scenario.model.MouseStep;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
 import hanamuramiyu.karakuri.scenario.model.RepeatMode;
 import hanamuramiyu.karakuri.scenario.model.RepeatStep;
+import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStepVisitor;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
@@ -19,6 +20,7 @@ import hanamuramiyu.karakuri.task.action.HotbarTask;
 import hanamuramiyu.karakuri.task.action.InventorySlotTask;
 import hanamuramiyu.karakuri.task.action.JumpTask;
 import hanamuramiyu.karakuri.task.action.MouseButtonTask;
+import hanamuramiyu.karakuri.task.action.RestockItemsTask;
 import hanamuramiyu.karakuri.task.action.MoveTask;
 import hanamuramiyu.karakuri.task.action.WaitTask;
 import hanamuramiyu.karakuri.task.composite.RepeatTask;
@@ -96,6 +98,13 @@ final class ScenarioStepTaskCreator
             () -> createSequence(step.steps()),
             repeatCount
         );
+    }
+
+    @Override
+    public ClientTask visit(
+        RestockItemsStep step
+    ) {
+        return new RestockItemsTask(step);
     }
 
     @Override

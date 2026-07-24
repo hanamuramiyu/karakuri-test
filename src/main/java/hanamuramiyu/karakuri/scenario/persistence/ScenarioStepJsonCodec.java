@@ -22,6 +22,7 @@ import hanamuramiyu.karakuri.scenario.model.MoveMode;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
 import hanamuramiyu.karakuri.scenario.model.RepeatMode;
 import hanamuramiyu.karakuri.scenario.model.RepeatStep;
+import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
 
@@ -86,6 +87,9 @@ final class ScenarioStepJsonCodec {
             case "repeat" ->
                 readRepeatStep(values);
 
+            case "restock_items" ->
+                readRestockItemsStep(values);
+
             case "walk_forward" ->
                 new MoveStep(
                     MoveDirection.FORWARD,
@@ -143,6 +147,9 @@ final class ScenarioStepJsonCodec {
             case RepeatStep repeatStep ->
                 writeRepeatStep(repeatStep);
 
+            case RestockItemsStep restockItemsStep ->
+                writeRestockItemsStep(restockItemsStep);
+
             case WaitStep waitStep ->
                 writeWaitStep(waitStep);
         };
@@ -183,6 +190,30 @@ final class ScenarioStepJsonCodec {
             values.optionalBoolean(
                 "includeHotbar",
                 DepositItemsStep.DEFAULT_INCLUDE_HOTBAR
+            )
+        );
+    }
+
+
+    private RestockItemsStep readRestockItemsStep(
+        JsonObjectReader values
+    ) {
+        return new RestockItemsStep(
+            values.optionalString(
+                "storageGroupId",
+                RestockItemsStep.UNASSIGNED_GROUP_ID
+            ),
+            values.optionalString(
+                "itemId",
+                RestockItemsStep.UNASSIGNED_ITEM_ID
+            ),
+            values.optionalInt(
+                "targetAmount",
+                RestockItemsStep.DEFAULT_TARGET_AMOUNT
+            ),
+            values.optionalBoolean(
+                "countHotbar",
+                RestockItemsStep.DEFAULT_COUNT_HOTBAR
             )
         );
     }
@@ -367,6 +398,36 @@ final class ScenarioStepJsonCodec {
         object.addProperty(
             "includeHotbar",
             step.includeHotbar()
+        );
+
+        return object;
+    }
+
+
+    private JsonObject writeRestockItemsStep(
+        RestockItemsStep step
+    ) {
+        JsonObject object =
+            createTimedStepObject(
+                "restock_items",
+                step.durationTicks()
+            );
+
+        object.addProperty(
+            "storageGroupId",
+            step.storageGroupId()
+        );
+        object.addProperty(
+            "itemId",
+            step.itemId()
+        );
+        object.addProperty(
+            "targetAmount",
+            step.targetAmount()
+        );
+        object.addProperty(
+            "countHotbar",
+            step.countHotbar()
         );
 
         return object;

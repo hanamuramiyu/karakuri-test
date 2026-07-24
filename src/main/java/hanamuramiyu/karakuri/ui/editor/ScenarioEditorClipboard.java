@@ -8,6 +8,7 @@ import hanamuramiyu.karakuri.scenario.model.JumpStep;
 import hanamuramiyu.karakuri.scenario.model.MouseStep;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
 import hanamuramiyu.karakuri.scenario.model.RepeatStep;
+import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
 
@@ -90,6 +91,13 @@ public final class ScenarioEditorClipboard {
                     mouseStep.durationTicks(),
                     mouseStep.clicksPerSecondHalfSteps(),
                     mouseStep.clickCount()
+                );
+            case RestockItemsStep restockItemsStep ->
+                new RestockItemsStep(
+                    restockItemsStep.storageGroupId(),
+                    restockItemsStep.itemId(),
+                    restockItemsStep.targetAmount(),
+                    restockItemsStep.countHotbar()
                 );
             case RepeatStep repeatStep ->
                 new RepeatStep(

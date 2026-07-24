@@ -7,6 +7,7 @@ import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.MouseAction;
 import hanamuramiyu.karakuri.scenario.model.MoveDirection;
 import hanamuramiyu.karakuri.scenario.model.RepeatStep;
+import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
 import hanamuramiyu.karakuri.scenario.model.Scenario;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.storage.StorageRegistry;
@@ -194,7 +195,8 @@ public final class ScenarioEditorScreen extends Screen {
                 this::insertCameraStep,
                 this::insertHotbarStep,
                 this::insertInventorySlotStep,
-                this::insertDepositItemsStep
+                this::insertDepositItemsStep,
+                this::insertRestockItemsStep
             ),
             ScenarioEditorPreferences.actionCategory(),
             ScenarioEditorPreferences::setActionCategory
@@ -238,6 +240,7 @@ public final class ScenarioEditorScreen extends Screen {
             this::testSelectedStep,
             this::openSelectedInventorySlot,
             this::openSelectedDepositItems,
+            this::openSelectedRestockItems,
             this::resetSelectedStep,
             () -> moveSelectedStep(-1),
             () -> moveSelectedStep(1),
@@ -368,6 +371,11 @@ public final class ScenarioEditorScreen extends Screen {
                     instanceof DepositItemsStep
             ) {
                 openSelectedDepositItems();
+            } else if (
+                state.selectedStep()
+                    instanceof RestockItemsStep
+            ) {
+                openSelectedRestockItems();
             }
         }
 
@@ -522,6 +530,11 @@ public final class ScenarioEditorScreen extends Screen {
                     instanceof DepositItemsStep
             ) {
                 openSelectedDepositItems();
+            } else if (
+                state.selectedStep()
+                    instanceof RestockItemsStep
+            ) {
+                openSelectedRestockItems();
             } else {
                 openSelectedGroup();
             }
@@ -1348,6 +1361,42 @@ public final class ScenarioEditorScreen extends Screen {
         openSelectedDepositItems();
     }
 
+
+    private void insertRestockItemsStep() {
+        stopRunningTest();
+
+        String defaultGroupId =
+            RestockItemsStep.UNASSIGNED_GROUP_ID;
+        String defaultItemId =
+            RestockItemsStep.UNASSIGNED_ITEM_ID;
+
+        for (
+            hanamuramiyu.karakuri.storage.StorageGroup group :
+            StorageRegistry.groups()
+        ) {
+            if (
+                group.enabled()
+                    && !group.itemFilter()
+                        .itemIds()
+                        .isEmpty()
+            ) {
+                defaultGroupId = group.id();
+                defaultItemId = group.itemFilter()
+                    .itemIds()
+                    .getFirst();
+                break;
+            }
+        }
+
+        state.insertRestockItemsStep(
+            defaultGroupId,
+            defaultItemId
+        );
+        syncSelectedStep();
+        returnToWorkflow();
+        openSelectedRestockItems();
+    }
+
     private void insertHotbarStep() {
         stopRunningTest();
         state.insertHotbarStep();
@@ -1379,6 +1428,29 @@ public final class ScenarioEditorScreen extends Screen {
                 step.storageGroupId(),
                 step.includeHotbar(),
                 state::setDepositItemsSelection
+            )
+        );
+    }
+
+
+    private void openSelectedRestockItems() {
+        closeTransientUi();
+
+        if (
+            !(state.selectedStep()
+                instanceof RestockItemsStep step)
+        ) {
+            return;
+        }
+
+        minecraft.setScreen(
+            new RestockItemsSelectionScreen(
+                this,
+                step.storageGroupId(),
+                step.itemId(),
+                step.targetAmount(),
+                step.countHotbar(),
+                state::setRestockItemsSelection
             )
         );
     }

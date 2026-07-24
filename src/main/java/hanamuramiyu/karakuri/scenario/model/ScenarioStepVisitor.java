@@ -17,5 +17,7 @@ public interface ScenarioStepVisitor<T> {
 
     T visit(RepeatStep step);
 
+    T visit(RestockItemsStep step);
+
     T visit(WaitStep step);
 }

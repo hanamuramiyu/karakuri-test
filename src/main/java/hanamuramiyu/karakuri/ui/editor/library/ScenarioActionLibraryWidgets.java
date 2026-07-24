@@ -219,8 +219,8 @@ final class ScenarioActionLibraryWidgets {
         int inventoryWidth =
             (
                 width
-                    - ScenarioActionLibraryLayout.BUTTON_GAP * 2
-            ) / 3;
+                    - ScenarioActionLibraryLayout.BUTTON_GAP * 3
+            ) / 4;
 
         createActionButton(
             Action.HOTBAR,
@@ -251,6 +251,18 @@ final class ScenarioActionLibraryWidgets {
             inventoryWidth,
             "Deposit Items",
             actions.depositItemsAction()
+        );
+        createActionButton(
+            Action.RESTOCK_ITEMS,
+            x
+                + (
+                    inventoryWidth
+                        + ScenarioActionLibraryLayout.BUTTON_GAP
+                ) * 3,
+            y,
+            inventoryWidth,
+            "Restock Items",
+            actions.restockItemsAction()
         );
     }
 
@@ -346,7 +358,8 @@ final class ScenarioActionLibraryWidgets {
         CAMERA_DOWN(ScenarioActionLibrary.Category.CAMERA),
         HOTBAR(ScenarioActionLibrary.Category.INVENTORY),
         INVENTORY_SLOT(ScenarioActionLibrary.Category.INVENTORY),
-        DEPOSIT_ITEMS(ScenarioActionLibrary.Category.INVENTORY);
+        DEPOSIT_ITEMS(ScenarioActionLibrary.Category.INVENTORY),
+        RESTOCK_ITEMS(ScenarioActionLibrary.Category.INVENTORY);
 
         private final ScenarioActionLibrary.Category category;
 

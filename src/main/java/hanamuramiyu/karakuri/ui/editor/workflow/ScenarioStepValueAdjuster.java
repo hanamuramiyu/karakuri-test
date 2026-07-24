@@ -13,6 +13,7 @@ import hanamuramiyu.karakuri.scenario.model.MouseStopMode;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
 import hanamuramiyu.karakuri.scenario.model.RepeatMode;
 import hanamuramiyu.karakuri.scenario.model.RepeatStep;
+import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
 
@@ -75,6 +76,9 @@ final class ScenarioStepValueAdjuster {
                     mouseStep,
                     direction
                 );
+
+            case RestockItemsStep restockItemsStep ->
+                restockItemsStep;
 
             case RepeatStep repeatStep ->
                 adjustRepeatStep(

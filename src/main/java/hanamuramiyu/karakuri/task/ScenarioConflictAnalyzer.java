@@ -9,6 +9,7 @@ import hanamuramiyu.karakuri.scenario.model.MouseAction;
 import hanamuramiyu.karakuri.scenario.model.MouseStep;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
 import hanamuramiyu.karakuri.scenario.model.RepeatStep;
+import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
 import hanamuramiyu.karakuri.scenario.model.Scenario;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
@@ -91,6 +92,11 @@ public final class ScenarioConflictAnalyzer {
                 channels.add(TaskChannel.HOTBAR);
                 channels.add(TaskChannel.INVENTORY);
             }
+
+            case RestockItemsStep ignored ->
+                channels.addAll(
+                    EnumSet.allOf(TaskChannel.class)
+                );
 
             case RepeatStep repeatStep -> {
                 for (

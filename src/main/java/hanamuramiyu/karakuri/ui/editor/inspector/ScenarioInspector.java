@@ -17,6 +17,7 @@ import hanamuramiyu.karakuri.scenario.model.MoveMode;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
 import hanamuramiyu.karakuri.scenario.model.RepeatMode;
 import hanamuramiyu.karakuri.scenario.model.RepeatStep;
+import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioFormat;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
@@ -53,6 +54,7 @@ public final class ScenarioInspector
     private final Runnable testSelectedStep;
     private final Runnable openInventorySlotSelection;
     private final Runnable openDepositItemsSelection;
+    private final Runnable openRestockItemsSelection;
     private final Runnable resetSelectedStep;
     private final Runnable moveSelectedLeft;
     private final Runnable moveSelectedRight;
@@ -76,6 +78,7 @@ public final class ScenarioInspector
         Runnable testSelectedStep,
         Runnable openInventorySlotSelection,
         Runnable openDepositItemsSelection,
+        Runnable openRestockItemsSelection,
         Runnable resetSelectedStep,
         Runnable moveSelectedLeft,
         Runnable moveSelectedRight,
@@ -121,6 +124,11 @@ public final class ScenarioInspector
         this.openDepositItemsSelection = Objects.requireNonNull(
             openDepositItemsSelection,
             "Deposit selection action must not be null"
+        );
+
+        this.openRestockItemsSelection = Objects.requireNonNull(
+            openRestockItemsSelection,
+            "Restock selection action must not be null"
         );
 
         this.resetSelectedStep = Objects.requireNonNull(
@@ -221,6 +229,16 @@ public final class ScenarioInspector
                 && !depositItemsStep.hasAssignedGroup()
         ) {
             return "Select a storage group for Deposit Items";
+        }
+
+        if (step instanceof RestockItemsStep restockItemsStep) {
+            if (!restockItemsStep.hasAssignedGroup()) {
+                return "Select a storage group for Restock Items";
+            }
+
+            if (!restockItemsStep.hasAssignedItem()) {
+                return "Select an item for Restock Items";
+            }
         }
 
         if (
@@ -675,6 +693,12 @@ public final class ScenarioInspector
     public void openDepositItemsSelection() {
         stopRunningTest.run();
         openDepositItemsSelection.run();
+    }
+
+    @Override
+    public void openRestockItemsSelection() {
+        stopRunningTest.run();
+        openRestockItemsSelection.run();
     }
 
     public void onDurationFieldChanged(

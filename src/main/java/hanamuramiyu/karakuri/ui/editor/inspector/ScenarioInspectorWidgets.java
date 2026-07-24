@@ -18,6 +18,7 @@ import hanamuramiyu.karakuri.scenario.model.MoveMode;
 import hanamuramiyu.karakuri.scenario.model.MoveStep;
 import hanamuramiyu.karakuri.scenario.model.RepeatMode;
 import hanamuramiyu.karakuri.scenario.model.RepeatStep;
+import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
 import hanamuramiyu.karakuri.ui.editor.ScenarioEditorState;
 import hanamuramiyu.karakuri.ui.editor.ScenarioEditorTheme;
@@ -83,6 +84,7 @@ final class ScenarioInspectorWidgets {
 
     KarakuriButton jumpToggleButton;
     KarakuriButton depositItemsButton;
+    KarakuriButton restockItemsButton;
     KarakuriButton inventorySlotButton;
     KarakuriButton cpsDecreaseButton;
     KarakuriButton cpsIncreaseButton;
@@ -437,6 +439,25 @@ final class ScenarioInspectorWidgets {
                     ? ScenarioEditorTheme.WARNING
                     : ScenarioEditorTheme.TEXT_MUTED
             );
+        } else if (step instanceof RestockItemsStep restockItemsStep) {
+            placeWideButton(
+                restockItemsButton,
+                "Storage group and item",
+                row1
+            );
+            setDescription(
+                "Keeps "
+                    + restockItemsStep.targetAmount()
+                    + " "
+                    + ScenarioStepPresentation.restockItemName(
+                        restockItemsStep
+                    )
+                    + (restockItemsStep.countHotbar()
+                        ? " across inventory and hotbar"
+                        : " in the main inventory"),
+                row3 - 10,
+                ScenarioEditorTheme.TEXT_MUTED
+            );
         } else if (step instanceof HotbarStep) {
             placeWidePrimary("Hotbar slot", row1);
             setDescription(
@@ -539,6 +560,13 @@ final class ScenarioInspectorWidgets {
                 row1,
                 contentWidth
             );
+        } else if (step instanceof RestockItemsStep) {
+            placeButton(
+                restockItemsButton,
+                contentX,
+                row1,
+                contentWidth
+            );
         } else if (step instanceof InventorySlotStep) {
             placeButton(
                 inventorySlotButton,
@@ -582,6 +610,22 @@ final class ScenarioInspectorWidgets {
                                 ? " · Inventory + hotbar"
                                 : " · Main inventory"
                         )
+                )
+            );
+        }
+
+        if (step instanceof RestockItemsStep restockItemsStep) {
+            restockItemsButton.setMessage(
+                Component.literal(
+                    ScenarioStepPresentation.restockGroupName(
+                        restockItemsStep
+                    )
+                        + " · "
+                        + ScenarioStepPresentation.restockItemName(
+                            restockItemsStep
+                        )
+                        + " → "
+                        + restockItemsStep.targetAmount()
                 )
             );
         }
@@ -668,6 +712,14 @@ final class ScenarioInspectorWidgets {
             actions::openDepositItemsSelection,
             KarakuriButton.Style.SECONDARY
         );
+        restockItemsButton = createButton(
+            contentX,
+            inspectorY,
+            contentWidth,
+            "Choose Storage, Item, and Amount",
+            actions::openRestockItemsSelection,
+            KarakuriButton.Style.SECONDARY
+        );
         inventorySlotButton = createButton(
             contentX,
             inspectorY,
@@ -703,6 +755,7 @@ final class ScenarioInspectorWidgets {
         deleteButton = createButton(contentX, inspectorY, 80, "Delete", actions::deleteSelectedStep, KarakuriButton.Style.DANGER);
 
         regularWidgets.add(depositItemsButton);
+        regularWidgets.add(restockItemsButton);
         regularWidgets.add(inventorySlotButton);
         regularWidgets.add(jumpToggleButton);
         regularWidgets.add(cpsDecreaseButton);
@@ -1151,6 +1204,8 @@ final class ScenarioInspectorWidgets {
         void openInventorySlotSelection();
 
         void openDepositItemsSelection();
+
+        void openRestockItemsSelection();
 
         void testSelectedStep();
 
