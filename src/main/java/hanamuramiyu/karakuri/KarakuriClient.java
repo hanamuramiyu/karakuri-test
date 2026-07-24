@@ -4,11 +4,17 @@ import com.mojang.blaze3d.platform.InputConstants;
 import hanamuramiyu.karakuri.quicklaunch.QuickLaunchController;
 import hanamuramiyu.karakuri.quicklaunch.QuickLaunchRegistry;
 import hanamuramiyu.karakuri.scenario.ScenarioLibrary;
+import hanamuramiyu.karakuri.storage.StoragePreviewController;
+import hanamuramiyu.karakuri.storage.StoragePreviewHud;
+import hanamuramiyu.karakuri.storage.StorageRegistry;
 import hanamuramiyu.karakuri.task.TaskManager;
 import hanamuramiyu.karakuri.ui.KarakuriScreen;
+import hanamuramiyu.karakuri.ui.StorageManagerScreen;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
@@ -71,17 +77,38 @@ public final class KarakuriClient implements ClientModInitializer {
     public void onInitializeClient() {
         ScenarioLibrary.initialize();
         QuickLaunchRegistry.initialize();
+        StorageRegistry.initialize();
+
+        HudElementRegistry.attachElementBefore(
+            VanillaHudElements.CHAT,
+            Identifier.fromNamespaceAndPath(
+                Karakuri.MOD_ID,
+                "storage_preview"
+            ),
+            StoragePreviewHud::render
+        );
 
         ClientTickEvents.END_CLIENT_TICK.register(
             client -> {
                 TaskManager.tick(client);
+                StoragePreviewController.tick(client);
 
                 while (OPEN_MENU_KEY.consumeClick()) {
-                    if (
-                        client.player != null
-                            && !(client.screen
-                                instanceof KarakuriScreen)
-                    ) {
+                    if (client.player == null) {
+                        continue;
+                    }
+
+                    if (StoragePreviewController.active()) {
+                        StoragePreviewController.stop();
+                        client.setScreen(
+                            new StorageManagerScreen(
+                                new KarakuriScreen(null)
+                            )
+                        );
+                        continue;
+                    }
+
+                    if (!(client.screen instanceof KarakuriScreen)) {
                         client.setScreen(
                             new KarakuriScreen(
                                 client.screen
@@ -155,6 +182,10 @@ public final class KarakuriClient implements ClientModInitializer {
                 }
             }
         );
+    }
+
+    public static KeyMapping openMenuKey() {
+        return OPEN_MENU_KEY;
     }
 
     public static KeyMapping quickSlotKey(

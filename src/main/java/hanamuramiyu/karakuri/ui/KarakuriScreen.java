@@ -458,6 +458,11 @@ public final class KarakuriScreen extends Screen {
                         0xFF67C7E8
                     ),
                     new KarakuriMenuButton.Item(
+                        "Storage Manager",
+                        this::openStorageManager,
+                        0xFFF0A35E
+                    ),
+                    new KarakuriMenuButton.Item(
                         "Emergency Stop All",
                         this::emergencyStopAll,
                         0xFFE66777
@@ -936,6 +941,12 @@ public final class KarakuriScreen extends Screen {
                 RunningScenariosScreen
                     .OpenMode.MANAGE
             )
+        );
+    }
+
+    private void openStorageManager() {
+        minecraft.setScreen(
+            new StorageManagerScreen(this)
         );
     }
 
