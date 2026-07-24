@@ -216,7 +216,8 @@ final class ScenarioActionLibraryWidgets {
         createActionButton(Action.CAMERA_RIGHT, x + cameraWidth + ScenarioActionLibraryLayout.BUTTON_GAP, y, cameraWidth, "Right", () -> actions.cameraAction().accept(CameraDirection.RIGHT));
         createActionButton(Action.CAMERA_UP, x + (cameraWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 2, y, cameraWidth, "Up", () -> actions.cameraAction().accept(CameraDirection.UP));
         createActionButton(Action.CAMERA_DOWN, x + (cameraWidth + ScenarioActionLibraryLayout.BUTTON_GAP) * 3, y, cameraWidth, "Down", () -> actions.cameraAction().accept(CameraDirection.DOWN));
-        createActionButton(Action.HOTBAR, x, y, width, "Select Hotbar Slot", actions.hotbarAction());
+        createActionButton(Action.HOTBAR, x, y, halfWidth, "Hotbar Slot", actions.hotbarAction());
+        createActionButton(Action.INVENTORY_SLOT, x + halfWidth + ScenarioActionLibraryLayout.BUTTON_GAP, y, halfWidth, "Inventory Slot", actions.inventorySlotAction());
     }
 
     private void createCategoryButton(
@@ -309,7 +310,8 @@ final class ScenarioActionLibraryWidgets {
         CAMERA_RIGHT(ScenarioActionLibrary.Category.CAMERA),
         CAMERA_UP(ScenarioActionLibrary.Category.CAMERA),
         CAMERA_DOWN(ScenarioActionLibrary.Category.CAMERA),
-        HOTBAR(ScenarioActionLibrary.Category.INVENTORY);
+        HOTBAR(ScenarioActionLibrary.Category.INVENTORY),
+        INVENTORY_SLOT(ScenarioActionLibrary.Category.INVENTORY);
 
         private final ScenarioActionLibrary.Category category;
 

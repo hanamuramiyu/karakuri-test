@@ -5,6 +5,8 @@ public interface ScenarioStepVisitor<T> {
 
     T visit(HotbarStep step);
 
+    T visit(InventorySlotStep step);
+
     T visit(JumpStep step);
 
     T visit(MoveStep step);

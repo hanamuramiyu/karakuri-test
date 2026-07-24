@@ -8,6 +8,7 @@ import hanamuramiyu.karakuri.scenario.model.CameraDirection;
 import hanamuramiyu.karakuri.scenario.model.CameraMotion;
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
 import hanamuramiyu.karakuri.scenario.model.HotbarStep;
+import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.JumpMode;
 import hanamuramiyu.karakuri.scenario.model.JumpStep;
 import hanamuramiyu.karakuri.scenario.model.JumpStopMode;
@@ -50,6 +51,9 @@ final class ScenarioStepJsonCodec {
 
             case "hotbar" ->
                 readHotbarStep(values);
+
+            case "inventory_slot" ->
+                readInventorySlotStep(values);
 
             case "jump" ->
                 readJumpStep(
@@ -117,6 +121,9 @@ final class ScenarioStepJsonCodec {
             case HotbarStep hotbarStep ->
                 writeHotbarStep(hotbarStep);
 
+            case InventorySlotStep inventorySlotStep ->
+                writeInventorySlotStep(inventorySlotStep);
+
             case JumpStep jumpStep ->
                 writeJumpStep(jumpStep);
 
@@ -165,6 +172,21 @@ final class ScenarioStepJsonCodec {
             values.optionalInt(
                 "slot",
                 HotbarStep.DEFAULT_SLOT
+            )
+        );
+    }
+
+    private InventorySlotStep readInventorySlotStep(
+        JsonObjectReader values
+    ) {
+        return new InventorySlotStep(
+            values.optionalInt(
+                "inventorySlot",
+                InventorySlotStep.DEFAULT_INVENTORY_SLOT
+            ),
+            values.optionalInt(
+                "hotbarSlot",
+                InventorySlotStep.DEFAULT_HOTBAR_SLOT
             )
         );
     }
@@ -319,6 +341,28 @@ final class ScenarioStepJsonCodec {
         object.addProperty(
             "slot",
             step.slot()
+        );
+
+        return object;
+    }
+
+    private JsonObject writeInventorySlotStep(
+        InventorySlotStep step
+    ) {
+        JsonObject object =
+            createTimedStepObject(
+                "inventory_slot",
+                step.durationTicks()
+            );
+
+        object.addProperty(
+            "inventorySlot",
+            step.inventorySlot()
+        );
+
+        object.addProperty(
+            "hotbarSlot",
+            step.hotbarSlot()
         );
 
         return object;

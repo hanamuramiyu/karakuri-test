@@ -3,6 +3,7 @@ package hanamuramiyu.karakuri.ui.editor;
 import hanamuramiyu.karakuri.scenario.model.CameraMotion;
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
 import hanamuramiyu.karakuri.scenario.model.HotbarStep;
+import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.JumpMode;
 import hanamuramiyu.karakuri.scenario.model.JumpStep;
 import hanamuramiyu.karakuri.scenario.model.JumpStopMode;
@@ -33,6 +34,8 @@ public final class ScenarioStepPresentation {
                 };
             case HotbarStep hotbarStep ->
                 0xFFE8D26A;
+            case InventorySlotStep inventorySlotStep ->
+                0xFF67C7E8;
             case JumpStep jumpStep ->
                 0xFF78D6C6;
             case MoveStep moveStep ->
@@ -78,6 +81,11 @@ public final class ScenarioStepPresentation {
             case HotbarStep hotbarStep ->
                 "Select Hotbar Slot "
                     + (hotbarStep.slot() + 1);
+            case InventorySlotStep inventorySlotStep ->
+                "Use "
+                    + InventorySlotStep.inventorySlotLabel(
+                        inventorySlotStep.inventorySlot()
+                    );
             case JumpStep jumpStep ->
                 switch (jumpStep.mode()) {
                     case SINGLE -> "Single Jump";
@@ -115,6 +123,8 @@ public final class ScenarioStepPresentation {
                 "Direction / motion";
             case HotbarStep hotbarStep ->
                 "Select active hotbar slot";
+            case InventorySlotStep inventorySlotStep ->
+                "Inventory source / working hotbar slot";
             case JumpStep jumpStep ->
                 "Mode / stop condition";
             case MoveStep moveStep ->
@@ -143,6 +153,8 @@ public final class ScenarioStepPresentation {
                 Integer.toString(
                     hotbarStep.slot() + 1
                 );
+            case InventorySlotStep inventorySlotStep ->
+                "I";
             case JumpStep jumpStep ->
                 "J";
             case MoveStep moveStep ->
@@ -172,6 +184,8 @@ public final class ScenarioStepPresentation {
                 cameraStep.direction().label();
             case HotbarStep hotbarStep ->
                 "Select Slot";
+            case InventorySlotStep inventorySlotStep ->
+                "Inventory Slot";
             case JumpStep jumpStep ->
                 switch (jumpStep.mode()) {
                     case SINGLE -> "Jump";
@@ -208,6 +222,12 @@ public final class ScenarioStepPresentation {
             case HotbarStep hotbarStep ->
                 "Hotbar "
                     + (hotbarStep.slot() + 1);
+            case InventorySlotStep inventorySlotStep ->
+                InventorySlotStep.inventorySlotLabel(
+                    inventorySlotStep.inventorySlot()
+                )
+                    + " → Hotbar "
+                    + (inventorySlotStep.hotbarSlot() + 1);
             case JumpStep jumpStep ->
                 jumpSubtitle(jumpStep);
             case MoveStep moveStep ->

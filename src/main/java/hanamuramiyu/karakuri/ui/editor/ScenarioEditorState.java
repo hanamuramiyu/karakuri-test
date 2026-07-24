@@ -4,6 +4,7 @@ import hanamuramiyu.karakuri.scenario.model.CameraDirection;
 import hanamuramiyu.karakuri.scenario.model.CameraMotion;
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
 import hanamuramiyu.karakuri.scenario.model.HotbarStep;
+import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.JumpMode;
 import hanamuramiyu.karakuri.scenario.model.JumpStep;
 import hanamuramiyu.karakuri.scenario.model.JumpStopMode;
@@ -285,6 +286,15 @@ public final class ScenarioEditorState {
         insertAfterSelected(
             new HotbarStep(
                 HotbarStep.DEFAULT_SLOT
+            )
+        );
+    }
+
+    public void insertInventorySlotStep() {
+        insertAfterSelected(
+            new InventorySlotStep(
+                InventorySlotStep.DEFAULT_INVENTORY_SLOT,
+                InventorySlotStep.DEFAULT_HOTBAR_SLOT
             )
         );
     }
@@ -699,6 +709,23 @@ public final class ScenarioEditorState {
         }
     }
 
+    public void setInventorySlotSelection(
+        int inventorySlot,
+        int hotbarSlot
+    ) {
+        if (
+            selectedStep()
+                instanceof InventorySlotStep step
+        ) {
+            replaceSelected(
+                step.withSelection(
+                    inventorySlot,
+                    hotbarSlot
+                )
+            );
+        }
+    }
+
     public void setMouseAction(
         MouseAction action
     ) {
@@ -870,6 +897,8 @@ public final class ScenarioEditorState {
                     );
                 case HotbarStep hotbarStep ->
                     hotbarStep;
+                case InventorySlotStep inventorySlotStep ->
+                    inventorySlotStep;
                 case JumpStep jumpStep ->
                     jumpStep.withDurationTicks(
                         durationTicks
@@ -960,6 +989,11 @@ public final class ScenarioEditorState {
             case HotbarStep hotbarStep ->
                 new HotbarStep(
                     HotbarStep.DEFAULT_SLOT
+                );
+            case InventorySlotStep inventorySlotStep ->
+                new InventorySlotStep(
+                    InventorySlotStep.DEFAULT_INVENTORY_SLOT,
+                    InventorySlotStep.DEFAULT_HOTBAR_SLOT
                 );
             case JumpStep jumpStep ->
                 new JumpStep(

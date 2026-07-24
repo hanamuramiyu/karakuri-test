@@ -4,6 +4,7 @@ import hanamuramiyu.karakuri.scenario.model.CameraDirection;
 import hanamuramiyu.karakuri.scenario.model.CameraMotion;
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
 import hanamuramiyu.karakuri.scenario.model.HotbarStep;
+import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.JumpMode;
 import hanamuramiyu.karakuri.scenario.model.JumpStep;
 import hanamuramiyu.karakuri.scenario.model.JumpStopMode;
@@ -80,6 +81,7 @@ final class ScenarioInspectorWidgets {
     final KarakuriDropdown<MouseStopMode> mouseStopDropdown;
 
     KarakuriButton jumpToggleButton;
+    KarakuriButton inventorySlotButton;
     KarakuriButton cpsDecreaseButton;
     KarakuriButton cpsIncreaseButton;
     KarakuriButton angleDecreaseButton;
@@ -425,6 +427,21 @@ final class ScenarioInspectorWidgets {
                 row3 - 10,
                 ScenarioEditorTheme.TEXT_MUTED
             );
+        } else if (step instanceof InventorySlotStep inventorySlotStep) {
+            placeWideButton(
+                inventorySlotButton,
+                "Inventory selection",
+                row1
+            );
+            setDescription(
+                InventorySlotStep.inventorySlotLabel(
+                    inventorySlotStep.inventorySlot()
+                )
+                    + " will be moved to hotbar slot "
+                    + (inventorySlotStep.hotbarSlot() + 1),
+                row3 - 10,
+                ScenarioEditorTheme.TEXT_MUTED
+            );
         } else {
             placeWidePrimary("Duration in seconds", row1);
         }
@@ -498,6 +515,13 @@ final class ScenarioInspectorWidgets {
             if (ScenarioStepRules.usesPrimaryValue(step)) {
                 placePrimary(contentX, row3, halfWidth, "Value");
             }
+        } else if (step instanceof InventorySlotStep) {
+            placeButton(
+                inventorySlotButton,
+                contentX,
+                row1,
+                contentWidth
+            );
         } else {
             placePrimary(contentX, row1, contentWidth, "Value");
         }
@@ -522,6 +546,21 @@ final class ScenarioInspectorWidgets {
         durationField.visible = ScenarioStepRules.usesDuration(step);
         countField.visible = ScenarioStepRules.usesCount(step);
         angleField.visible = ScenarioStepRules.usesAngle(step);
+
+        if (step instanceof InventorySlotStep inventorySlotStep) {
+            inventorySlotButton.setMessage(
+                Component.literal(
+                    layoutMode == ScenarioInspectorLayout.Mode.WIDE
+                        ? "Choose Source and Hotbar Slot"
+                        : InventorySlotStep.inventorySlotLabel(
+                            inventorySlotStep.inventorySlot()
+                        )
+                            + " → "
+                            + (inventorySlotStep.hotbarSlot() + 1)
+                )
+            );
+        }
+
         if (step instanceof MoveStep moveStep) {
             moveDirectionDropdown.setValue(moveStep.direction());
             moveModeDropdown.setValue(moveStep.mode());
@@ -582,6 +621,14 @@ final class ScenarioInspectorWidgets {
     }
 
     private void createRegularWidgets() {
+        inventorySlotButton = createButton(
+            contentX,
+            inspectorY,
+            contentWidth,
+            "Choose Source and Hotbar Slot",
+            actions::openInventorySlotSelection,
+            KarakuriButton.Style.SECONDARY
+        );
         jumpToggleButton = createButton(
             contentX,
             inspectorY,
@@ -608,6 +655,7 @@ final class ScenarioInspectorWidgets {
         duplicateButton = createButton(contentX, inspectorY, 80, "Duplicate", actions::duplicateSelectedStep, KarakuriButton.Style.SECONDARY);
         deleteButton = createButton(contentX, inspectorY, 80, "Delete", actions::deleteSelectedStep, KarakuriButton.Style.DANGER);
 
+        regularWidgets.add(inventorySlotButton);
         regularWidgets.add(jumpToggleButton);
         regularWidgets.add(cpsDecreaseButton);
         regularWidgets.add(cpsIncreaseButton);
@@ -1051,6 +1099,8 @@ final class ScenarioInspectorWidgets {
         void changeAngle(int direction);
 
         void changePrimaryValue(int direction);
+
+        void openInventorySlotSelection();
 
         void testSelectedStep();
 

@@ -2,6 +2,7 @@ package hanamuramiyu.karakuri.ui.editor.workflow;
 
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
 import hanamuramiyu.karakuri.scenario.model.HotbarStep;
+import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.JumpMode;
 import hanamuramiyu.karakuri.scenario.model.JumpStep;
 import hanamuramiyu.karakuri.scenario.model.JumpStopMode;
@@ -47,6 +48,9 @@ final class ScenarioStepValueAdjuster {
                         HotbarStep.MAX_SLOT
                     )
                 );
+
+            case InventorySlotStep inventorySlotStep ->
+                inventorySlotStep;
 
             case JumpStep jumpStep ->
                 adjustJumpStep(

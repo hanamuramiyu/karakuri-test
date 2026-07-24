@@ -2,6 +2,7 @@ package hanamuramiyu.karakuri.ui;
 
 import hanamuramiyu.karakuri.scenario.ScenarioLibrary;
 import hanamuramiyu.karakuri.scenario.model.CameraDirection;
+import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.MouseAction;
 import hanamuramiyu.karakuri.scenario.model.MoveDirection;
 import hanamuramiyu.karakuri.scenario.model.RepeatStep;
@@ -189,7 +190,8 @@ public final class ScenarioEditorScreen extends Screen {
                 this::insertRepeatGroup,
                 this::insertMouseStep,
                 this::insertCameraStep,
-                this::insertHotbarStep
+                this::insertHotbarStep,
+                this::insertInventorySlotStep
             ),
             ScenarioEditorPreferences.actionCategory(),
             ScenarioEditorPreferences::setActionCategory
@@ -231,6 +233,7 @@ public final class ScenarioEditorScreen extends Screen {
             ),
             this::stopRunningTest,
             this::testSelectedStep,
+            this::openSelectedInventorySlot,
             this::resetSelectedStep,
             () -> moveSelectedStep(-1),
             () -> moveSelectedStep(1),
@@ -348,12 +351,15 @@ public final class ScenarioEditorScreen extends Screen {
 
         boolean handled = workflowCanvas.mouseClicked(event);
 
-        if (
-            handled
-                && doubled
-                && state.selectedStep() instanceof RepeatStep
-        ) {
-            openSelectedGroup();
+        if (handled && doubled) {
+            if (state.selectedStep() instanceof RepeatStep) {
+                openSelectedGroup();
+            } else if (
+                state.selectedStep()
+                    instanceof InventorySlotStep
+            ) {
+                openSelectedInventorySlot();
+            }
         }
 
         return handled;
@@ -497,7 +503,14 @@ public final class ScenarioEditorScreen extends Screen {
             event.key() == GLFW.GLFW_KEY_ENTER
                 || event.key() == GLFW.GLFW_KEY_KP_ENTER
         ) {
-            openSelectedGroup();
+            if (
+                state.selectedStep()
+                    instanceof InventorySlotStep
+            ) {
+                openSelectedInventorySlot();
+            } else {
+                openSelectedGroup();
+            }
             return true;
         }
 
@@ -1308,6 +1321,34 @@ public final class ScenarioEditorScreen extends Screen {
         state.insertHotbarStep();
         syncSelectedStep();
         returnToWorkflow();
+    }
+
+    private void insertInventorySlotStep() {
+        stopRunningTest();
+        state.insertInventorySlotStep();
+        syncSelectedStep();
+        returnToWorkflow();
+        openSelectedInventorySlot();
+    }
+
+    private void openSelectedInventorySlot() {
+        closeTransientUi();
+
+        if (
+            !(state.selectedStep()
+                instanceof InventorySlotStep step)
+        ) {
+            return;
+        }
+
+        minecraft.setScreen(
+            new InventorySlotSelectionScreen(
+                this,
+                step.inventorySlot(),
+                step.hotbarSlot(),
+                state::setInventorySlotSelection
+            )
+        );
     }
 
     private void syncWorkflowLevel() {

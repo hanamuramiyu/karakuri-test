@@ -3,6 +3,7 @@ package hanamuramiyu.karakuri.ui.editor;
 import hanamuramiyu.karakuri.scenario.model.CameraMotion;
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
 import hanamuramiyu.karakuri.scenario.model.HotbarStep;
+import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.JumpMode;
 import hanamuramiyu.karakuri.scenario.model.JumpStep;
 import hanamuramiyu.karakuri.scenario.model.JumpStopMode;
@@ -42,6 +43,7 @@ public final class ScenarioStepRules {
     ) {
         if (
             step instanceof HotbarStep
+                || step instanceof InventorySlotStep
                 || step instanceof RepeatStep
         ) {
             return false;

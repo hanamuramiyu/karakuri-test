@@ -3,6 +3,7 @@ package hanamuramiyu.karakuri.scenario.model;
 public sealed interface ScenarioStep permits
     CameraStep,
     HotbarStep,
+    InventorySlotStep,
     JumpStep,
     MoveStep,
     MouseStep,

@@ -2,6 +2,7 @@ package hanamuramiyu.karakuri.task;
 
 import hanamuramiyu.karakuri.scenario.model.CameraStep;
 import hanamuramiyu.karakuri.scenario.model.HotbarStep;
+import hanamuramiyu.karakuri.scenario.model.InventorySlotStep;
 import hanamuramiyu.karakuri.scenario.model.JumpStep;
 import hanamuramiyu.karakuri.scenario.model.MouseAction;
 import hanamuramiyu.karakuri.scenario.model.MouseStep;
@@ -78,6 +79,9 @@ public final class ScenarioConflictAnalyzer {
                 );
 
             case HotbarStep ignored ->
+                channels.add(TaskChannel.HOTBAR);
+
+            case InventorySlotStep ignored ->
                 channels.add(TaskChannel.HOTBAR);
 
             case RepeatStep repeatStep -> {

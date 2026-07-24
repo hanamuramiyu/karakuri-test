@@ -50,6 +50,7 @@ public final class ScenarioInspector
     private final int inspectorWidth;
     private final int inspectorHeight;
     private final Runnable testSelectedStep;
+    private final Runnable openInventorySlotSelection;
     private final Runnable resetSelectedStep;
     private final Runnable moveSelectedLeft;
     private final Runnable moveSelectedRight;
@@ -71,6 +72,7 @@ public final class ScenarioInspector
         ScenarioInspectorLayout layout,
         Runnable stopRunningTest,
         Runnable testSelectedStep,
+        Runnable openInventorySlotSelection,
         Runnable resetSelectedStep,
         Runnable moveSelectedLeft,
         Runnable moveSelectedRight,
@@ -106,6 +108,11 @@ public final class ScenarioInspector
         this.testSelectedStep = Objects.requireNonNull(
             testSelectedStep,
             "Test-step action must not be null"
+        );
+
+        this.openInventorySlotSelection = Objects.requireNonNull(
+            openInventorySlotSelection,
+            "Inventory selection action must not be null"
         );
 
         this.resetSelectedStep = Objects.requireNonNull(
@@ -643,6 +650,12 @@ public final class ScenarioInspector
         syncValueFields();
         refreshEditor();
     }
+    @Override
+    public void openInventorySlotSelection() {
+        stopRunningTest.run();
+        openInventorySlotSelection.run();
+    }
+
     public void onDurationFieldChanged(
         String value
     ) {
@@ -894,6 +907,9 @@ public final class ScenarioInspector
         widgets.testButton.active =
             status != TaskStatus.IDLE
                 || !state.selectedGroupHasInfiniteStepBeforeEnd();
+
+        widgets.inventorySlotButton.active =
+            status == TaskStatus.IDLE;
 
         widgets.resetButton.active =
             status == TaskStatus.IDLE
