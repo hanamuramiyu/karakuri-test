@@ -9,6 +9,7 @@ import hanamuramiyu.karakuri.storage.StorageRegistry;
 import hanamuramiyu.karakuri.storage.StorageTargeting;
 import hanamuramiyu.karakuri.storage.StorageWorldIdentity;
 import hanamuramiyu.karakuri.ui.widget.KarakuriButton;
+import hanamuramiyu.karakuri.ui.widget.KarakuriCheckboxRenderer;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -54,6 +55,7 @@ public final class StorageManagerScreen extends Screen {
 
     private KarakuriButton renameGroupButton;
     private KarakuriButton colorButton;
+    private KarakuriButton filterButton;
     private KarakuriButton deleteGroupButton;
     private KarakuriButton addTargetButton;
     private KarakuriButton renameMarkerButton;
@@ -80,7 +82,7 @@ public final class StorageManagerScreen extends Screen {
         int footerY =
             panelY + panelHeight() - FOOTER_HEIGHT;
         int groupButtonWidth =
-            (contentWidth - BUTTON_GAP * 3) / 4;
+            (contentWidth - BUTTON_GAP * 4) / 5;
         int actionButtonWidth =
             (contentWidth - BUTTON_GAP * 4) / 5;
         int firstRowY = footerY + 6;
@@ -132,13 +134,29 @@ public final class StorageManagerScreen extends Screen {
             )
         );
 
-        deleteGroupButton = addRenderableWidget(
+        filterButton = addRenderableWidget(
             new KarakuriButton(
                 font,
                 panelX
                     + CONTENT_MARGIN
                     + (groupButtonWidth
                         + BUTTON_GAP) * 3,
+                firstRowY,
+                groupButtonWidth,
+                BUTTON_HEIGHT,
+                Component.literal("Item Filter"),
+                this::editItemFilter,
+                KarakuriButton.Style.SECONDARY
+            )
+        );
+
+        deleteGroupButton = addRenderableWidget(
+            new KarakuriButton(
+                font,
+                panelX
+                    + CONTENT_MARGIN
+                    + (groupButtonWidth
+                        + BUTTON_GAP) * 4,
                 firstRowY,
                 groupButtonWidth,
                 BUTTON_HEIGHT,
@@ -678,12 +696,20 @@ public final class StorageManagerScreen extends Screen {
                 group,
                 currentWorldId()
             ).size();
+        int itemCount =
+            group.itemFilter().itemIds().size();
+        boolean overlap =
+            !StorageRegistry
+                .overlappingGroups(group.id())
+                .isEmpty();
         String detail = markerCount
             + (markerCount == 1
                 ? " storage"
                 : " storages")
             + "  ·  "
-            + group.color().label();
+            + itemCount
+            + (itemCount == 1 ? " item" : " items")
+            + (overlap ? "  ·  overlap" : "");
         graphics.drawString(
             font,
             Component.literal(
@@ -868,31 +894,14 @@ public final class StorageManagerScreen extends Screen {
         boolean selected,
         int color
     ) {
-        graphics.fill(
-            x,
-            y,
-            x + CHECKBOX_SIZE,
-            y + CHECKBOX_SIZE,
-            selected ? color : 0xFF100E16
-        );
-        graphics.renderOutline(
+        KarakuriCheckboxRenderer.render(
+            graphics,
             x,
             y,
             CHECKBOX_SIZE,
-            CHECKBOX_SIZE,
-            selected ? 0xFFF3EAFB : 0xFF5A5063
+            selected,
+            color
         );
-
-        if (selected) {
-            graphics.drawString(
-                font,
-                Component.literal("✓"),
-                x + 3,
-                y + 3,
-                0xFFF8F4FB,
-                false
-            );
-        }
     }
 
     private void renderEmpty(
@@ -1048,6 +1057,21 @@ public final class StorageManagerScreen extends Screen {
             group.withColor(group.color().next())
         );
         updateButtons();
+    }
+
+    private void editItemFilter() {
+        StorageGroup group = activeGroup();
+
+        if (group == null) {
+            return;
+        }
+
+        minecraft.setScreen(
+            new StorageItemFilterScreen(
+                this,
+                group.id()
+            )
+        );
     }
 
     private void deleteGroup() {
@@ -1531,6 +1555,7 @@ public final class StorageManagerScreen extends Screen {
         if (
             renameGroupButton == null
                 || colorButton == null
+                || filterButton == null
                 || deleteGroupButton == null
                 || addTargetButton == null
                 || renameMarkerButton == null
@@ -1550,6 +1575,17 @@ public final class StorageManagerScreen extends Screen {
                 group == null
                     ? "Color"
                     : "Color: " + group.color().label()
+            )
+        );
+        filterButton.active = group != null;
+        filterButton.setMessage(
+            Component.literal(
+                group == null
+                    ? "Item Filter"
+                    : "Items: "
+                        + group.itemFilter()
+                            .itemIds()
+                            .size()
             )
         );
         deleteGroupButton.active = group != null;

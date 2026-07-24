@@ -8,7 +8,8 @@ public record StorageGroup(
     String id,
     String name,
     StorageColor color,
-    boolean enabled
+    boolean enabled,
+    StorageItemFilter itemFilter
 ) {
     public StorageGroup {
         id = normalizeUuid(id);
@@ -24,6 +25,10 @@ public record StorageGroup(
             color,
             "Storage group color must not be null"
         );
+        itemFilter = Objects.requireNonNull(
+            itemFilter,
+            "Storage group item filter must not be null"
+        );
     }
 
     public StorageGroup(
@@ -34,7 +39,8 @@ public record StorageGroup(
             UUID.randomUUID().toString(),
             name,
             color,
-            true
+            true,
+            StorageItemFilter.empty()
         );
     }
 
@@ -45,7 +51,8 @@ public record StorageGroup(
             id,
             updatedName,
             color,
-            enabled
+            enabled,
+            itemFilter
         );
     }
 
@@ -56,7 +63,8 @@ public record StorageGroup(
             id,
             name,
             updatedColor,
-            enabled
+            enabled,
+            itemFilter
         );
     }
 
@@ -67,7 +75,20 @@ public record StorageGroup(
             id,
             name,
             color,
-            updatedEnabled
+            updatedEnabled,
+            itemFilter
+        );
+    }
+
+    public StorageGroup withItemFilter(
+        StorageItemFilter updatedItemFilter
+    ) {
+        return new StorageGroup(
+            id,
+            name,
+            color,
+            enabled,
+            updatedItemFilter
         );
     }
 

@@ -25,7 +25,8 @@ import java.util.Locale;
 import java.util.Set;
 
 public final class StorageRegistry {
-    private static final int SCHEMA_VERSION = 2;
+    private static final int SCHEMA_VERSION = 3;
+    private static final int PREVIOUS_SCHEMA_VERSION = 2;
     private static final int LEGACY_SCHEMA_VERSION = 1;
     private static final Gson GSON =
         new GsonBuilder()
@@ -358,6 +359,106 @@ public final class StorageRegistry {
             .toList();
     }
 
+    public static synchronized List<StorageGroup>
+    overlappingGroups(
+        String groupId
+    ) {
+        StorageGroup group = findGroup(groupId);
+
+        if (
+            group == null
+                || group.itemFilter().emptyFilter()
+        ) {
+            return List.of();
+        }
+
+        Set<String> sharedGroupIds =
+            new HashSet<>();
+
+        for (StorageMarker marker : markersForGroup(group)) {
+            sharedGroupIds.addAll(marker.groupIds());
+        }
+
+        sharedGroupIds.remove(group.id());
+
+        List<StorageGroup> overlapping =
+            new ArrayList<>();
+
+        for (String sharedGroupId : sharedGroupIds) {
+            StorageGroup sharedGroup =
+                findGroup(sharedGroupId);
+
+            if (
+                sharedGroup != null
+                    && group.itemFilter().overlaps(
+                        sharedGroup.itemFilter()
+                    )
+            ) {
+                overlapping.add(sharedGroup);
+            }
+        }
+
+        overlapping.sort(
+            java.util.Comparator.comparing(
+                StorageGroup::name,
+                String.CASE_INSENSITIVE_ORDER
+            )
+        );
+
+        return List.copyOf(overlapping);
+    }
+
+    public static synchronized List<StorageGroup>
+    overlappingGroups(
+        String groupId,
+        StorageItemFilter itemFilter
+    ) {
+        StorageGroup group = findGroup(groupId);
+
+        if (
+            group == null
+                || itemFilter == null
+                || itemFilter.emptyFilter()
+        ) {
+            return List.of();
+        }
+
+        Set<String> sharedGroupIds =
+            new HashSet<>();
+
+        for (StorageMarker marker : markersForGroup(group)) {
+            sharedGroupIds.addAll(marker.groupIds());
+        }
+
+        sharedGroupIds.remove(group.id());
+
+        List<StorageGroup> overlapping =
+            new ArrayList<>();
+
+        for (String sharedGroupId : sharedGroupIds) {
+            StorageGroup sharedGroup =
+                findGroup(sharedGroupId);
+
+            if (
+                sharedGroup != null
+                    && itemFilter.overlaps(
+                        sharedGroup.itemFilter()
+                    )
+            ) {
+                overlapping.add(sharedGroup);
+            }
+        }
+
+        overlapping.sort(
+            java.util.Comparator.comparing(
+                StorageGroup::name,
+                String.CASE_INSENSITIVE_ORDER
+            )
+        );
+
+        return List.copyOf(overlapping);
+    }
+
     private static void save(
         List<StorageGroup> updatedGroups,
         List<StorageMarker> updatedMarkers
@@ -395,6 +496,8 @@ public final class StorageRegistry {
 
             LoadedRegistry loaded = switch (schemaVersion) {
                 case SCHEMA_VERSION -> readCurrent(root);
+                case PREVIOUS_SCHEMA_VERSION ->
+                    readPrevious(root);
                 case LEGACY_SCHEMA_VERSION -> readLegacy(root);
                 default -> throw new IllegalArgumentException(
                     "Unsupported storage schema version: "
@@ -454,6 +557,39 @@ public final class StorageRegistry {
         );
     }
 
+    private static LoadedRegistry readPrevious(
+        JsonObject root
+    ) {
+        List<StorageGroup> loadedGroups =
+            new ArrayList<>();
+        List<StorageMarker> loadedMarkers =
+            new ArrayList<>();
+
+        for (
+            JsonElement element :
+            requiredArray(root, "groups")
+        ) {
+            loadedGroups.add(
+                readPreviousGroup(element.getAsJsonObject())
+            );
+        }
+
+        for (
+            JsonElement element :
+            requiredArray(root, "markers")
+        ) {
+            loadedMarkers.add(
+                readCurrentMarker(element.getAsJsonObject())
+            );
+        }
+
+        return new LoadedRegistry(
+            List.copyOf(loadedGroups),
+            List.copyOf(loadedMarkers),
+            true
+        );
+    }
+
     private static LoadedRegistry readLegacy(
         JsonObject root
     ) {
@@ -484,7 +620,8 @@ public final class StorageRegistry {
                         groupObject,
                         "enabled",
                         true
-                    )
+                    ),
+                    StorageItemFilter.empty()
                 )
             );
 
@@ -577,8 +714,51 @@ public final class StorageRegistry {
             StorageColor.fromId(
                 requiredString(object, "color")
             ),
-            optionalBoolean(object, "enabled", true)
+            optionalBoolean(object, "enabled", true),
+            readItemFilter(
+                requiredObject(object, "itemFilter")
+            )
         );
+    }
+
+    private static StorageGroup readPreviousGroup(
+        JsonObject object
+    ) {
+        return new StorageGroup(
+            requiredString(object, "id"),
+            requiredString(object, "name"),
+            StorageColor.fromId(
+                requiredString(object, "color")
+            ),
+            optionalBoolean(object, "enabled", true),
+            StorageItemFilter.empty()
+        );
+    }
+
+    private static StorageItemFilter readItemFilter(
+        JsonObject object
+    ) {
+        List<String> itemIds = new ArrayList<>();
+
+        for (
+            JsonElement element :
+            requiredArray(object, "itemIds")
+        ) {
+            if (
+                !element.isJsonPrimitive()
+                    || !element
+                        .getAsJsonPrimitive()
+                        .isString()
+            ) {
+                throw new IllegalArgumentException(
+                    "Storage item filter ID must be a string"
+                );
+            }
+
+            itemIds.add(element.getAsString());
+        }
+
+        return new StorageItemFilter(itemIds);
     }
 
     private static StorageMarker readCurrentMarker(
@@ -653,6 +833,16 @@ public final class StorageRegistry {
         object.addProperty("name", group.name());
         object.addProperty("color", group.color().id());
         object.addProperty("enabled", group.enabled());
+
+        JsonObject itemFilterObject = new JsonObject();
+        JsonArray itemIdArray = new JsonArray();
+
+        for (String itemId : group.itemFilter().itemIds()) {
+            itemIdArray.add(itemId);
+        }
+
+        itemFilterObject.add("itemIds", itemIdArray);
+        object.add("itemFilter", itemFilterObject);
         return object;
     }
 
@@ -913,6 +1103,21 @@ public final class StorageRegistry {
         return element == null || element.isJsonNull()
             ? fallback
             : element.getAsBoolean();
+    }
+
+    private static JsonObject requiredObject(
+        JsonObject object,
+        String key
+    ) {
+        JsonElement element = object.get(key);
+
+        if (element == null || !element.isJsonObject()) {
+            throw new IllegalArgumentException(
+                "Missing object property: " + key
+            );
+        }
+
+        return element.getAsJsonObject();
     }
 
     private static JsonArray requiredArray(

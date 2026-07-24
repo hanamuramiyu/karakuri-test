@@ -7,6 +7,7 @@ import hanamuramiyu.karakuri.scenario.ScenarioLibrary;
 import hanamuramiyu.karakuri.scenario.model.Scenario;
 import hanamuramiyu.karakuri.task.TaskChannel;
 import hanamuramiyu.karakuri.ui.widget.KarakuriButton;
+import hanamuramiyu.karakuri.ui.widget.KarakuriCheckboxRenderer;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -609,36 +610,14 @@ public final class QuickLaunchSlotScreen extends Screen {
         int checkboxY = rowY
             + (ROW_HEIGHT - CHECKBOX_SIZE) / 2;
 
-        graphics.fill(
-            checkboxX,
-            checkboxY,
-            checkboxX + CHECKBOX_SIZE,
-            checkboxY + CHECKBOX_SIZE,
-            selected
-                ? 0xFF9B79D1
-                : 0xFF100E16
-        );
-
-        graphics.renderOutline(
+        KarakuriCheckboxRenderer.render(
+            graphics,
             checkboxX,
             checkboxY,
             CHECKBOX_SIZE,
-            CHECKBOX_SIZE,
-            selected
-                ? 0xFFCDB1F2
-                : 0xFF5A5063
+            selected,
+            0xFF9B79D1
         );
-
-        if (selected) {
-            graphics.drawString(
-                font,
-                Component.literal("✓"),
-                checkboxX + 3,
-                checkboxY + 3,
-                0xFFF8F4FB,
-                false
-            );
-        }
 
         int textX =
             checkboxX + CHECKBOX_SIZE + 9;
