@@ -57,8 +57,7 @@ public final class ScenarioEditorClipboard {
                 );
             case DepositItemsStep depositItemsStep ->
                 new DepositItemsStep(
-                    depositItemsStep.storageGroupId(),
-                    depositItemsStep.includeHotbar()
+                    depositItemsStep.options()
                 );
             case HotbarStep hotbarStep ->
                 new HotbarStep(
@@ -94,10 +93,7 @@ public final class ScenarioEditorClipboard {
                 );
             case RestockItemsStep restockItemsStep ->
                 new RestockItemsStep(
-                    restockItemsStep.storageGroupId(),
-                    restockItemsStep.itemId(),
-                    restockItemsStep.targetAmount(),
-                    restockItemsStep.countHotbar()
+                    restockItemsStep.options()
                 );
             case RepeatStep repeatStep ->
                 new RepeatStep(

@@ -1,6 +1,10 @@
 package hanamuramiyu.karakuri.ui;
 
-import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferAmountMode;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferDirection;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferItemMode;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferOptions;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferSpeed;
 import hanamuramiyu.karakuri.storage.StorageGroup;
 import hanamuramiyu.karakuri.storage.StorageRegistry;
 import hanamuramiyu.karakuri.ui.widget.KarakuriButton;
@@ -16,61 +20,87 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
-public final class RestockItemsSelectionScreen extends Screen {
-    private static final int PANEL_MAX_WIDTH = 760;
-    private static final int PANEL_MAX_HEIGHT = 500;
+public final class StorageTransferSelectionScreen extends Screen {
+    private static final int PANEL_MAX_WIDTH = 860;
+    private static final int PANEL_MAX_HEIGHT = 560;
     private static final int PANEL_MARGIN = 8;
     private static final int CONTENT_MARGIN = 14;
     private static final int HEADER_HEIGHT = 62;
-    private static final int FOOTER_HEIGHT = 104;
+    private static final int FOOTER_HEIGHT = 142;
     private static final int COLUMN_GAP = 10;
     private static final int GROUP_ROW_HEIGHT = 38;
-    private static final int ITEM_ROW_HEIGHT = 36;
+    private static final int ITEM_ROW_HEIGHT = 38;
     private static final int CHECKBOX_SIZE = 14;
     private static final int BUTTON_HEIGHT = 24;
     private static final int BUTTON_GAP = 7;
     private static final int SCROLL_STEP = 3;
 
     private final Screen parent;
+    private final StorageTransferDirection direction;
     private final SelectionAction selectionAction;
 
     private List<StorageGroup> groups = List.of();
     private List<ItemEntry> items = List.of();
+    private final Set<String> selectedItemIds =
+        new LinkedHashSet<>();
     private String selectedGroupId;
-    private String selectedItemId;
-    private int targetAmount;
-    private boolean countHotbar;
+    private StorageTransferItemMode itemMode;
+    private StorageTransferAmountMode amountMode;
+    private int amount;
+    private StorageTransferSpeed speed;
+    private boolean includeHotbar;
     private int groupScroll;
     private int itemScroll;
-    private EditBox amountField;
-    private KarakuriButton applyButton;
     private boolean amountValid = true;
+    private EditBox amountField;
+    private KarakuriButton itemModeButton;
+    private KarakuriButton amountModeButton;
+    private KarakuriButton speedButton;
+    private KarakuriButton applyButton;
 
-    public RestockItemsSelectionScreen(
+    public StorageTransferSelectionScreen(
         Screen parent,
-        String selectedGroupId,
-        String selectedItemId,
-        int targetAmount,
-        boolean countHotbar,
+        StorageTransferDirection direction,
+        StorageTransferOptions options,
         SelectionAction selectionAction
     ) {
-        super(Component.literal("Configure Restock Items"));
+        super(
+            Component.literal(
+                "Configure " + direction.label()
+            )
+        );
         this.parent = Objects.requireNonNull(
             parent,
             "Parent screen must not be null"
+        );
+        this.direction = Objects.requireNonNull(
+            direction,
+            "Storage transfer direction must not be null"
         );
         this.selectionAction = Objects.requireNonNull(
             selectionAction,
             "Selection action must not be null"
         );
-        this.selectedGroupId = selectedGroupId;
-        this.selectedItemId = selectedItemId;
-        this.targetAmount = targetAmount;
-        this.countHotbar = countHotbar;
+
+        StorageTransferOptions initial =
+            Objects.requireNonNull(
+                options,
+                "Storage transfer options must not be null"
+            );
+
+        selectedGroupId = initial.storageGroupId();
+        itemMode = initial.itemMode();
+        selectedItemIds.addAll(initial.itemIds());
+        amountMode = initial.amountMode();
+        amount = initial.amount();
+        speed = initial.speed();
+        includeHotbar = initial.includeHotbar();
     }
 
     @Override
@@ -87,37 +117,83 @@ public final class RestockItemsSelectionScreen extends Screen {
         int panelX = panelX();
         int panelY = panelY();
         int panelWidth = panelWidth();
-        int footerY = panelY + panelHeight() - FOOTER_HEIGHT;
         int contentWidth = panelWidth - CONTENT_MARGIN * 2;
+        int footerY = panelY + panelHeight() - FOOTER_HEIGHT;
+        int modeButtonWidth = Math.max(
+            130,
+            (contentWidth - BUTTON_GAP * 3 - 180) / 3
+        );
 
-        int plusX = panelX
-            + panelWidth
-            - CONTENT_MARGIN
-            - 28;
-        int amountX = plusX - 6 - 72;
+        itemModeButton = addRenderableWidget(
+            new KarakuriButton(
+                font,
+                panelX + CONTENT_MARGIN,
+                footerY + 10,
+                modeButtonWidth,
+                BUTTON_HEIGHT,
+                Component.empty(),
+                this::cycleItemMode,
+                KarakuriButton.Style.SECONDARY
+            )
+        );
+
+        amountModeButton = addRenderableWidget(
+            new KarakuriButton(
+                font,
+                panelX
+                    + CONTENT_MARGIN
+                    + modeButtonWidth
+                    + BUTTON_GAP,
+                footerY + 10,
+                modeButtonWidth,
+                BUTTON_HEIGHT,
+                Component.empty(),
+                this::cycleAmountMode,
+                KarakuriButton.Style.SECONDARY
+            )
+        );
+
+        speedButton = addRenderableWidget(
+            new KarakuriButton(
+                font,
+                panelX
+                    + CONTENT_MARGIN
+                    + (modeButtonWidth + BUTTON_GAP) * 2,
+                footerY + 10,
+                modeButtonWidth,
+                BUTTON_HEIGHT,
+                Component.empty(),
+                this::cycleSpeed,
+                KarakuriButton.Style.SECONDARY
+            )
+        );
+
+        int amountX = panelX
+            + CONTENT_MARGIN
+            + 104;
 
         amountField = new EditBox(
             font,
             amountX,
-            footerY + 12,
-            72,
+            footerY + 46,
+            76,
             22,
-            Component.literal("Target amount")
+            Component.literal("Transfer amount")
         );
         amountField.setMaxLength(4);
-        amountField.setValue(Integer.toString(targetAmount));
+        amountField.setValue(Integer.toString(amount));
         amountField.setResponder(this::onAmountChanged);
         addRenderableWidget(amountField);
 
         addRenderableWidget(
             new KarakuriButton(
                 font,
-                amountField.getX() - 34,
-                footerY + 11,
+                amountX - 34,
+                footerY + 45,
                 28,
                 BUTTON_HEIGHT,
                 Component.literal("-"),
-                () -> adjustTarget(-1),
+                () -> adjustAmount(-1),
                 KarakuriButton.Style.GHOST
             )
         );
@@ -125,12 +201,12 @@ public final class RestockItemsSelectionScreen extends Screen {
         addRenderableWidget(
             new KarakuriButton(
                 font,
-                amountField.getX() + amountField.getWidth() + 6,
-                footerY + 11,
+                amountX + amountField.getWidth() + 6,
+                footerY + 45,
                 28,
                 BUTTON_HEIGHT,
                 Component.literal("+"),
-                () -> adjustTarget(1),
+                () -> adjustAmount(1),
                 KarakuriButton.Style.GHOST
             )
         );
@@ -194,8 +270,8 @@ public final class RestockItemsSelectionScreen extends Screen {
             - HEADER_HEIGHT
             - FOOTER_HEIGHT;
         int groupWidth = Math.clamp(
-            contentWidth * 42 / 100,
-            140,
+            contentWidth * 34 / 100,
+            160,
             300
         );
         int itemX = contentX + groupWidth + COLUMN_GAP;
@@ -242,9 +318,7 @@ public final class RestockItemsSelectionScreen extends Screen {
         );
         graphics.drawString(
             font,
-            Component.literal(
-                "Choose one filtered item and the amount to keep"
-            ),
+            Component.literal(headerDescription()),
             panelX + CONTENT_MARGIN,
             panelY + 32,
             0xFF9F95A8,
@@ -265,7 +339,9 @@ public final class RestockItemsSelectionScreen extends Screen {
             contentY,
             itemWidth,
             contentHeight,
-            "Filtered Items"
+            itemMode == StorageTransferItemMode.GROUP_FILTER
+                ? "Filtered Items · Entire Filter"
+                : "Filtered Items · Select Multiple"
         );
 
         renderGroups(
@@ -287,28 +363,37 @@ public final class RestockItemsSelectionScreen extends Screen {
             contentHeight - 28
         );
 
+        graphics.drawString(
+            font,
+            Component.literal("Amount"),
+            contentX,
+            footerY + 52,
+            amountMode.usesAmount()
+                ? 0xFF9F95A8
+                : 0xFF625B68,
+            false
+        );
+
+        int hotbarX = panelX
+            + panelWidth
+            - CONTENT_MARGIN
+            - 230;
+        int hotbarY = footerY + 49;
+
         KarakuriCheckboxRenderer.render(
             graphics,
-            contentX,
-            footerY + 13,
+            hotbarX,
+            hotbarY,
             CHECKBOX_SIZE,
-            countHotbar,
+            includeHotbar,
             0xFFB38AE8
         );
         graphics.drawString(
             font,
-            Component.literal("Count and fill hotbar"),
-            contentX + CHECKBOX_SIZE + 8,
-            footerY + 16,
+            Component.literal(hotbarLabel()),
+            hotbarX + CHECKBOX_SIZE + 8,
+            hotbarY + 3,
             0xFFEAE4EE,
-            false
-        );
-        graphics.drawString(
-            font,
-            Component.literal("Target amount"),
-            amountField.getX() - 116,
-            footerY + 18,
-            0xFF9F95A8,
             false
         );
 
@@ -319,8 +404,8 @@ public final class RestockItemsSelectionScreen extends Screen {
                 truncate(status, contentWidth)
             ),
             contentX,
-            footerY + 45,
-            amountValid
+            footerY + 78,
+            configurationValid()
                 ? 0xFF9F95A8
                 : 0xFFE66777,
             false
@@ -366,15 +451,25 @@ public final class RestockItemsSelectionScreen extends Screen {
         Bounds itemBounds = itemBounds();
 
         if (itemBounds.contains(event.x(), event.y())) {
-            int row = (int) (
-                (event.y() - itemBounds.y())
-                    / ITEM_ROW_HEIGHT
-            );
-            int index = itemScroll + row;
+            if (
+                itemMode
+                    == StorageTransferItemMode.SELECTED_ITEMS
+            ) {
+                int row = (int) (
+                    (event.y() - itemBounds.y())
+                        / ITEM_ROW_HEIGHT
+                );
+                int index = itemScroll + row;
 
-            if (index >= 0 && index < items.size()) {
-                selectedItemId = items.get(index).id();
-                updateButtons();
+                if (index >= 0 && index < items.size()) {
+                    String itemId = items.get(index).id();
+
+                    if (!selectedItemIds.add(itemId)) {
+                        selectedItemIds.remove(itemId);
+                    }
+
+                    updateButtons();
+                }
             }
 
             return true;
@@ -383,18 +478,23 @@ public final class RestockItemsSelectionScreen extends Screen {
         int footerY = panelY()
             + panelHeight()
             - FOOTER_HEIGHT;
+        int hotbarX = panelX()
+            + panelWidth()
+            - CONTENT_MARGIN
+            - 230;
 
         if (
             contains(
                 event.x(),
                 event.y(),
-                panelX() + CONTENT_MARGIN,
-                footerY + 9,
-                240,
+                hotbarX,
+                footerY + 43,
+                230,
                 28
             )
         ) {
-            countHotbar = !countHotbar;
+            includeHotbar = !includeHotbar;
+            updateButtons();
             return true;
         }
 
@@ -408,17 +508,17 @@ public final class RestockItemsSelectionScreen extends Screen {
         double horizontalAmount,
         double verticalAmount
     ) {
-        int amount = (int) Math.signum(verticalAmount)
+        int scroll = (int) Math.signum(verticalAmount)
             * SCROLL_STEP;
 
         if (groupBounds().contains(mouseX, mouseY)) {
-            groupScroll -= amount;
+            groupScroll -= scroll;
             clampScrolls();
             return true;
         }
 
         if (itemBounds().contains(mouseX, mouseY)) {
-            itemScroll -= amount;
+            itemScroll -= scroll;
             clampScrolls();
             return true;
         }
@@ -439,6 +539,74 @@ public final class RestockItemsSelectionScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    private void cycleItemMode() {
+        itemMode = itemMode.next();
+        normalizeItemSelection();
+        updateButtons();
+    }
+
+    private void cycleAmountMode() {
+        amountMode = amountMode.nextFor(direction);
+        updateButtons();
+    }
+
+    private void cycleSpeed() {
+        speed = speed.next();
+        updateButtons();
+    }
+
+    private void onAmountChanged(
+        String value
+    ) {
+        try {
+            int parsed = Integer.parseInt(value);
+            amountValid = parsed
+                >= StorageTransferOptions.MIN_AMOUNT
+                && parsed
+                    <= StorageTransferOptions.MAX_AMOUNT;
+
+            if (amountValid) {
+                amount = parsed;
+            }
+        } catch (NumberFormatException exception) {
+            amountValid = false;
+        }
+
+        updateButtons();
+    }
+
+    private void adjustAmount(
+        int direction
+    ) {
+        amount = Math.clamp(
+            amount + direction,
+            StorageTransferOptions.MIN_AMOUNT,
+            StorageTransferOptions.MAX_AMOUNT
+        );
+        amountValid = true;
+        amountField.setValue(Integer.toString(amount));
+        updateButtons();
+    }
+
+    private void applySelection() {
+        if (!configurationValid()) {
+            return;
+        }
+
+        selectionAction.apply(
+            new StorageTransferOptions(
+                selectedGroupId,
+                itemMode,
+                selectedItemIds.stream().toList(),
+                amountMode,
+                amount,
+                speed,
+                includeHotbar
+            )
+        );
+        minecraft.setScreen(parent);
     }
 
     private void rebuildItems() {
@@ -482,20 +650,210 @@ public final class RestockItemsSelectionScreen extends Screen {
         for (String itemId : group.itemFilter().itemIds()) {
             ItemEntry entry = entries.get(itemId);
 
-            if (entry == null) {
-                result.add(
-                    new ItemEntry(
+            result.add(
+                entry == null
+                    ? new ItemEntry(
                         itemId,
                         itemId,
                         ItemStack.EMPTY
                     )
-                );
-            } else {
-                result.add(entry);
-            }
+                    : entry
+            );
         }
 
         items = List.copyOf(result);
+    }
+
+    private void normalizeGroupSelection() {
+        boolean exists = groups.stream()
+            .anyMatch(
+                group -> group.id().equals(selectedGroupId)
+            );
+
+        if (!exists) {
+            selectedGroupId = groups.isEmpty()
+                ? null
+                : groups.getFirst().id();
+        }
+    }
+
+    private void normalizeItemSelection() {
+        Set<String> available = items.stream()
+            .map(ItemEntry::id)
+            .collect(
+                java.util.stream.Collectors.toCollection(
+                    LinkedHashSet::new
+                )
+            );
+
+        selectedItemIds.retainAll(available);
+
+        if (
+            itemMode == StorageTransferItemMode.SELECTED_ITEMS
+                && selectedItemIds.isEmpty()
+                && !items.isEmpty()
+        ) {
+            selectedItemIds.add(items.getFirst().id());
+        }
+    }
+
+    private StorageGroup selectedGroup() {
+        return selectedGroupId == null
+            ? null
+            : StorageRegistry.findGroup(selectedGroupId);
+    }
+
+    private boolean configurationValid() {
+        StorageGroup group = selectedGroup();
+
+        if (
+            group == null
+                || group.itemFilter().emptyFilter()
+        ) {
+            return false;
+        }
+
+        if (
+            itemMode == StorageTransferItemMode.SELECTED_ITEMS
+                && selectedItemIds.isEmpty()
+        ) {
+            return false;
+        }
+
+        return !amountMode.usesAmount() || amountValid;
+    }
+
+    private String statusText() {
+        StorageGroup group = selectedGroup();
+
+        if (group == null) {
+            return "Create and enable a storage group first";
+        }
+
+        if (group.itemFilter().emptyFilter()) {
+            return "Add at least one item to the selected group filter";
+        }
+
+        if (
+            itemMode == StorageTransferItemMode.SELECTED_ITEMS
+                && selectedItemIds.isEmpty()
+        ) {
+            return "Select at least one filtered item";
+        }
+
+        if (amountMode.usesAmount() && !amountValid) {
+            return "Amount must be between 1 and 2304";
+        }
+
+        String itemsText = itemMode
+            == StorageTransferItemMode.GROUP_FILTER
+                ? group.itemFilter().itemIds().size()
+                    + " filtered item types"
+                : selectedItemIds.size()
+                    + " selected item types";
+
+        return direction == StorageTransferDirection.DEPOSIT
+            ? depositStatus(itemsText)
+            : withdrawStatus(itemsText);
+    }
+
+    private String depositStatus(
+        String itemsText
+    ) {
+        return switch (amountMode) {
+            case ALL -> "Deposit all matching " + itemsText;
+            case UP_TO -> "Deposit up to "
+                + amount
+                + " of each of "
+                + itemsText;
+            case KEEP -> "Keep "
+                + amount
+                + " of each type and deposit the excess from "
+                + itemsText;
+            case TARGET -> throw new IllegalStateException(
+                "Deposit screen cannot use target mode"
+            );
+        };
+    }
+
+    private String withdrawStatus(
+        String itemsText
+    ) {
+        return switch (amountMode) {
+            case ALL -> "Take all available " + itemsText;
+            case UP_TO -> "Take up to "
+                + amount
+                + " of each of "
+                + itemsText;
+            case TARGET -> "Restock each of "
+                + itemsText
+                + " to "
+                + amount;
+            case KEEP -> throw new IllegalStateException(
+                "Restock screen cannot use keep mode"
+            );
+        };
+    }
+
+    private String headerDescription() {
+        return direction == StorageTransferDirection.DEPOSIT
+            ? "Choose what the player gives to the targeted storage"
+            : "Choose what the player takes from the targeted storage";
+    }
+
+    private String hotbarLabel() {
+        return direction == StorageTransferDirection.DEPOSIT
+            ? "Include hotbar"
+            : "Count and fill hotbar";
+    }
+
+    private void updateButtons() {
+        if (
+            itemModeButton == null
+                || amountModeButton == null
+                || speedButton == null
+                || amountField == null
+                || applyButton == null
+        ) {
+            return;
+        }
+
+        itemModeButton.setMessage(
+            Component.literal(
+                itemMode == StorageTransferItemMode.GROUP_FILTER
+                    ? "Items: Entire Filter"
+                    : "Items: Selected ("
+                        + selectedItemIds.size()
+                        + ")"
+            )
+        );
+        amountModeButton.setMessage(
+            Component.literal(
+                "Amount: " + amountModeLabel()
+            )
+        );
+        speedButton.setMessage(
+            Component.literal("Speed: " + speed.label())
+        );
+        amountField.active = amountMode.usesAmount();
+        applyButton.active = configurationValid();
+    }
+
+    private String amountModeLabel() {
+        return switch (direction) {
+            case DEPOSIT -> switch (amountMode) {
+                case ALL -> "All";
+                case UP_TO -> "Up To";
+                case KEEP -> "Keep";
+                case TARGET -> "Target";
+            };
+            case WITHDRAW -> switch (amountMode) {
+                case ALL -> "Take All";
+                case UP_TO -> "Take Up To";
+                case TARGET -> "Target";
+                case KEEP -> "Keep";
+            };
+        };
     }
 
     private void renderFrame(
@@ -529,7 +887,9 @@ public final class RestockItemsSelectionScreen extends Screen {
         );
         graphics.drawString(
             font,
-            Component.literal(label),
+            Component.literal(
+                truncate(label, frameWidth - 18)
+            ),
             x + 9,
             y + 9,
             0xFFECE6F1,
@@ -695,8 +1055,9 @@ public final class RestockItemsSelectionScreen extends Screen {
             int rowY = y
                 + (index - itemScroll)
                     * ITEM_ROW_HEIGHT;
-            boolean selected = entry.id()
-                .equals(selectedItemId);
+            boolean selected = itemMode
+                == StorageTransferItemMode.GROUP_FILTER
+                    || selectedItemIds.contains(entry.id());
             boolean hovered = contains(
                 mouseX,
                 mouseY,
@@ -729,20 +1090,41 @@ public final class RestockItemsSelectionScreen extends Screen {
                         : 0xFF27222F
             );
 
+            int itemX = x + 8;
+
+            if (
+                itemMode
+                    == StorageTransferItemMode.SELECTED_ITEMS
+            ) {
+                KarakuriCheckboxRenderer.render(
+                    graphics,
+                    itemX,
+                    rowY + 12,
+                    CHECKBOX_SIZE,
+                    selectedItemIds.contains(entry.id()),
+                    0xFFB38AE8
+                );
+                itemX += CHECKBOX_SIZE + 7;
+            }
+
             if (!entry.stack().isEmpty()) {
                 graphics.renderItem(
                     entry.stack(),
-                    x + 8,
-                    rowY + 9
+                    itemX,
+                    rowY + 10
                 );
             }
 
+            int textX = itemX + 23;
             graphics.drawString(
                 font,
                 Component.literal(
-                    truncate(entry.name(), areaWidth - 48)
+                    truncate(
+                        entry.name(),
+                        areaWidth - (textX - x) - 8
+                    )
                 ),
-                x + 31,
+                textX,
                 rowY + 6,
                 0xFFF0EAF4,
                 false
@@ -750,10 +1132,13 @@ public final class RestockItemsSelectionScreen extends Screen {
             graphics.drawString(
                 font,
                 Component.literal(
-                    truncate(entry.id(), areaWidth - 48)
+                    truncate(
+                        entry.id(),
+                        areaWidth - (textX - x) - 8
+                    )
                 ),
-                x + 31,
-                rowY + 21,
+                textX,
+                rowY + 22,
                 0xFF92889B,
                 false
             );
@@ -784,135 +1169,6 @@ public final class RestockItemsSelectionScreen extends Screen {
         );
     }
 
-    private void onAmountChanged(
-        String value
-    ) {
-        try {
-            int parsed = Integer.parseInt(value);
-            amountValid = parsed
-                >= RestockItemsStep.MIN_TARGET_AMOUNT
-                && parsed
-                    <= RestockItemsStep.MAX_TARGET_AMOUNT;
-
-            if (amountValid) {
-                targetAmount = parsed;
-            }
-        } catch (NumberFormatException exception) {
-            amountValid = false;
-        }
-
-        updateButtons();
-    }
-
-    private void adjustTarget(
-        int direction
-    ) {
-        targetAmount = Math.clamp(
-            targetAmount + direction,
-            RestockItemsStep.MIN_TARGET_AMOUNT,
-            RestockItemsStep.MAX_TARGET_AMOUNT
-        );
-        amountValid = true;
-        amountField.setValue(Integer.toString(targetAmount));
-        updateButtons();
-    }
-
-    private void applySelection() {
-        if (
-            selectedGroupId == null
-                || selectedItemId == null
-                || !amountValid
-        ) {
-            return;
-        }
-
-        selectionAction.apply(
-            selectedGroupId,
-            selectedItemId,
-            targetAmount,
-            countHotbar
-        );
-        minecraft.setScreen(parent);
-    }
-
-    private void normalizeGroupSelection() {
-        boolean selectedExists = groups.stream()
-            .anyMatch(
-                group -> group.id().equals(selectedGroupId)
-            );
-
-        if (!selectedExists) {
-            selectedGroupId = groups.isEmpty()
-                ? null
-                : groups.getFirst().id();
-        }
-    }
-
-    private void normalizeItemSelection() {
-        boolean selectedExists = items.stream()
-            .anyMatch(
-                item -> item.id().equals(selectedItemId)
-            );
-
-        if (!selectedExists) {
-            selectedItemId = items.isEmpty()
-                ? null
-                : items.getFirst().id();
-        }
-    }
-
-    private StorageGroup selectedGroup() {
-        return selectedGroupId == null
-            ? null
-            : StorageRegistry.findGroup(selectedGroupId);
-    }
-
-    private ItemEntry selectedItem() {
-        if (selectedItemId == null) {
-            return null;
-        }
-
-        return items.stream()
-            .filter(item -> item.id().equals(selectedItemId))
-            .findFirst()
-            .orElse(null);
-    }
-
-    private String statusText() {
-        if (!amountValid) {
-            return "Target amount must be between 1 and 2304";
-        }
-
-        StorageGroup group = selectedGroup();
-        ItemEntry item = selectedItem();
-
-        if (group == null) {
-            return "Create and enable a storage group first";
-        }
-
-        if (item == null) {
-            return "Add at least one item to the selected group filter";
-        }
-
-        return "Keep "
-            + targetAmount
-            + " "
-            + item.name()
-            + (countHotbar
-                ? " across inventory and hotbar"
-                : " in the main inventory");
-    }
-
-    private void updateButtons() {
-        if (applyButton == null) {
-            return;
-        }
-
-        applyButton.active = selectedGroupId != null
-            && selectedItemId != null
-            && amountValid;
-    }
-
     private void clampScrolls() {
         groupScroll = Math.clamp(
             groupScroll,
@@ -932,12 +1188,26 @@ public final class RestockItemsSelectionScreen extends Screen {
         );
     }
 
+    private int visibleGroupRows() {
+        return Math.max(
+            1,
+            groupBounds().height() / GROUP_ROW_HEIGHT
+        );
+    }
+
+    private int visibleItemRows() {
+        return Math.max(
+            1,
+            itemBounds().height() / ITEM_ROW_HEIGHT
+        );
+    }
+
     private Bounds groupBounds() {
         int contentWidth = panelWidth()
             - CONTENT_MARGIN * 2;
         int groupWidth = Math.clamp(
-            contentWidth * 42 / 100,
-            140,
+            contentWidth * 34 / 100,
+            160,
             300
         );
 
@@ -956,13 +1226,10 @@ public final class RestockItemsSelectionScreen extends Screen {
         int contentWidth = panelWidth()
             - CONTENT_MARGIN * 2;
         int groupWidth = Math.clamp(
-            contentWidth * 42 / 100,
-            140,
+            contentWidth * 34 / 100,
+            160,
             300
         );
-        int itemWidth = contentWidth
-            - groupWidth
-            - COLUMN_GAP;
 
         return new Bounds(
             panelX()
@@ -971,7 +1238,7 @@ public final class RestockItemsSelectionScreen extends Screen {
                 + COLUMN_GAP
                 + 1,
             panelY() + HEADER_HEIGHT + 27,
-            itemWidth - 2,
+            contentWidth - groupWidth - COLUMN_GAP - 2,
             panelHeight()
                 - HEADER_HEIGHT
                 - FOOTER_HEIGHT
@@ -979,18 +1246,12 @@ public final class RestockItemsSelectionScreen extends Screen {
         );
     }
 
-    private int visibleGroupRows() {
-        return Math.max(
-            1,
-            groupBounds().height() / GROUP_ROW_HEIGHT
-        );
+    private int panelX() {
+        return (width - panelWidth()) / 2;
     }
 
-    private int visibleItemRows() {
-        return Math.max(
-            1,
-            itemBounds().height() / ITEM_ROW_HEIGHT
-        );
+    private int panelY() {
+        return (height - panelHeight()) / 2;
     }
 
     private int panelWidth() {
@@ -1005,14 +1266,6 @@ public final class RestockItemsSelectionScreen extends Screen {
             PANEL_MAX_HEIGHT,
             height - PANEL_MARGIN * 2
         );
-    }
-
-    private int panelX() {
-        return (width - panelWidth()) / 2;
-    }
-
-    private int panelY() {
-        return (height - panelHeight()) / 2;
     }
 
     private String truncate(
@@ -1038,28 +1291,23 @@ public final class RestockItemsSelectionScreen extends Screen {
         return value.substring(0, end) + suffix;
     }
 
-    private boolean contains(
+    private static boolean contains(
         double mouseX,
         double mouseY,
         int x,
         int y,
-        int areaWidth,
-        int areaHeight
+        int width,
+        int height
     ) {
         return mouseX >= x
-            && mouseX < x + areaWidth
+            && mouseX < x + width
             && mouseY >= y
-            && mouseY < y + areaHeight;
+            && mouseY < y + height;
     }
 
     @FunctionalInterface
     public interface SelectionAction {
-        void apply(
-            String storageGroupId,
-            String itemId,
-            int targetAmount,
-            boolean countHotbar
-        );
+        void apply(StorageTransferOptions options);
     }
 
     private record ItemEntry(
@@ -1075,14 +1323,18 @@ public final class RestockItemsSelectionScreen extends Screen {
         int width,
         int height
     ) {
-        private boolean contains(
+        boolean contains(
             double mouseX,
             double mouseY
         ) {
-            return mouseX >= x
-                && mouseX < x + width
-                && mouseY >= y
-                && mouseY < y + height;
+            return StorageTransferSelectionScreen.contains(
+                mouseX,
+                mouseY,
+                x,
+                y,
+                width,
+                height
+            );
         }
     }
 }

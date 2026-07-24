@@ -20,6 +20,7 @@ import hanamuramiyu.karakuri.scenario.model.RepeatMode;
 import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferDirection;
 import hanamuramiyu.karakuri.ui.editor.ScenarioEditorState;
 import hanamuramiyu.karakuri.ui.editor.ScenarioEditorTheme;
 import hanamuramiyu.karakuri.ui.editor.ScenarioStepPresentation;
@@ -427,13 +428,23 @@ final class ScenarioInspectorWidgets {
         } else if (step instanceof DepositItemsStep depositItemsStep) {
             placeWideButton(
                 depositItemsButton,
-                "Storage group",
+                "Storage transfer settings",
                 row1
             );
             setDescription(
-                depositItemsStep.includeHotbar()
-                    ? "Deposits matching items from main inventory and hotbar"
-                    : "Deposits matching items from main inventory only",
+                ScenarioStepPresentation.transferItemsSummary(
+                    depositItemsStep.options()
+                )
+                    + " · "
+                    + ScenarioStepPresentation.transferAmountSummary(
+                        StorageTransferDirection.DEPOSIT,
+                        depositItemsStep.options()
+                    )
+                    + " · "
+                    + depositItemsStep.speed().label()
+                    + (depositItemsStep.includeHotbar()
+                        ? " · Hotbar included"
+                        : " · Hotbar protected"),
                 row3 - 10,
                 depositItemsStep.includeHotbar()
                     ? ScenarioEditorTheme.WARNING
@@ -442,19 +453,23 @@ final class ScenarioInspectorWidgets {
         } else if (step instanceof RestockItemsStep restockItemsStep) {
             placeWideButton(
                 restockItemsButton,
-                "Storage group and item",
+                "Storage transfer settings",
                 row1
             );
             setDescription(
-                "Keeps "
-                    + restockItemsStep.targetAmount()
-                    + " "
-                    + ScenarioStepPresentation.restockItemName(
-                        restockItemsStep
+                ScenarioStepPresentation.transferItemsSummary(
+                    restockItemsStep.options()
+                )
+                    + " · "
+                    + ScenarioStepPresentation.transferAmountSummary(
+                        StorageTransferDirection.WITHDRAW,
+                        restockItemsStep.options()
                     )
+                    + " · "
+                    + restockItemsStep.speed().label()
                     + (restockItemsStep.countHotbar()
-                        ? " across inventory and hotbar"
-                        : " in the main inventory"),
+                        ? " · Hotbar included"
+                        : " · Main inventory only"),
                 row3 - 10,
                 ScenarioEditorTheme.TEXT_MUTED
             );
@@ -605,10 +620,14 @@ final class ScenarioInspectorWidgets {
                     ScenarioStepPresentation.depositGroupName(
                         depositItemsStep
                     )
-                        + (
-                            depositItemsStep.includeHotbar()
-                                ? " · Inventory + hotbar"
-                                : " · Main inventory"
+                        + " · "
+                        + ScenarioStepPresentation.transferItemsSummary(
+                            depositItemsStep.options()
+                        )
+                        + " · "
+                        + ScenarioStepPresentation.transferAmountSummary(
+                            StorageTransferDirection.DEPOSIT,
+                            depositItemsStep.options()
                         )
                 )
             );
@@ -621,11 +640,14 @@ final class ScenarioInspectorWidgets {
                         restockItemsStep
                     )
                         + " · "
-                        + ScenarioStepPresentation.restockItemName(
-                            restockItemsStep
+                        + ScenarioStepPresentation.transferItemsSummary(
+                            restockItemsStep.options()
                         )
-                        + " → "
-                        + restockItemsStep.targetAmount()
+                        + " · "
+                        + ScenarioStepPresentation.transferAmountSummary(
+                            StorageTransferDirection.WITHDRAW,
+                            restockItemsStep.options()
+                        )
                 )
             );
         }
@@ -708,7 +730,7 @@ final class ScenarioInspectorWidgets {
             contentX,
             inspectorY,
             contentWidth,
-            "Choose Storage Group",
+            "Configure Deposit Transfer",
             actions::openDepositItemsSelection,
             KarakuriButton.Style.SECONDARY
         );
@@ -716,7 +738,7 @@ final class ScenarioInspectorWidgets {
             contentX,
             inspectorY,
             contentWidth,
-            "Choose Storage, Item, and Amount",
+            "Configure Restock Transfer",
             actions::openRestockItemsSelection,
             KarakuriButton.Style.SECONDARY
         );

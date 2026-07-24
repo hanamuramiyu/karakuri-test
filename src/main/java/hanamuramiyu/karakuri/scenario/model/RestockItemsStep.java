@@ -1,33 +1,53 @@
 package hanamuramiyu.karakuri.scenario.model;
 
-import java.util.Locale;
-import java.util.UUID;
+import java.util.List;
+import java.util.Objects;
 
 public record RestockItemsStep(
-    String storageGroupId,
-    String itemId,
-    int targetAmount,
-    boolean countHotbar
+    StorageTransferOptions options
 ) implements ScenarioStep {
-    public static final String UNASSIGNED_GROUP_ID = "";
+    public static final String UNASSIGNED_GROUP_ID =
+        StorageTransferOptions.UNASSIGNED_GROUP_ID;
     public static final String UNASSIGNED_ITEM_ID = "";
-    public static final int MIN_TARGET_AMOUNT = 1;
-    public static final int MAX_TARGET_AMOUNT = 2304;
-    public static final int DEFAULT_TARGET_AMOUNT = 64;
+    public static final int MIN_TARGET_AMOUNT =
+        StorageTransferOptions.MIN_AMOUNT;
+    public static final int MAX_TARGET_AMOUNT =
+        StorageTransferOptions.MAX_AMOUNT;
+    public static final int DEFAULT_TARGET_AMOUNT =
+        StorageTransferOptions.DEFAULT_AMOUNT;
     public static final boolean DEFAULT_COUNT_HOTBAR = true;
 
     public RestockItemsStep {
-        storageGroupId = normalizeGroupId(storageGroupId);
-        itemId = normalizeItemId(itemId);
+        options = Objects.requireNonNull(
+            options,
+            "Restock transfer options must not be null"
+        );
 
         if (
-            targetAmount < MIN_TARGET_AMOUNT
-                || targetAmount > MAX_TARGET_AMOUNT
+            !options.amountMode().validFor(
+                StorageTransferDirection.WITHDRAW
+            )
         ) {
             throw new IllegalArgumentException(
-                "Restock target amount must be between 1 and 2304"
+                "Restock amount mode is not valid for withdrawals"
             );
         }
+    }
+
+    public RestockItemsStep(
+        String storageGroupId,
+        String itemId,
+        int targetAmount,
+        boolean countHotbar
+    ) {
+        this(
+            StorageTransferOptions.restockDefaults(
+                storageGroupId,
+                itemId,
+                targetAmount,
+                countHotbar
+            )
+        );
     }
 
     @Override
@@ -37,7 +57,14 @@ public record RestockItemsStep(
 
     @Override
     public String label() {
-        return "Restock item to " + targetAmount;
+        return switch (options.amountMode()) {
+            case ALL -> "Take all matching items";
+            case UP_TO -> "Take up to " + options.amount();
+            case TARGET -> "Restock items to " + options.amount();
+            case KEEP -> throw new IllegalStateException(
+                "Restock step cannot use keep mode"
+            );
+        };
     }
 
     @Override
@@ -47,67 +74,61 @@ public record RestockItemsStep(
         return visitor.visit(this);
     }
 
+    public String storageGroupId() {
+        return options.storageGroupId();
+    }
+
+    public StorageTransferItemMode itemMode() {
+        return options.itemMode();
+    }
+
+    public List<String> itemIds() {
+        return options.itemIds();
+    }
+
+    public String itemId() {
+        return options.itemIds().isEmpty()
+            ? UNASSIGNED_ITEM_ID
+            : options.itemIds().getFirst();
+    }
+
+    public StorageTransferAmountMode amountMode() {
+        return options.amountMode();
+    }
+
+    public int amount() {
+        return options.amount();
+    }
+
+    public int targetAmount() {
+        return options.amount();
+    }
+
+    public StorageTransferSpeed speed() {
+        return options.speed();
+    }
+
+    public boolean includeHotbar() {
+        return options.includeHotbar();
+    }
+
+    public boolean countHotbar() {
+        return options.includeHotbar();
+    }
+
     public boolean hasAssignedGroup() {
-        return !storageGroupId.isEmpty();
+        return options.hasAssignedGroup();
     }
 
     public boolean hasAssignedItem() {
-        return !itemId.isEmpty();
+        return options.itemMode()
+            == StorageTransferItemMode.GROUP_FILTER
+            || options.hasSelectedItems();
     }
 
     public RestockItemsStep withSelection(
-        String updatedStorageGroupId,
-        String updatedItemId,
-        int updatedTargetAmount,
-        boolean updatedCountHotbar
+        StorageTransferOptions updatedOptions
     ) {
-        return new RestockItemsStep(
-            updatedStorageGroupId,
-            updatedItemId,
-            updatedTargetAmount,
-            updatedCountHotbar
-        );
-    }
-
-    private static String normalizeGroupId(
-        String value
-    ) {
-        if (value == null || value.isBlank()) {
-            return UNASSIGNED_GROUP_ID;
-        }
-
-        try {
-            return UUID.fromString(value.trim())
-                .toString()
-                .toLowerCase(Locale.ROOT);
-        } catch (IllegalArgumentException exception) {
-            throw new IllegalArgumentException(
-                "Storage group ID must be a UUID: " + value,
-                exception
-            );
-        }
-    }
-
-    private static String normalizeItemId(
-        String value
-    ) {
-        if (value == null || value.isBlank()) {
-            return UNASSIGNED_ITEM_ID;
-        }
-
-        String normalized = value
-            .trim()
-            .toLowerCase(Locale.ROOT);
-
-        if (
-            normalized.indexOf(':') <= 0
-                || normalized.endsWith(":")
-        ) {
-            throw new IllegalArgumentException(
-                "Restock item ID must be namespaced: " + value
-            );
-        }
-
-        return normalized;
+        return new RestockItemsStep(updatedOptions);
     }
 }

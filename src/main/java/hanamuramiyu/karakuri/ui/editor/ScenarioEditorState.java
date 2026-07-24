@@ -21,6 +21,9 @@ import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
 import hanamuramiyu.karakuri.scenario.model.Scenario;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferAmountMode;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferSpeed;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferOptions;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
 
 import java.util.ArrayList;
@@ -737,39 +740,27 @@ public final class ScenarioEditorState {
     }
 
     public void setDepositItemsSelection(
-        String storageGroupId,
-        boolean includeHotbar
+        StorageTransferOptions options
     ) {
         if (
             selectedStep()
                 instanceof DepositItemsStep step
         ) {
             replaceSelected(
-                step.withSelection(
-                    storageGroupId,
-                    includeHotbar
-                )
+                step.withSelection(options)
             );
         }
     }
 
     public void setRestockItemsSelection(
-        String storageGroupId,
-        String itemId,
-        int targetAmount,
-        boolean countHotbar
+        StorageTransferOptions options
     ) {
         if (
             selectedStep()
                 instanceof RestockItemsStep step
         ) {
             replaceSelected(
-                step.withSelection(
-                    storageGroupId,
-                    itemId,
-                    targetAmount,
-                    countHotbar
-                )
+                step.withSelection(options)
             );
         }
     }
@@ -1062,10 +1053,15 @@ public final class ScenarioEditorState {
                 );
             case RestockItemsStep restockItemsStep ->
                 new RestockItemsStep(
-                    restockItemsStep.storageGroupId(),
-                    restockItemsStep.itemId(),
-                    RestockItemsStep.DEFAULT_TARGET_AMOUNT,
-                    RestockItemsStep.DEFAULT_COUNT_HOTBAR
+                    restockItemsStep.options().withSelection(
+                        restockItemsStep.storageGroupId(),
+                        restockItemsStep.itemMode(),
+                        restockItemsStep.itemIds(),
+                        StorageTransferAmountMode.TARGET,
+                        RestockItemsStep.DEFAULT_TARGET_AMOUNT,
+                        StorageTransferSpeed.CONTROLLED,
+                        RestockItemsStep.DEFAULT_COUNT_HOTBAR
+                    )
                 );
             case HotbarStep hotbarStep ->
                 new HotbarStep(

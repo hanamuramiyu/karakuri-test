@@ -20,6 +20,7 @@ import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioFormat;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferItemMode;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
 import hanamuramiyu.karakuri.task.TaskManager;
 import hanamuramiyu.karakuri.task.TaskStatus;
@@ -224,11 +225,18 @@ public final class ScenarioInspector
         ScenarioStep step =
             getSelectedStep();
 
-        if (
-            step instanceof DepositItemsStep depositItemsStep
-                && !depositItemsStep.hasAssignedGroup()
-        ) {
-            return "Select a storage group for Deposit Items";
+        if (step instanceof DepositItemsStep depositItemsStep) {
+            if (!depositItemsStep.hasAssignedGroup()) {
+                return "Select a storage group for Deposit Items";
+            }
+
+            if (
+                depositItemsStep.itemMode()
+                    == StorageTransferItemMode.SELECTED_ITEMS
+                    && depositItemsStep.itemIds().isEmpty()
+            ) {
+                return "Select at least one item for Deposit Items";
+            }
         }
 
         if (step instanceof RestockItemsStep restockItemsStep) {
@@ -237,7 +245,7 @@ public final class ScenarioInspector
             }
 
             if (!restockItemsStep.hasAssignedItem()) {
-                return "Select an item for Restock Items";
+                return "Select at least one item for Restock Items";
             }
         }
 

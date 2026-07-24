@@ -190,6 +190,27 @@ final class JsonObjectReader {
         return element.getAsBoolean();
     }
 
+    JsonArray optionalArray(
+        String key
+    ) {
+        JsonElement element = object.get(key);
+
+        if (
+            element == null
+                || element.isJsonNull()
+        ) {
+            return null;
+        }
+
+        if (!element.isJsonArray()) {
+            throw new JsonParseException(
+                "Invalid array property: " + key
+            );
+        }
+
+        return element.getAsJsonArray();
+    }
+
     JsonArray requiredArray(
         String key
     ) {

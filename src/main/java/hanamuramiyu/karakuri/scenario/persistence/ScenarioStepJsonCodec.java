@@ -24,6 +24,10 @@ import hanamuramiyu.karakuri.scenario.model.RepeatMode;
 import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferAmountMode;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferItemMode;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferOptions;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferSpeed;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
 
 import java.util.ArrayList;
@@ -183,37 +187,92 @@ final class ScenarioStepJsonCodec {
         JsonObjectReader values
     ) {
         return new DepositItemsStep(
-            values.optionalString(
-                "storageGroupId",
-                DepositItemsStep.UNASSIGNED_GROUP_ID
-            ),
-            values.optionalBoolean(
-                "includeHotbar",
-                DepositItemsStep.DEFAULT_INCLUDE_HOTBAR
+            new StorageTransferOptions(
+                values.optionalString(
+                    "storageGroupId",
+                    DepositItemsStep.UNASSIGNED_GROUP_ID
+                ),
+                StorageTransferItemMode.fromId(
+                    values.optionalString(
+                        "itemMode",
+                        StorageTransferItemMode.GROUP_FILTER.id()
+                    )
+                ),
+                readTransferItemIds(values, null),
+                StorageTransferAmountMode.fromId(
+                    values.optionalString(
+                        "amountMode",
+                        StorageTransferAmountMode.ALL.id()
+                    )
+                ),
+                values.optionalInt(
+                    "amount",
+                    StorageTransferOptions.DEFAULT_AMOUNT
+                ),
+                StorageTransferSpeed.fromId(
+                    values.optionalString(
+                        "speed",
+                        StorageTransferSpeed.FAST.id()
+                    )
+                ),
+                values.optionalBoolean(
+                    "includeHotbar",
+                    DepositItemsStep.DEFAULT_INCLUDE_HOTBAR
+                )
             )
         );
     }
 
-
     private RestockItemsStep readRestockItemsStep(
         JsonObjectReader values
     ) {
+        String legacyItemId = values.optionalString(
+            "itemId",
+            RestockItemsStep.UNASSIGNED_ITEM_ID
+        );
+
         return new RestockItemsStep(
-            values.optionalString(
-                "storageGroupId",
-                RestockItemsStep.UNASSIGNED_GROUP_ID
-            ),
-            values.optionalString(
-                "itemId",
-                RestockItemsStep.UNASSIGNED_ITEM_ID
-            ),
-            values.optionalInt(
-                "targetAmount",
-                RestockItemsStep.DEFAULT_TARGET_AMOUNT
-            ),
-            values.optionalBoolean(
-                "countHotbar",
-                RestockItemsStep.DEFAULT_COUNT_HOTBAR
+            new StorageTransferOptions(
+                values.optionalString(
+                    "storageGroupId",
+                    RestockItemsStep.UNASSIGNED_GROUP_ID
+                ),
+                StorageTransferItemMode.fromId(
+                    values.optionalString(
+                        "itemMode",
+                        StorageTransferItemMode.SELECTED_ITEMS.id()
+                    )
+                ),
+                readTransferItemIds(
+                    values,
+                    legacyItemId
+                ),
+                StorageTransferAmountMode.fromId(
+                    values.optionalString(
+                        "amountMode",
+                        StorageTransferAmountMode.TARGET.id()
+                    )
+                ),
+                values.optionalInt(
+                    "amount",
+                    values.optionalInt(
+                        "targetAmount",
+                        RestockItemsStep.DEFAULT_TARGET_AMOUNT
+                    )
+                ),
+                StorageTransferSpeed.fromId(
+                    values.optionalString(
+                        "speed",
+                        StorageTransferSpeed.CONTROLLED.id()
+                    )
+                ),
+                values.optionalBoolean(
+                    "includeHotbar",
+                    values.optionalBoolean(
+                        "countHotbar",
+                        RestockItemsStep.DEFAULT_COUNT_HOTBAR
+                    )
+                )
             )
         );
     }
@@ -391,18 +450,9 @@ final class ScenarioStepJsonCodec {
                 step.durationTicks()
             );
 
-        object.addProperty(
-            "storageGroupId",
-            step.storageGroupId()
-        );
-        object.addProperty(
-            "includeHotbar",
-            step.includeHotbar()
-        );
-
+        writeTransferOptions(object, step.options());
         return object;
     }
-
 
     private JsonObject writeRestockItemsStep(
         RestockItemsStep step
@@ -413,24 +463,73 @@ final class ScenarioStepJsonCodec {
                 step.durationTicks()
             );
 
+        writeTransferOptions(object, step.options());
+        return object;
+    }
+
+    private List<String> readTransferItemIds(
+        JsonObjectReader values,
+        String legacyItemId
+    ) {
+        JsonArray itemIds = values.optionalArray("itemIds");
+
+        if (itemIds == null) {
+            return legacyItemId == null
+                || legacyItemId.isBlank()
+                    ? List.of()
+                    : List.of(legacyItemId);
+        }
+
+        List<String> result = new ArrayList<>();
+
+        for (JsonElement itemId : itemIds) {
+            if (
+                !itemId.isJsonPrimitive()
+                    || !itemId
+                        .getAsJsonPrimitive()
+                        .isString()
+            ) {
+                throw new JsonParseException(
+                    "Storage transfer item ID must be a string"
+                );
+            }
+
+            result.add(itemId.getAsString());
+        }
+
+        return List.copyOf(result);
+    }
+
+    private void writeTransferOptions(
+        JsonObject object,
+        StorageTransferOptions options
+    ) {
         object.addProperty(
             "storageGroupId",
-            step.storageGroupId()
+            options.storageGroupId()
         );
         object.addProperty(
-            "itemId",
-            step.itemId()
-        );
-        object.addProperty(
-            "targetAmount",
-            step.targetAmount()
-        );
-        object.addProperty(
-            "countHotbar",
-            step.countHotbar()
+            "itemMode",
+            options.itemMode().id()
         );
 
-        return object;
+        JsonArray itemIds = new JsonArray();
+
+        for (String itemId : options.itemIds()) {
+            itemIds.add(itemId);
+        }
+
+        object.add("itemIds", itemIds);
+        object.addProperty(
+            "amountMode",
+            options.amountMode().id()
+        );
+        object.addProperty("amount", options.amount());
+        object.addProperty("speed", options.speed().id());
+        object.addProperty(
+            "includeHotbar",
+            options.includeHotbar()
+        );
     }
 
     private JsonObject writeHotbarStep(

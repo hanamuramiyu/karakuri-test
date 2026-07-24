@@ -17,6 +17,10 @@ import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
 import hanamuramiyu.karakuri.scenario.model.ScenarioFormat;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferAmountMode;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferDirection;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferItemMode;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferOptions;
 import hanamuramiyu.karakuri.scenario.model.WaitStep;
 import hanamuramiyu.karakuri.storage.StorageGroup;
 import hanamuramiyu.karakuri.storage.StorageRegistry;
@@ -123,7 +127,8 @@ public final class ScenarioStepPresentation {
                             + mouseStep.action().label()
                         : mouseStep.action().label();
             case RestockItemsStep restockItemsStep ->
-                "Restock " + restockItemName(restockItemsStep);
+                "Restock from "
+                    + restockGroupName(restockItemsStep);
             case RepeatStep repeatStep ->
                 "Repeat Group";
             case WaitStep waitStep ->
@@ -138,7 +143,7 @@ public final class ScenarioStepPresentation {
             case CameraStep cameraStep ->
                 "Direction / motion";
             case DepositItemsStep depositItemsStep ->
-                "Storage group / inventory source";
+                "Storage / items / amount / speed";
             case HotbarStep hotbarStep ->
                 "Select active hotbar slot";
             case InventorySlotStep inventorySlotStep ->
@@ -150,7 +155,7 @@ public final class ScenarioStepPresentation {
             case MouseStep mouseStep ->
                 "Button / input / stop";
             case RestockItemsStep restockItemsStep ->
-                "Storage group / item / target amount";
+                "Storage / items / amount / speed";
             case RepeatStep repeatStep ->
                 "Mode / count / nested blocks";
             case WaitStep waitStep ->
@@ -248,13 +253,11 @@ public final class ScenarioStepPresentation {
                                 cameraStep.durationTicks()
                             );
             case DepositItemsStep depositItemsStep ->
-                depositGroupName(depositItemsStep)
-                    + " · "
-                    + (
-                        depositItemsStep.includeHotbar()
-                            ? "Inventory + hotbar"
-                            : "Main inventory"
-                    );
+                transferSubtitle(
+                    StorageTransferDirection.DEPOSIT,
+                    depositGroupName(depositItemsStep),
+                    depositItemsStep.options()
+                );
             case HotbarStep hotbarStep ->
                 "Hotbar "
                     + (hotbarStep.slot() + 1);
@@ -276,13 +279,11 @@ public final class ScenarioStepPresentation {
             case MouseStep mouseStep ->
                 mouseSubtitle(mouseStep);
             case RestockItemsStep restockItemsStep ->
-                restockItemName(restockItemsStep)
-                    + " → "
-                    + restockItemsStep.targetAmount()
-                    + " · "
-                    + (restockItemsStep.countHotbar()
-                        ? "Inventory + hotbar"
-                        : "Main inventory");
+                transferSubtitle(
+                    StorageTransferDirection.WITHDRAW,
+                    restockGroupName(restockItemsStep),
+                    restockItemsStep.options()
+                );
             case RepeatStep repeatStep ->
                 repeatSubtitle(repeatStep);
             case WaitStep waitStep ->
@@ -327,25 +328,90 @@ public final class ScenarioStepPresentation {
     public static String restockItemName(
         RestockItemsStep step
     ) {
-        if (!step.hasAssignedItem()) {
-            return "Unassigned Item";
+        return transferItemsSummary(step.options());
+    }
+
+    public static String transferItemsSummary(
+        StorageTransferOptions options
+    ) {
+        if (
+            options.itemMode()
+                == StorageTransferItemMode.GROUP_FILTER
+        ) {
+            return "Entire filter";
         }
 
+        if (options.itemIds().isEmpty()) {
+            return "No selected items";
+        }
+
+        if (options.itemIds().size() == 1) {
+            return itemName(options.itemIds().getFirst());
+        }
+
+        return options.itemIds().size() + " selected items";
+    }
+
+    public static String transferAmountSummary(
+        StorageTransferDirection direction,
+        StorageTransferOptions options
+    ) {
+        return switch (direction) {
+            case DEPOSIT -> switch (options.amountMode()) {
+                case ALL -> "All matching";
+                case UP_TO -> "Up to "
+                    + options.amount()
+                    + " each";
+                case KEEP -> "Keep "
+                    + options.amount()
+                    + " each";
+                case TARGET -> "Invalid target mode";
+            };
+            case WITHDRAW -> switch (options.amountMode()) {
+                case ALL -> "Take all";
+                case UP_TO -> "Take up to "
+                    + options.amount()
+                    + " each";
+                case TARGET -> "Target "
+                    + options.amount()
+                    + " each";
+                case KEEP -> "Invalid keep mode";
+            };
+        };
+    }
+
+    private static String transferSubtitle(
+        StorageTransferDirection direction,
+        String groupName,
+        StorageTransferOptions options
+    ) {
+        return groupName
+            + " · "
+            + transferItemsSummary(options)
+            + " · "
+            + transferAmountSummary(direction, options)
+            + " · "
+            + options.speed().label();
+    }
+
+    private static String itemName(
+        String itemId
+    ) {
         for (Item item : BuiltInRegistries.ITEM) {
             if (
                 BuiltInRegistries.ITEM
                     .getKey(item)
                     .toString()
-                    .equals(step.itemId())
+                    .equals(itemId)
             ) {
                 ItemStack stack = item.getDefaultInstance();
                 return stack.isEmpty()
-                    ? step.itemId()
+                    ? itemId
                     : stack.getHoverName().getString();
             }
         }
 
-        return step.itemId();
+        return itemId;
     }
 
     public static String jumpPrimaryValueLabel(

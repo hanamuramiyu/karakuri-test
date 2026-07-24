@@ -1,17 +1,42 @@
 package hanamuramiyu.karakuri.scenario.model;
 
-import java.util.Locale;
-import java.util.UUID;
+import java.util.List;
+import java.util.Objects;
 
 public record DepositItemsStep(
-    String storageGroupId,
-    boolean includeHotbar
+    StorageTransferOptions options
 ) implements ScenarioStep {
-    public static final String UNASSIGNED_GROUP_ID = "";
+    public static final String UNASSIGNED_GROUP_ID =
+        StorageTransferOptions.UNASSIGNED_GROUP_ID;
     public static final boolean DEFAULT_INCLUDE_HOTBAR = false;
 
     public DepositItemsStep {
-        storageGroupId = normalizeGroupId(storageGroupId);
+        options = Objects.requireNonNull(
+            options,
+            "Deposit transfer options must not be null"
+        );
+
+        if (
+            !options.amountMode().validFor(
+                StorageTransferDirection.DEPOSIT
+            )
+        ) {
+            throw new IllegalArgumentException(
+                "Deposit amount mode is not valid for deposits"
+            );
+        }
+    }
+
+    public DepositItemsStep(
+        String storageGroupId,
+        boolean includeHotbar
+    ) {
+        this(
+            StorageTransferOptions.depositDefaults(
+                storageGroupId,
+                includeHotbar
+            )
+        );
     }
 
     @Override
@@ -21,7 +46,14 @@ public record DepositItemsStep(
 
     @Override
     public String label() {
-        return "Deposit matching items";
+        return switch (options.amountMode()) {
+            case ALL -> "Deposit matching items";
+            case UP_TO -> "Deposit up to " + options.amount();
+            case KEEP -> "Deposit and keep " + options.amount();
+            case TARGET -> throw new IllegalStateException(
+                "Deposit step cannot use target mode"
+            );
+        };
     }
 
     @Override
@@ -31,36 +63,41 @@ public record DepositItemsStep(
         return visitor.visit(this);
     }
 
+    public String storageGroupId() {
+        return options.storageGroupId();
+    }
+
+    public StorageTransferItemMode itemMode() {
+        return options.itemMode();
+    }
+
+    public List<String> itemIds() {
+        return options.itemIds();
+    }
+
+    public StorageTransferAmountMode amountMode() {
+        return options.amountMode();
+    }
+
+    public int amount() {
+        return options.amount();
+    }
+
+    public StorageTransferSpeed speed() {
+        return options.speed();
+    }
+
+    public boolean includeHotbar() {
+        return options.includeHotbar();
+    }
+
     public boolean hasAssignedGroup() {
-        return !storageGroupId.isEmpty();
+        return options.hasAssignedGroup();
     }
 
     public DepositItemsStep withSelection(
-        String updatedStorageGroupId,
-        boolean updatedIncludeHotbar
+        StorageTransferOptions updatedOptions
     ) {
-        return new DepositItemsStep(
-            updatedStorageGroupId,
-            updatedIncludeHotbar
-        );
-    }
-
-    private static String normalizeGroupId(
-        String value
-    ) {
-        if (value == null || value.isBlank()) {
-            return UNASSIGNED_GROUP_ID;
-        }
-
-        try {
-            return UUID.fromString(value.trim())
-                .toString()
-                .toLowerCase(Locale.ROOT);
-        } catch (IllegalArgumentException exception) {
-            throw new IllegalArgumentException(
-                "Storage group ID must be a UUID: " + value,
-                exception
-            );
-        }
+        return new DepositItemsStep(updatedOptions);
     }
 }

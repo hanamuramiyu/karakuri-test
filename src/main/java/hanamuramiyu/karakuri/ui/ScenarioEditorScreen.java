@@ -10,6 +10,7 @@ import hanamuramiyu.karakuri.scenario.model.RepeatStep;
 import hanamuramiyu.karakuri.scenario.model.RestockItemsStep;
 import hanamuramiyu.karakuri.scenario.model.Scenario;
 import hanamuramiyu.karakuri.scenario.model.ScenarioStep;
+import hanamuramiyu.karakuri.scenario.model.StorageTransferDirection;
 import hanamuramiyu.karakuri.storage.StorageRegistry;
 import hanamuramiyu.karakuri.task.TaskManager;
 import hanamuramiyu.karakuri.task.TaskStatus;
@@ -1423,10 +1424,10 @@ public final class ScenarioEditorScreen extends Screen {
         }
 
         minecraft.setScreen(
-            new DepositItemsSelectionScreen(
+            new StorageTransferSelectionScreen(
                 this,
-                step.storageGroupId(),
-                step.includeHotbar(),
+                StorageTransferDirection.DEPOSIT,
+                step.options(),
                 state::setDepositItemsSelection
             )
         );
@@ -1444,12 +1445,10 @@ public final class ScenarioEditorScreen extends Screen {
         }
 
         minecraft.setScreen(
-            new RestockItemsSelectionScreen(
+            new StorageTransferSelectionScreen(
                 this,
-                step.storageGroupId(),
-                step.itemId(),
-                step.targetAmount(),
-                step.countHotbar(),
+                StorageTransferDirection.WITHDRAW,
+                step.options(),
                 state::setRestockItemsSelection
             )
         );
